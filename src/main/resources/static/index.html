@@ -8,16 +8,12 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg:#08090C; --surface:#101319; --surface-hi:#161A22; --line:#21262F; --line-hi:#2E3540;
-    --text:#F2F4F7; --muted:#8A93A3; --dim:#5A6373; --accent:#C8FF33; --accent-ink:#1B2400;
-    --live:#FF4D4D;
-    --display:"Barlow Condensed","Helvetica Neue",sans-serif;
-    --sans:"Inter",-apple-system,BlinkMacSystemFont,sans-serif;
-  }
+  :root{--bg:#08090C;--surface:#101319;--surface-hi:#161A22;--line:#21262F;--line-hi:#2E3540;
+    --text:#F2F4F7;--muted:#8A93A3;--dim:#5A6373;--accent:#C8FF33;--accent-ink:#1B2400;--live:#FF4D4D;
+    --display:"Barlow Condensed","Helvetica Neue",sans-serif;--sans:"Inter",-apple-system,sans-serif}
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;padding-bottom:80px}
-  .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
 
   nav{border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10;background:rgba(8,9,12,.92);backdrop-filter:blur(12px)}
   .nav-inner{display:flex;align-items:center;gap:20px;height:62px}
@@ -29,49 +25,58 @@
 
   .eyebrow{font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:9px}
   h2{font-family:var(--display);font-weight:700;font-size:30px;letter-spacing:.02em;text-transform:uppercase;margin-bottom:18px}
-  section{margin-top:42px}
+  section{margin-top:38px}
 
   button{font-family:var(--sans);font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:10px 16px;border-radius:8px;border:1px solid var(--line-hi);background:transparent;color:var(--text);cursor:pointer;transition:.12s}
   button:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
-  button:disabled{opacity:.35;cursor:not-allowed}
+  button:disabled{opacity:.3;cursor:not-allowed}
   button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
   button.primary:hover:not(:disabled){opacity:.88;color:var(--accent-ink)}
-  button.ghost{padding:6px 11px;font-size:11px;color:var(--dim);border-color:var(--line)}
+  button.ghost{padding:7px 12px;font-size:11px;color:var(--dim);border-color:var(--line)}
   input{font-family:var(--sans);font-size:15px;padding:11px 14px;border-radius:8px;border:1px solid var(--line-hi);background:var(--surface);color:var(--text);min-width:230px}
   input:focus{outline:none;border-color:var(--accent)}
-
-  .start{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:28px 34px;display:flex;flex-direction:column;gap:0}
-  .split{margin-top:24px;padding-top:22px;border-top:1px solid var(--line)}
   select{font-family:var(--sans);font-size:14px;padding:10px 12px;border-radius:8px;border:1px solid var(--line-hi);background:var(--surface-hi);color:var(--text)}
   select:focus{outline:none;border-color:var(--accent)}
+
+  .start{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:28px 34px}
+  .split{margin-top:24px;padding-top:22px;border-top:1px solid var(--line)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
   .badge{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:3px 10px;margin-left:10px}
   .backlink{background:none;border:none;color:var(--dim);padding:0;font-size:11px;letter-spacing:.1em;text-decoration:underline;margin-left:12px}
   .backlink:hover{color:var(--accent)}
 
-  .board{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
-  .slot{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:12px;min-height:250px}
-  .slot.done{border-color:var(--line-hi)}
-  .slot-head{display:flex;align-items:center;justify-content:space-between}
-  .pos{font-family:var(--display);font-weight:700;font-size:19px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-  .pts{font-family:var(--display);font-weight:700;font-size:24px;color:var(--accent)}
-  .team{font-family:var(--display);font-weight:700;font-size:30px;letter-spacing:.03em}
-  .who{font-size:15px;font-weight:500}
-  .who small{display:block;font-size:11px;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;margin-top:2px}
-  .placeholder{color:var(--dim);font-size:13px}
+  .stage{background:var(--surface);border:1px solid var(--line-hi);border-radius:16px;padding:28px 32px}
+  .stage-head{display:flex;align-items:baseline;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:22px}
+  .step{font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+  .respins{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+  .respins b{color:var(--accent);font-weight:600}
+  .reveal{display:flex;align-items:center;gap:22px;flex-wrap:wrap;margin-bottom:20px}
+  .teambox{font-family:var(--display);font-weight:700;font-size:52px;letter-spacing:.03em;line-height:1}
+  .whobox .nm{font-family:var(--display);font-weight:700;font-size:32px;letter-spacing:.02em;line-height:1.1}
+  .whobox .sub{font-size:12px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-top:3px}
+  .prompt{color:var(--muted);font-size:14px}
 
-  .opts{display:flex;flex-direction:column;gap:6px;margin-top:auto}
-  .opt{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--text);cursor:pointer;text-transform:none;letter-spacing:0;font-size:13px;font-weight:400}
-  .opt:hover:not(:disabled){border-color:var(--accent);color:var(--text)}
-  .opt .part{font-weight:500}
-  .opt .stat{font-size:11px;color:var(--dim)}
-  .opt .val{font-family:var(--display);font-weight:700;font-size:17px;color:var(--muted)}
-  .opt.picked{border-color:var(--accent);background:rgba(200,255,51,.06)}
-  .opt.picked .val{color:var(--accent)}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+  .opt{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:14px 16px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--text);cursor:pointer;text-transform:none;letter-spacing:0;font-size:14px;font-weight:400;text-align:left}
+  .opt:hover:not(:disabled){border-color:var(--accent)}
+  .opt .part{font-family:var(--display);font-weight:700;font-size:21px;letter-spacing:.02em}
+  .opt .stat{font-size:11px;color:var(--dim);letter-spacing:.08em;text-transform:uppercase}
+  .opt .val{font-family:var(--display);font-weight:700;font-size:19px;color:var(--accent);margin-top:5px}
 
-  .row{display:flex;gap:8px;flex-wrap:wrap}
+  .positions{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+  .pos{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  .pos.active{border-color:var(--accent)}
+  .pos-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px}
+  .pos-name{font-family:var(--display);font-weight:700;font-size:20px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .pos-total{font-family:var(--display);font-weight:700;font-size:24px;color:var(--accent)}
+  .part-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--line);font-size:13px}
+  .part-row .lbl{color:var(--dim);font-size:11px;letter-spacing:.1em;text-transform:uppercase;min-width:74px}
+  .part-row .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .part-row .pt{font-family:var(--display);font-weight:700;font-size:16px}
+  .part-row.empty .nm{color:var(--dim)}
+
   .total{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:14px}
   .total .n{font-family:var(--display);font-weight:700;font-size:44px;color:var(--accent);line-height:1}
-
   table{width:100%;border-collapse:collapse;font-size:14px}
   th{font-size:11px;font-weight:400;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);text-align:left;padding-bottom:9px}
   td{padding:11px 0;border-top:1px solid var(--line)}
@@ -85,25 +90,23 @@
 
 <nav><div class="wrap nav-inner">
   <div class="logo">Wheel<span>house</span></div>
-  <div class="nav-links">
-    <a href="/" class="on">Play</a>
-    <a href="/live.html">Live</a>
-  </div>
+  <div class="nav-links"><a href="/" class="on">Play</a><a href="/live.html">Live</a></div>
 </div></nav>
 
 <div class="wrap">
   <section>
     <div class="eyebrow"><span id="weekLabel">Loading</span></div>
     <h2 id="headline">Build your guy</h2>
+
     <div id="start" class="start" style="display:none">
-      <div class="row" style="align-items:center">
+      <div class="row">
         <input id="owner" placeholder="your name" autocomplete="off">
         <button class="primary" id="startBtn">Start this week</button>
         <span class="lock" id="lockNote"></span>
       </div>
       <div class="split">
         <div class="eyebrow" style="margin-bottom:12px">Or play a week from the past</div>
-        <div class="row" style="align-items:center">
+        <div class="row">
           <select id="season"></select>
           <select id="week"></select>
           <button id="archiveBtn">Play it</button>
@@ -111,26 +114,29 @@
         </div>
       </div>
     </div>
-    <div id="board" class="board" style="display:none"></div>
-    <div id="total" class="total" style="display:none">
-      <div>
-        <div class="eyebrow" style="margin:0">Your score</div>
-        <div style="font-size:13px;color:var(--dim)">Updates as games play</div>
-      </div>
-      <div class="n" id="totalN">0</div>
-    </div>
+
+    <div id="stage" class="stage" style="display:none"></div>
     <div class="err" id="err"></div>
   </section>
 
+  <section id="rosterSection" style="display:none">
+    <div class="eyebrow">Your roster</div>
+    <h2>Assembled so far</h2>
+    <div id="positions" class="positions"></div>
+    <div class="total">
+      <div><div class="eyebrow" style="margin:0">Total</div>
+        <div style="font-size:13px;color:var(--dim)">Updates as games play</div></div>
+      <div class="n" id="totalN">0</div>
+    </div>
+  </section>
+
   <section id="lbSection" style="display:none">
-    <div class="eyebrow">This week</div>
-    <h2>Leaderboard</h2>
+    <div class="eyebrow">This week</div><h2>Leaderboard</h2>
     <div class="card"><table id="lb"></table></div>
   </section>
 
   <section id="histSection" style="display:none">
-    <div class="eyebrow">Your season</div>
-    <h2>Past weeks</h2>
+    <div class="eyebrow">Your season</div><h2>Past weeks</h2>
     <div class="card"><table id="hist"></table></div>
   </section>
 </div>
@@ -150,82 +156,113 @@ async function api(method, path, params) {
   return body;
 }
 
-function showError(e) {
-  document.getElementById("err").textContent = e ? e.message : "";
-}
+const showError = e => document.getElementById("err").textContent = e ? e.message : "";
+const pickAt = i => entry.positions.flatMap(p => p.picks).find(p => p.pickIndex === i);
+const posLabel = (slot, index) => slot === "FLEX" ? "Flex " + (index - 1) : slot;
+// Split only at lowercase-to-uppercase boundaries so "passingYards" becomes "passing yards"
+// while an acronym stays intact.
+const statLabel = s => s.split(".")[1].replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
 
 async function loadContest() {
   const c = await api("GET", "/contest");
   document.getElementById("weekLabel").textContent = c.label;
   if (c.locked) document.getElementById("lockNote").textContent = "week locked";
-  return c;
 }
 
 async function loadArchiveOptions() {
   const a = await api("GET", "/archive");
-  const seasons = [];
-  for (let y = a.latest; y >= a.earliest; y--) seasons.push(y);
-  document.getElementById("season").innerHTML =
-    seasons.map(y => `<option value="${y}">${y}</option>`).join("");
+  const years = [];
+  for (let y = a.latest; y >= a.earliest; y--) years.push(y);
+  document.getElementById("season").innerHTML = years.map(y => `<option>${y}</option>`).join("");
   const weeks = [];
   for (let w = 1; w <= a.weeks; w++) weeks.push(w);
   document.getElementById("week").innerHTML =
     weeks.map(w => `<option value="${w}">Week ${w}</option>`).join("");
 }
 
-function slotCard(s) {
-  const p = s.player;
-  const complete = !!s.chosen;
+/* one pick at a time: spin a team, spin a player, decide what they are for */
+function renderStage() {
+  const host = document.getElementById("stage");
 
-  let identity;
-  if (!s.team) {
-    identity = `<div class="placeholder">Spin for a team to begin.</div>`;
+  if (entry.activePick == null) {
+    host.innerHTML = `<div class="stage-head"><span class="step">Roster complete</span></div>
+      <div class="prompt">All twelve picks are in. Scores update as games play.</div>`;
+    return;
+  }
+
+  const pick = pickAt(entry.activePick);
+  const p = pick.player;
+  let reveal, controls, options = "";
+
+  if (!pick.team) {
+    reveal = `<div class="prompt">Spin to see which team you are drawing from.</div>`;
+    controls = `<button class="primary" data-act="team">Spin team</button>`;
   } else if (!p) {
-    identity = `<div><div class="team">${esc(s.team)}</div>
-      <div class="placeholder">Now spin for a player.</div></div>`;
+    reveal = `<div class="reveal"><div class="teambox">${esc(pick.team)}</div>
+      <div class="prompt">Now spin for a ${pick.slot === "FLEX" ? "receiver" : esc(pick.slot)}.</div></div>`;
+    controls = `<button class="primary" data-act="player">Spin player</button>
+      <button class="ghost" data-act="team" data-respin="1" ${entry.teamRespins > 0 ? "" : "disabled"}>Respin team</button>`;
   } else {
-    identity = `<div><div class="team">${esc(s.team)}</div>
-      <div class="who">${esc(p.name)}<small>${esc(p.position)}</small></div></div>`;
+    reveal = `<div class="reveal">
+        <div class="teambox">${esc(pick.team)}</div>
+        <div class="whobox"><div class="nm">${esc(p.name)}</div>
+          <div class="sub">${esc(p.position)} &middot; ${esc(p.team)}</div></div>
+      </div>
+      <div class="prompt" style="margin-bottom:14px">What are you taking from them?${
+        pick.options.length === 1 ? " Only one part left in this position." : ""}</div>`;
+    controls = `<button class="ghost" data-act="player" data-respin="1" ${entry.playerRespins > 0 ? "" : "disabled"}>Respin player</button>`;
+    options = `<div class="opts">` + pick.options.map(o => `
+      <button class="opt" data-act="choose" data-opt="${esc(o.key)}">
+        <span class="part">${esc(o.part)}</span>
+        <span class="stat">${esc(statLabel(o.stat))}</span>
+        <span class="val">${o.points == null ? "&middot;" : fmt(o.points)}</span>
+      </button>`).join("") + `</div>`;
   }
 
-  let controls = "";
-  if (!s.team) {
-    controls = `<button class="primary" data-act="team" data-i="${s.index}">Spin team</button>`;
-  } else if (!p) {
-    controls = `<button class="primary" data-act="player" data-i="${s.index}">Spin player</button>
-      <button class="ghost" data-act="team" data-i="${s.index}" data-respin="1"
-        ${s.teamRespinAvailable ? "" : "disabled"}>Respin team</button>`;
-  } else if (!complete) {
-    controls = `<button class="ghost" data-act="player" data-i="${s.index}" data-respin="1"
-        ${s.playerRespinAvailable ? "" : "disabled"}>Respin player</button>`;
-  }
-
-  const opts = p ? s.options.map(o => `
-    <button class="opt ${s.chosen === o.key ? "picked" : ""}"
-            data-act="choose" data-i="${s.index}" data-opt="${esc(o.key)}"
-            ${complete ? "disabled" : ""}>
-      <span><span class="part">${esc(o.part)}</span><br><span class="stat">${esc(o.stat.split(".")[1])}</span></span>
-      <span class="val">${o.points == null ? "&middot;" : fmt(o.points)}</span>
-    </button>`).join("") : "";
-
-  const earned = complete ? (s.options.find(o => o.key === s.chosen) || {}).points : null;
-
-  return `<div class="slot ${complete ? "done" : ""}">
-    <div class="slot-head">
-      <span class="pos">${esc(s.slot)}</span>
-      <span class="pts">${earned == null ? "" : fmt(earned)}</span>
+  host.innerHTML = `
+    <div class="stage-head">
+      <span class="step">Pick ${entry.activePick + 1} of ${entry.totalPicks} &middot; ${esc(posLabel(pick.slot, pick.position))}</span>
+      <span class="respins">respins &nbsp; team <b>${entry.teamRespins}</b> &nbsp; player <b>${entry.playerRespins}</b></span>
     </div>
-    ${identity}
-    <div class="row">${controls}</div>
-    <div class="opts">${opts}</div>
-  </div>`;
+    ${reveal}
+    <div class="row" style="margin-bottom:${options ? "18px" : "0"}">${controls}</div>
+    ${options}`;
+
+  host.querySelectorAll("[data-act]").forEach(el =>
+    el.addEventListener("click", () => act(el.dataset, entry.activePick)));
+}
+
+function renderRoster() {
+  document.getElementById("positions").innerHTML = entry.positions.map(pos => {
+    const active = entry.activePick != null
+      && pos.picks.some(p => p.pickIndex === entry.activePick);
+
+    const rows = pos.picks.map(p => {
+      if (!p.chosen) {
+        return `<div class="part-row empty"><span class="lbl">&mdash;</span>
+          <span class="nm">${p.player ? esc(p.player.name) : "not drafted"}</span>
+          <span class="pt" style="color:var(--dim)">&middot;</span></div>`;
+      }
+      const part = (p.options.find(o => o.key === p.chosen) || {}).part || p.chosen;
+      return `<div class="part-row"><span class="lbl">${esc(part)}</span>
+        <span class="nm">${esc(p.player.name)}</span>
+        <span class="pt">${fmt(p.points)}</span></div>`;
+    }).join("");
+
+    return `<div class="pos ${active ? "active" : ""}">
+      <div class="pos-head"><span class="pos-name">${esc(posLabel(pos.slot, pos.index))}</span>
+        <span class="pos-total">${fmt(pos.total)}</span></div>${rows}</div>`;
+  }).join("");
+
+  document.getElementById("totalN").textContent = fmt(entry.total);
 }
 
 function render() {
-  document.getElementById("start").style.display = entry ? "none" : "flex";
-  document.getElementById("board").style.display = entry ? "grid" : "none";
-  document.getElementById("total").style.display = entry ? "flex" : "none";
-  if (!entry) return;
+  const building = !!entry;
+  document.getElementById("start").style.display = building ? "none" : "block";
+  document.getElementById("stage").style.display = building ? "block" : "none";
+  document.getElementById("rosterSection").style.display = building ? "block" : "none";
+  if (!building) return;
 
   const c = entry.contest || {};
   document.getElementById("weekLabel").textContent = c.label || "";
@@ -233,11 +270,7 @@ function render() {
     esc(entry.owner) + "'s roster"
     + (c.archive ? '<span class="badge">historic</span>' : "")
     + '<button class="backlink" id="leaveBtn">start over</button>';
-  document.getElementById("board").innerHTML = entry.slots.map(slotCard).join("");
-  document.getElementById("totalN").textContent = fmt(entry.total);
 
-  document.querySelectorAll("[data-act]").forEach(el =>
-    el.addEventListener("click", () => act(el.dataset)));
   document.getElementById("leaveBtn").addEventListener("click", () => {
     entry = null;
     localStorage.removeItem("wh.entry");
@@ -245,14 +278,18 @@ function render() {
     loadContest();
     render();
   });
+
+  renderStage();
+  renderRoster();
 }
 
-async function act(d) {
+async function act(d, index) {
   showError(null);
   try {
-    if (d.act === "team")   entry = await api("POST", `/${entry.entryId}/slot/${d.i}/team`,   d.respin ? { respin: true } : null);
-    if (d.act === "player") entry = await api("POST", `/${entry.entryId}/slot/${d.i}/player`, d.respin ? { respin: true } : null);
-    if (d.act === "choose") entry = await api("POST", `/${entry.entryId}/slot/${d.i}/choose`, { option: d.opt });
+    const respin = d.respin ? { respin: true } : null;
+    if (d.act === "team")   entry = await api("POST", `/${entry.entryId}/pick/${index}/team`, respin);
+    if (d.act === "player") entry = await api("POST", `/${entry.entryId}/pick/${index}/player`, respin);
+    if (d.act === "choose") entry = await api("POST", `/${entry.entryId}/pick/${index}/choose`, { option: d.opt });
     render();
     refreshTables();
   } catch (e) { showError(e); }
@@ -265,13 +302,11 @@ async function refreshTables() {
       document.getElementById("lbSection").style.display = "block";
       document.getElementById("lb").innerHTML =
         `<tr><th style="width:44px">#</th><th>Player</th><th style="text-align:right">Score</th></tr>` +
-        lb.map((r, i) => `<tr>
-            <td style="color:var(--dim)">${i + 1}</td>
-            <td>${esc(r.owner)}${r.complete ? "" : ' <span style="color:var(--dim);font-size:12px">building</span>'}</td>
-            <td class="n">${fmt(r.total)}</td>
-          </tr>`).join("");
+        lb.map((r, i) => `<tr><td style="color:var(--dim)">${i + 1}</td>
+          <td>${esc(r.owner)}${r.complete ? "" : ' <span style="color:var(--dim);font-size:12px">building</span>'}</td>
+          <td class="n">${fmt(r.total)}</td></tr>`).join("");
     }
-  } catch (e) { /* leaderboard is not worth surfacing an error for */ }
+  } catch (e) { /* not worth surfacing */ }
 
   if (!owner) return;
   try {
@@ -293,8 +328,8 @@ async function start(params) {
   localStorage.setItem("wh.owner", name);
   try {
     entry = await api("POST", "/open", Object.assign({ owner: name }, params || {}));
-    // Remember the entry, not just the name. Resuming by name alone always reopens the
-    // live week, which silently throws you out of whatever archive week you were playing.
+    // Remember the entry, not just the name. Resuming by name alone always reopens the live
+    // week, which silently throws you out of whatever archive week you were playing.
     localStorage.setItem("wh.entry", entry.entryId);
     render();
     refreshTables();
@@ -305,14 +340,10 @@ async function start(params) {
 async function startArchive() {
   const btn = document.getElementById("archiveBtn");
   const label = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = "Loading";
-  await start({
-    season: document.getElementById("season").value,
-    week: document.getElementById("week").value
-  });
-  btn.disabled = false;
-  btn.textContent = label;
+  btn.disabled = true; btn.textContent = "Loading";
+  await start({ season: document.getElementById("season").value,
+                week: document.getElementById("week").value });
+  btn.disabled = false; btn.textContent = label;
 }
 
 (async function init() {
@@ -321,13 +352,16 @@ async function startArchive() {
   document.getElementById("startBtn").addEventListener("click", () => start());
   document.getElementById("archiveBtn").addEventListener("click", startArchive);
   document.getElementById("owner").addEventListener("keydown", e => { if (e.key === "Enter") start(); });
+
   if (owner) document.getElementById("owner").value = owner;
   const saved = localStorage.getItem("wh.entry");
   if (saved) {
-    try { entry = await api("GET", "/" + saved); } catch (e) { localStorage.removeItem("wh.entry"); }
+    try { entry = await api("GET", "/" + saved); }
+    catch (e) { localStorage.removeItem("wh.entry"); }
   }
   render();
   refreshTables();
+
   // Scores move while games are on; the board should not need a manual refresh.
   setInterval(async () => {
     if (!entry) return;

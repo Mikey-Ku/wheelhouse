@@ -1,7 +1,7 @@
 package dev.mikeyku.wheelhouse.web;
 
-import dev.mikeyku.wheelhouse.contest.Contest;
 import dev.mikeyku.wheelhouse.contest.ArchiveService;
+import dev.mikeyku.wheelhouse.contest.Contest;
 import dev.mikeyku.wheelhouse.contest.ContestService;
 import dev.mikeyku.wheelhouse.entry.EntryRecord;
 import dev.mikeyku.wheelhouse.entry.EntryService;
@@ -21,12 +21,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** The whole build-and-score flow. */
+/** The build-and-score flow: twelve picks across four composite positions. */
 @RestController
 @RequestMapping("/api/play")
 public class PlayController {
@@ -51,15 +52,14 @@ public class PlayController {
         return describe(contests.current());
     }
 
-    private Map<String, Object> describe(Contest c) {
+    /** Which seasons the archive can reach. */
+    @GetMapping("/archive")
+    public Map<String, Object> archiveRange() {
         return Map.of(
-                "id", c.id(),
-                "label", c.label(),
-                "season", c.season(),
-                "week", c.week(),
-                "archive", c.archive(),
-                "lockAt", c.lockAt() == null ? "" : c.lockAt().toString(),
-                "locked", c.locked(Instant.now()));
+                "earliest", ArchiveService.EARLIEST_SEASON,
+                "latest", contests.current().season() - 1,
+                "weeks", 18,
+                "projectionsFrom", 2019);
     }
 
     /**
@@ -76,34 +76,24 @@ public class PlayController {
         return view(entries.openEntry(owner, contest));
     }
 
-    /** Which seasons the archive can reach. */
-    @GetMapping("/archive")
-    public Map<String, Object> archiveRange() {
-        return Map.of(
-                "earliest", ArchiveService.EARLIEST_SEASON,
-                "latest", contests.current().season() - 1,
-                "weeks", 18,
-                "projectionsFrom", 2019);
-    }
-
     @GetMapping("/{entryId}")
     public Map<String, Object> get(@PathVariable String entryId) {
         return view(entries.byId(entryId));
     }
 
-    @PostMapping("/{entryId}/slot/{index}/team")
+    @PostMapping("/{entryId}/pick/{index}/team")
     public Map<String, Object> spinTeam(@PathVariable String entryId, @PathVariable int index,
                                         @RequestParam(defaultValue = "false") boolean respin) {
         return view(entries.spinTeam(entryId, index, respin));
     }
 
-    @PostMapping("/{entryId}/slot/{index}/player")
+    @PostMapping("/{entryId}/pick/{index}/player")
     public Map<String, Object> spinPlayer(@PathVariable String entryId, @PathVariable int index,
                                           @RequestParam(defaultValue = "false") boolean respin) {
         return view(entries.spinPlayer(entryId, index, respin));
     }
 
-    @PostMapping("/{entryId}/slot/{index}/choose")
+    @PostMapping("/{entryId}/pick/{index}/choose")
     public Map<String, Object> choose(@PathVariable String entryId, @PathVariable int index,
                                       @RequestParam String option) {
         return view(entries.choose(entryId, index, option));
@@ -123,6 +113,17 @@ public class PlayController {
                 .toList();
     }
 
+    private Map<String, Object> describe(Contest c) {
+        return Map.of(
+                "id", c.id(),
+                "label", c.label(),
+                "season", c.season(),
+                "week", c.week(),
+                "archive", c.archive(),
+                "lockAt", c.lockAt() == null ? "" : c.lockAt().toString(),
+                "locked", c.locked(Instant.now()));
+    }
+
     private Map<String, Object> summary(EntryRecord entry) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("entryId", entry.id());
@@ -137,47 +138,28 @@ public class PlayController {
         if (entry == null) {
             return Map.of("error", "no such entry");
         }
-        Roster roster = entries.asRoster(entry);
-        ScoringService.ScoredRoster scored = scoring.score(roster);
+        ScoringService.ScoredRoster scored = scoring.score(entries.asRoster(entry));
+        EntryRecord.PickRecord active = entry.activePick();
 
-        Map<String, Double> pointsByKey = new LinkedHashMap<>();
-        scored.picks().forEach(p -> pointsByKey.put(p.slot() + "|" + p.playerId(), p.points()));
+        List<Map<String, Object>> positions = new ArrayList<>();
+        for (int p = 0; p < Roster.POSITIONS.size(); p++) {
+            List<EntryRecord.PickRecord> inPosition = entry.picksInPosition(p);
+            List<Map<String, Object>> picks = inPosition.stream()
+                    .map(pick -> describePick(entry, pick))
+                    .toList();
 
-        List<Map<String, Object>> slots = entry.slots().stream().map(s -> {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("index", s.slotIndex());
-            m.put("slot", s.slot().name());
-            m.put("team", s.team());
-            m.put("teamRespinAvailable", s.team() != null && !s.teamRespun());
-            m.put("playerRespinAvailable", s.playerId() != null && !s.playerRespun());
-            m.put("chosen", s.option());
+            double positionTotal = picks.stream()
+                    .mapToDouble(m -> m.get("points") == null ? 0 : (double) m.get("points"))
+                    .sum();
 
-            Player player = s.playerId() == null ? null : catalog.byId(s.playerId());
-            if (player != null) {
-                m.put("player", Map.of(
-                        "id", player.id(),
-                        "name", player.name() == null ? "" : player.name(),
-                        "position", player.position() == null ? "" : player.position(),
-                        "team", player.team() == null ? "" : player.team()));
-            }
-
-            // Every option priced live, so after kickoff you can see the road not taken.
-            m.put("options", s.slot().options().stream().map(o -> {
-                Map<String, Object> om = new LinkedHashMap<>();
-                om.put("key", o.key());
-                om.put("part", o.label());
-                om.put("stat", o.category() + "." + o.stat());
-                if (player != null) {
-                    ScoringService.ScoredPick probe = scoring.score(new Roster(
-                            "probe", entry.contestId(), "", List.of(
-                            new Roster.Pick(s.slot(), player.id(), o.key())))).picks().get(0);
-                    om.put("raw", probe.raw());
-                    om.put("points", probe.points());
-                }
-                return om;
-            }).toList());
-            return m;
-        }).toList();
+            Map<String, Object> pos = new LinkedHashMap<>();
+            pos.put("index", p);
+            pos.put("slot", Roster.POSITIONS.get(p).name());
+            pos.put("total", round(positionTotal));
+            pos.put("complete", inPosition.stream().allMatch(EntryRecord.PickRecord::filled));
+            pos.put("picks", picks);
+            positions.add(pos);
+        }
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("entryId", entry.id());
@@ -185,8 +167,68 @@ public class PlayController {
         out.put("contest", describe(contests.byId(entry.contestId())));
         out.put("complete", entry.complete());
         out.put("total", scored.total());
-        out.put("slots", slots);
+        out.put("teamRespins", entry.teamRespins());
+        out.put("playerRespins", entry.playerRespins());
+        out.put("activePick", active == null ? null : active.pickIndex());
+        out.put("totalPicks", Roster.TOTAL_PICKS);
+        out.put("positions", positions);
         return out;
+    }
+
+    private Map<String, Object> describePick(EntryRecord entry, EntryRecord.PickRecord pick) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("pickIndex", pick.pickIndex());
+        m.put("position", pick.position());
+        m.put("slot", pick.slot().name());
+        m.put("team", pick.team());
+        m.put("chosen", pick.option());
+
+        Player player = pick.playerId() == null ? null : catalog.byId(pick.playerId());
+        if (player != null) {
+            m.put("player", Map.of(
+                    "id", player.id(),
+                    "name", player.name() == null ? "" : player.name(),
+                    "position", player.position() == null ? "" : player.position(),
+                    "team", player.team() == null ? "" : player.team()));
+        }
+
+        // Only the parts still open in this position, each priced against real results so the
+        // road not taken is visible once games have played.
+        List<Map<String, Object>> options = new ArrayList<>();
+        List<Slot.StatOption> offer = pick.option() == null
+                ? entries.remainingOptions(entry, pick.pickIndex())
+                : pick.slot().options();
+
+        for (Slot.StatOption o : offer) {
+            Map<String, Object> om = new LinkedHashMap<>();
+            om.put("key", o.key());
+            om.put("part", o.label());
+            om.put("stat", o.category() + "." + o.stat());
+            if (player != null) {
+                ScoringService.ScoredPick probe = scoring.score(new Roster(
+                        "probe", entry.contestId(), "",
+                        List.of(new Roster.Pick(pick.slot(), player.id(), o.key()))))
+                        .picks().get(0);
+                om.put("raw", probe.raw());
+                om.put("points", probe.points());
+            }
+            options.add(om);
+        }
+        m.put("options", options);
+
+        Double earned = null;
+        if (pick.option() != null) {
+            earned = options.stream()
+                    .filter(o -> pick.option().equalsIgnoreCase((String) o.get("key")))
+                    .map(o -> (Double) o.get("points"))
+                    .findFirst().orElse(null);
+        }
+        m.put("points", earned);
+        return m;
+    }
+
+    private double round(double v) {
+        return Math.round(v * 100.0) / 100.0;
     }
 
     @ExceptionHandler({IllegalStateException.class, IllegalArgumentException.class})
