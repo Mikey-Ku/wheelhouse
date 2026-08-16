@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wheelhouse</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#08090C; --surface:#101319; --surface-hi:#161A22; --line:#21262F; --line-hi:#2E3540;
+    --text:#F2F4F7; --muted:#8A93A3; --dim:#5A6373; --accent:#C8FF33; --accent-ink:#1B2400;
+    --live:#FF4D4D;
+    --display:"Barlow Condensed","Helvetica Neue",sans-serif;
+    --sans:"Inter",-apple-system,BlinkMacSystemFont,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;padding-bottom:80px}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+
+  nav{border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10;background:rgba(8,9,12,.92);backdrop-filter:blur(12px)}
+  .nav-inner{display:flex;align-items:center;gap:20px;height:62px}
+  .logo{font-family:var(--display);font-weight:700;font-size:24px;letter-spacing:.04em;text-transform:uppercase}
+  .logo span{color:var(--accent)}
+  .nav-links{display:flex;gap:26px;margin-left:auto}
+  .nav-links a{font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-decoration:none;padding:6px 0;border-bottom:2px solid transparent}
+  .nav-links a.on{color:var(--text);border-bottom-color:var(--accent)}
+
+  .eyebrow{font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:9px}
+  h2{font-family:var(--display);font-weight:700;font-size:30px;letter-spacing:.02em;text-transform:uppercase;margin-bottom:18px}
+  section{margin-top:42px}
+
+  button{font-family:var(--sans);font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:10px 16px;border-radius:8px;border:1px solid var(--line-hi);background:transparent;color:var(--text);cursor:pointer;transition:.12s}
+  button:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+  button:disabled{opacity:.35;cursor:not-allowed}
+  button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+  button.primary:hover:not(:disabled){opacity:.88;color:var(--accent-ink)}
+  button.ghost{padding:6px 11px;font-size:11px;color:var(--dim);border-color:var(--line)}
+  input{font-family:var(--sans);font-size:15px;padding:11px 14px;border-radius:8px;border:1px solid var(--line-hi);background:var(--surface);color:var(--text);min-width:230px}
+  input:focus{outline:none;border-color:var(--accent)}
+
+  .start{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:28px 34px;display:flex;flex-direction:column;gap:0}
+  .split{margin-top:24px;padding-top:22px;border-top:1px solid var(--line)}
+  select{font-family:var(--sans);font-size:14px;padding:10px 12px;border-radius:8px;border:1px solid var(--line-hi);background:var(--surface-hi);color:var(--text)}
+  select:focus{outline:none;border-color:var(--accent)}
+  .badge{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:3px 10px;margin-left:10px}
+  .backlink{background:none;border:none;color:var(--dim);padding:0;font-size:11px;letter-spacing:.1em;text-decoration:underline;margin-left:12px}
+  .backlink:hover{color:var(--accent)}
+
+  .board{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+  .slot{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:12px;min-height:250px}
+  .slot.done{border-color:var(--line-hi)}
+  .slot-head{display:flex;align-items:center;justify-content:space-between}
+  .pos{font-family:var(--display);font-weight:700;font-size:19px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .pts{font-family:var(--display);font-weight:700;font-size:24px;color:var(--accent)}
+  .team{font-family:var(--display);font-weight:700;font-size:30px;letter-spacing:.03em}
+  .who{font-size:15px;font-weight:500}
+  .who small{display:block;font-size:11px;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;margin-top:2px}
+  .placeholder{color:var(--dim);font-size:13px}
+
+  .opts{display:flex;flex-direction:column;gap:6px;margin-top:auto}
+  .opt{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--text);cursor:pointer;text-transform:none;letter-spacing:0;font-size:13px;font-weight:400}
+  .opt:hover:not(:disabled){border-color:var(--accent);color:var(--text)}
+  .opt .part{font-weight:500}
+  .opt .stat{font-size:11px;color:var(--dim)}
+  .opt .val{font-family:var(--display);font-weight:700;font-size:17px;color:var(--muted)}
+  .opt.picked{border-color:var(--accent);background:rgba(200,255,51,.06)}
+  .opt.picked .val{color:var(--accent)}
+
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  .total{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:14px}
+  .total .n{font-family:var(--display);font-weight:700;font-size:44px;color:var(--accent);line-height:1}
+
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th{font-size:11px;font-weight:400;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);text-align:left;padding-bottom:9px}
+  td{padding:11px 0;border-top:1px solid var(--line)}
+  td.n{text-align:right;font-family:var(--display);font-weight:700;font-size:19px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 22px}
+  .err{color:var(--live);font-size:13px;min-height:18px;margin-top:10px}
+  .lock{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--live)}
+</style>
+</head>
+<body>
+
+<nav><div class="wrap nav-inner">
+  <div class="logo">Wheel<span>house</span></div>
+  <div class="nav-links">
+    <a href="/" class="on">Play</a>
+    <a href="/live.html">Live</a>
+  </div>
+</div></nav>
+
+<div class="wrap">
+  <section>
+    <div class="eyebrow"><span id="weekLabel">Loading</span></div>
+    <h2 id="headline">Build your guy</h2>
+    <div id="start" class="start" style="display:none">
+      <div class="row" style="align-items:center">
+        <input id="owner" placeholder="your name" autocomplete="off">
+        <button class="primary" id="startBtn">Start this week</button>
+        <span class="lock" id="lockNote"></span>
+      </div>
+      <div class="split">
+        <div class="eyebrow" style="margin-bottom:12px">Or play a week from the past</div>
+        <div class="row" style="align-items:center">
+          <select id="season"></select>
+          <select id="week"></select>
+          <button id="archiveBtn">Play it</button>
+          <span style="font-size:12px;color:var(--dim)">Results are already known, so this is a sandbox, not a ranked week.</span>
+        </div>
+      </div>
+    </div>
+    <div id="board" class="board" style="display:none"></div>
+    <div id="total" class="total" style="display:none">
+      <div>
+        <div class="eyebrow" style="margin:0">Your score</div>
+        <div style="font-size:13px;color:var(--dim)">Updates as games play</div>
+      </div>
+      <div class="n" id="totalN">0</div>
+    </div>
+    <div class="err" id="err"></div>
+  </section>
+
+  <section id="lbSection" style="display:none">
+    <div class="eyebrow">This week</div>
+    <h2>Leaderboard</h2>
+    <div class="card"><table id="lb"></table></div>
+  </section>
+
+  <section id="histSection" style="display:none">
+    <div class="eyebrow">Your season</div>
+    <h2>Past weeks</h2>
+    <div class="card"><table id="hist"></table></div>
+  </section>
+</div>
+
+<script>
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt = n => n == null ? "0" : (Math.round(n * 100) / 100).toString();
+
+let entry = null;
+let owner = localStorage.getItem("wh.owner") || "";
+
+async function api(method, path, params) {
+  const qs = params ? "?" + new URLSearchParams(params) : "";
+  const r = await fetch("/api/play" + path + qs, { method });
+  const body = await r.json();
+  if (!r.ok || body.error) throw new Error(body.error || "request failed");
+  return body;
+}
+
+function showError(e) {
+  document.getElementById("err").textContent = e ? e.message : "";
+}
+
+async function loadContest() {
+  const c = await api("GET", "/contest");
+  document.getElementById("weekLabel").textContent = c.label;
+  if (c.locked) document.getElementById("lockNote").textContent = "week locked";
+  return c;
+}
+
+async function loadArchiveOptions() {
+  const a = await api("GET", "/archive");
+  const seasons = [];
+  for (let y = a.latest; y >= a.earliest; y--) seasons.push(y);
+  document.getElementById("season").innerHTML =
+    seasons.map(y => `<option value="${y}">${y}</option>`).join("");
+  const weeks = [];
+  for (let w = 1; w <= a.weeks; w++) weeks.push(w);
+  document.getElementById("week").innerHTML =
+    weeks.map(w => `<option value="${w}">Week ${w}</option>`).join("");
+}
+
+function slotCard(s) {
+  const p = s.player;
+  const complete = !!s.chosen;
+
+  let identity;
+  if (!s.team) {
+    identity = `<div class="placeholder">Spin for a team to begin.</div>`;
+  } else if (!p) {
+    identity = `<div><div class="team">${esc(s.team)}</div>
+      <div class="placeholder">Now spin for a player.</div></div>`;
+  } else {
+    identity = `<div><div class="team">${esc(s.team)}</div>
+      <div class="who">${esc(p.name)}<small>${esc(p.position)}</small></div></div>`;
+  }
+
+  let controls = "";
+  if (!s.team) {
+    controls = `<button class="primary" data-act="team" data-i="${s.index}">Spin team</button>`;
+  } else if (!p) {
+    controls = `<button class="primary" data-act="player" data-i="${s.index}">Spin player</button>
+      <button class="ghost" data-act="team" data-i="${s.index}" data-respin="1"
+        ${s.teamRespinAvailable ? "" : "disabled"}>Respin team</button>`;
+  } else if (!complete) {
+    controls = `<button class="ghost" data-act="player" data-i="${s.index}" data-respin="1"
+        ${s.playerRespinAvailable ? "" : "disabled"}>Respin player</button>`;
+  }
+
+  const opts = p ? s.options.map(o => `
+    <button class="opt ${s.chosen === o.key ? "picked" : ""}"
+            data-act="choose" data-i="${s.index}" data-opt="${esc(o.key)}"
+            ${complete ? "disabled" : ""}>
+      <span><span class="part">${esc(o.part)}</span><br><span class="stat">${esc(o.stat.split(".")[1])}</span></span>
+      <span class="val">${o.points == null ? "&middot;" : fmt(o.points)}</span>
+    </button>`).join("") : "";
+
+  const earned = complete ? (s.options.find(o => o.key === s.chosen) || {}).points : null;
+
+  return `<div class="slot ${complete ? "done" : ""}">
+    <div class="slot-head">
+      <span class="pos">${esc(s.slot)}</span>
+      <span class="pts">${earned == null ? "" : fmt(earned)}</span>
+    </div>
+    ${identity}
+    <div class="row">${controls}</div>
+    <div class="opts">${opts}</div>
+  </div>`;
+}
+
+function render() {
+  document.getElementById("start").style.display = entry ? "none" : "flex";
+  document.getElementById("board").style.display = entry ? "grid" : "none";
+  document.getElementById("total").style.display = entry ? "flex" : "none";
+  if (!entry) return;
+
+  const c = entry.contest || {};
+  document.getElementById("weekLabel").textContent = c.label || "";
+  document.getElementById("headline").innerHTML =
+    esc(entry.owner) + "'s roster"
+    + (c.archive ? '<span class="badge">historic</span>' : "")
+    + '<button class="backlink" id="leaveBtn">start over</button>';
+  document.getElementById("board").innerHTML = entry.slots.map(slotCard).join("");
+  document.getElementById("totalN").textContent = fmt(entry.total);
+
+  document.querySelectorAll("[data-act]").forEach(el =>
+    el.addEventListener("click", () => act(el.dataset)));
+  document.getElementById("leaveBtn").addEventListener("click", () => {
+    entry = null;
+    localStorage.removeItem("wh.entry");
+    document.getElementById("histSection").style.display = "none";
+    loadContest();
+    render();
+  });
+}
+
+async function act(d) {
+  showError(null);
+  try {
+    if (d.act === "team")   entry = await api("POST", `/${entry.entryId}/slot/${d.i}/team`,   d.respin ? { respin: true } : null);
+    if (d.act === "player") entry = await api("POST", `/${entry.entryId}/slot/${d.i}/player`, d.respin ? { respin: true } : null);
+    if (d.act === "choose") entry = await api("POST", `/${entry.entryId}/slot/${d.i}/choose`, { option: d.opt });
+    render();
+    refreshTables();
+  } catch (e) { showError(e); }
+}
+
+async function refreshTables() {
+  try {
+    const lb = await api("GET", "/leaderboard", entry ? { contestId: entry.contest.id } : null);
+    if (lb.length) {
+      document.getElementById("lbSection").style.display = "block";
+      document.getElementById("lb").innerHTML =
+        `<tr><th style="width:44px">#</th><th>Player</th><th style="text-align:right">Score</th></tr>` +
+        lb.map((r, i) => `<tr>
+            <td style="color:var(--dim)">${i + 1}</td>
+            <td>${esc(r.owner)}${r.complete ? "" : ' <span style="color:var(--dim);font-size:12px">building</span>'}</td>
+            <td class="n">${fmt(r.total)}</td>
+          </tr>`).join("");
+    }
+  } catch (e) { /* leaderboard is not worth surfacing an error for */ }
+
+  if (!owner) return;
+  try {
+    const hist = await api("GET", "/history", { owner });
+    const past = hist.filter(h => h.contestId !== entry?.contest?.id);
+    if (past.length) {
+      document.getElementById("histSection").style.display = "block";
+      document.getElementById("hist").innerHTML =
+        `<tr><th>Week</th><th style="text-align:right">Score</th></tr>` +
+        past.map(h => `<tr><td>${esc(h.contestId)}</td><td class="n">${fmt(h.total)}</td></tr>`).join("");
+    }
+  } catch (e) { /* no history yet */ }
+}
+
+async function start(params) {
+  const name = document.getElementById("owner").value.trim();
+  if (!name) { showError(new Error("enter a name first")); return; }
+  owner = name;
+  localStorage.setItem("wh.owner", name);
+  try {
+    entry = await api("POST", "/open", Object.assign({ owner: name }, params || {}));
+    // Remember the entry, not just the name. Resuming by name alone always reopens the
+    // live week, which silently throws you out of whatever archive week you were playing.
+    localStorage.setItem("wh.entry", entry.entryId);
+    render();
+    refreshTables();
+  } catch (e) { showError(e); }
+}
+
+// Loading a historic week pulls a full slate of box scores, so it is not instant.
+async function startArchive() {
+  const btn = document.getElementById("archiveBtn");
+  const label = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Loading";
+  await start({
+    season: document.getElementById("season").value,
+    week: document.getElementById("week").value
+  });
+  btn.disabled = false;
+  btn.textContent = label;
+}
+
+(async function init() {
+  await loadContest();
+  await loadArchiveOptions();
+  document.getElementById("startBtn").addEventListener("click", () => start());
+  document.getElementById("archiveBtn").addEventListener("click", startArchive);
+  document.getElementById("owner").addEventListener("keydown", e => { if (e.key === "Enter") start(); });
+  if (owner) document.getElementById("owner").value = owner;
+  const saved = localStorage.getItem("wh.entry");
+  if (saved) {
+    try { entry = await api("GET", "/" + saved); } catch (e) { localStorage.removeItem("wh.entry"); }
+  }
+  render();
+  refreshTables();
+  // Scores move while games are on; the board should not need a manual refresh.
+  setInterval(async () => {
+    if (!entry) return;
+    try { entry = await api("GET", "/" + entry.entryId); render(); refreshTables(); } catch (e) {}
+  }, 15000);
+})();
+</script>
+</body>
+</html>

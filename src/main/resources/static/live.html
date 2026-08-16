@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wheelhouse — live</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #08090C;
+    --surface: #101319;
+    --surface-hi: #161A22;
+    --line: #21262F;
+    --line-hi: #2E3540;
+    --text: #F2F4F7;
+    --muted: #8A93A3;
+    --dim: #5A6373;
+    --accent: #C8FF33;
+    --accent-dim: #7E9E2A;
+    --live: #FF4D4D;
+    --display: "Barlow Condensed", "Helvetica Neue", sans-serif;
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    padding-bottom: 80px;
+  }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---------- nav ---------- */
+  nav {
+    border-bottom: 1px solid var(--line);
+    background: rgba(8, 9, 12, 0.9);
+    backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .nav-inner { display: flex; align-items: center; gap: 36px; height: 62px; }
+  .logo {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 24px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .logo span { color: var(--accent); }
+  .nav-links { display: flex; gap: 28px; margin-left: auto; }
+  .nav-links a {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: none;
+    padding: 6px 0;
+    border-bottom: 2px solid transparent;
+  }
+  .nav-links a.on { color: var(--text); border-bottom-color: var(--accent); }
+  .nav-links a.soon { color: var(--dim); cursor: default; }
+
+  /* ---------- section headers ---------- */
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+  h2 {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 30px;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    margin-bottom: 18px;
+  }
+  section { margin-top: 46px; }
+
+  .pulse {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--live);
+    box-shadow: 0 0 0 0 rgba(255, 77, 77, 0.7);
+    animation: pulse 1.8s infinite;
+  }
+  @keyframes pulse {
+    70% { box-shadow: 0 0 0 7px rgba(255, 77, 77, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 77, 77, 0); }
+  }
+
+  /* ---------- game cards ---------- */
+  .games { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 14px; }
+  .game {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 18px 20px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .game:hover { border-color: var(--line-hi); background: var(--surface-hi); }
+  .game.on { border-color: var(--accent); }
+  .game .teams {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 21px;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    line-height: 1.25;
+  }
+  .game .at { color: var(--dim); font-size: 15px; margin: 0 7px; }
+  .game .clock {
+    margin-top: 9px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--live);
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  /* ---------- leaders ---------- */
+  .leaders { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+  .board {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 18px 20px 8px;
+  }
+  .board h3 {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  .row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .row:last-child { border-bottom: none; }
+  .rank {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--dim);
+    width: 17px;
+    flex-shrink: 0;
+  }
+  .row.top .rank { color: var(--accent); }
+  .who { flex: 1; min-width: 0; }
+  .who .nm { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .who .tm { font-size: 11px; color: var(--dim); letter-spacing: 0.08em; text-transform: uppercase; }
+  .val {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 22px;
+    letter-spacing: 0.01em;
+  }
+  .row.top .val { color: var(--accent); }
+
+  /* ---------- feed ---------- */
+  .feed { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .tick {
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--line);
+    font-size: 14px;
+  }
+  .tick:last-child { border-bottom: none; }
+  .tick .nm { font-weight: 500; min-width: 150px; }
+  .tick .st { color: var(--muted); flex: 1; font-size: 13px; }
+  .tick .ch {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--accent);
+  }
+  .tick .ch.neg { color: var(--muted); }
+  .tag {
+    margin-left: 9px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--dim);
+    border: 1px solid var(--line-hi);
+    border-radius: 4px;
+    padding: 1px 6px;
+  }
+
+  .empty {
+    background: var(--surface);
+    border: 1px dashed var(--line-hi);
+    border-radius: 14px;
+    padding: 52px 24px;
+    text-align: center;
+  }
+  .empty .big {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 26px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--muted);
+  }
+  .empty p { color: var(--dim); font-size: 14px; margin-top: 7px; }
+
+  footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line); }
+  footer p { font-size: 12px; color: var(--dim); }
+  footer code { color: var(--muted); font-family: ui-monospace, monospace; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap nav-inner">
+    <div class="logo">Wheel<span>house</span></div>
+    <div class="nav-links">
+      <a href="#" class="on">Live</a>
+      <a class="soon">Build</a>
+      <a class="soon">Leaderboard</a>
+    </div>
+  </div>
+</nav>
+
+<div class="wrap">
+
+  <section id="games-section">
+    <div class="eyebrow"><span class="pulse"></span><span id="games-eyebrow">Checking</span></div>
+    <h2>On the field</h2>
+    <div id="games" class="games"></div>
+  </section>
+
+  <section id="leaders-section">
+    <div class="eyebrow">Wheel candidates</div>
+    <h2>Stat leaders</h2>
+    <div id="leaders" class="leaders"></div>
+  </section>
+
+  <section id="feed-section">
+    <div class="eyebrow">Ingest</div>
+    <h2>As it happens</h2>
+    <div id="feed" class="feed"></div>
+  </section>
+
+  <footer>
+    <p>Polling ESPN every 15s, diffing snapshots into deltas. Raw JSON at
+      <code>/api/live</code>, <code>/api/games/{id}</code>, <code>/api/deltas</code>.</p>
+  </footer>
+
+</div>
+
+<script>
+const BOARDS = [
+  { title: "Passing yards",   stat: "passing.passingYards" },
+  { title: "Rushing yards",   stat: "rushing.rushingYards" },
+  { title: "Receiving yards", stat: "receiving.receivingYards" }
+];
+
+let selectedEvent = null;
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
+
+async function json(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(url + " -> " + r.status);
+  return r.json();
+}
+
+function renderGames(games) {
+  const eyebrow = document.getElementById("games-eyebrow");
+  const host = document.getElementById("games");
+
+  if (!games.length) {
+    eyebrow.textContent = "Nothing live";
+    host.innerHTML = `<div class="empty" style="grid-column:1/-1">
+        <div class="big">No games in progress</div>
+        <p>The poller is running. This fills in the moment a game kicks off.</p>
+      </div>`;
+    return;
+  }
+
+  eyebrow.textContent = games.length === 1 ? "1 game live" : games.length + " games live";
+  host.innerHTML = games.map(g => {
+    const [away, home] = g.name.split(" at ");
+    const on = g.eventId === selectedEvent ? " on" : "";
+    return `<div class="game${on}" data-id="${esc(g.eventId)}">
+        <div class="teams">${esc(away)}<span class="at">at</span>${esc(home)}</div>
+        <div class="clock"><span class="pulse"></span>${esc(g.detail)}</div>
+      </div>`;
+  }).join("");
+
+  host.querySelectorAll(".game").forEach(el =>
+    el.addEventListener("click", () => { selectedEvent = el.dataset.id; refresh(); }));
+}
+
+function renderLeaders(rows) {
+  const host = document.getElementById("leaders");
+  if (!rows.length) {
+    host.innerHTML = `<div class="empty" style="grid-column:1/-1">
+        <div class="big">No stats yet</div>
+        <p>Numbers appear here as soon as a live game produces them.</p>
+      </div>`;
+    return;
+  }
+
+  host.innerHTML = BOARDS.map(board => {
+    const top = rows
+      .filter(r => r.stat === board.stat && r.value > 0)
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5);
+
+    const body = top.length
+      ? top.map((r, i) => `<div class="row${i === 0 ? " top" : ""}">
+            <div class="rank">${i + 1}</div>
+            <div class="who">
+              <div class="nm">${esc(r.player)}</div>
+              <div class="tm">${esc(r.team)}</div>
+            </div>
+            <div class="val">${Math.round(r.value)}</div>
+          </div>`).join("")
+      : `<div class="row"><div class="who"><div class="nm" style="color:var(--dim)">Nothing yet</div></div></div>`;
+
+    return `<div class="board"><h3>${board.title}</h3>${body}</div>`;
+  }).join("");
+}
+
+function renderFeed(deltas) {
+  const host = document.getElementById("feed");
+
+  // Zero-valued rows are just roster load noise. A first sighting with a real number is
+  // worth showing, but it is a catch-up rather than something that just happened, so it
+  // gets flagged rather than dressed up as live movement.
+  const moves = deltas.filter(d => d.change !== 0).slice(0, 12);
+
+  if (!moves.length) {
+    host.outerHTML = `<div class="feed empty" id="feed">
+        <div class="big">Waiting on movement</div>
+        <p>Every stat change lands here within 15 seconds of the play.</p>
+      </div>`;
+    return;
+  }
+
+  host.className = "feed";
+  host.innerHTML = moves.map(d => {
+    const up = d.change > 0;
+    const initial = d.previous === "new";
+    // Split only at lowercase-to-uppercase boundaries, so "passingYards" becomes
+    // "passing yards" while an acronym like "adjQBR" stays intact.
+    const label = d.stat.split(".")[1].replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
+    return `<div class="tick">
+        <div class="nm">${esc(d.player)}</div>
+        <div class="st">${esc(label)}${initial ? '<span class="tag">catch-up</span>' : ""}</div>
+        <div class="ch${up ? "" : " neg"}">${up ? "+" : ""}${Math.round(d.change * 10) / 10}</div>
+      </div>`;
+  }).join("");
+}
+
+async function refresh() {
+  try {
+    const games = await json("/api/live");
+    if (!selectedEvent || !games.some(g => g.eventId === selectedEvent)) {
+      selectedEvent = games.length ? games[0].eventId : null;
+    }
+    renderGames(games);
+
+    const stats = selectedEvent ? await json("/api/games/" + selectedEvent) : [];
+    renderLeaders(stats);
+
+    renderFeed(await json("/api/deltas?limit=200"));
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+refresh();
+setInterval(refresh, 5000);
+</script>
+
+</body>
+</html>
