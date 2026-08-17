@@ -1,20 +1,13 @@
 # wheelhouse
 
 A fantasy football game where you spin a wheel to assemble a roster, and a live scoring
-platform underneath it.
-
-Working name. The roster is one QB, one RB, and two flex spots taking WR or TE. Each slot is
-filled by spinning for a team and then spinning for a player on that team, with one respin
-available on each.
+platform underneath it. Working name.
 
 ## The game
 
-Four slots: one QB, one RB, two flex. Each slot spins for a team, then you pick a player
-from that team, with one respin available on each.
-
-Each position is assembled from **three different players of that position**: your
-quarterback is passing yards from one, touchdowns from another, rushing yards from a third.
-Twelve players in all.
+Four positions: one QB, one RB, two flex. Each is assembled from **three different players of
+that position**: your quarterback is passing yards from one, touchdowns from another, rushing
+yards from a third. Twelve players in all.
 
 The wheel decides who you get. You decide which of the position's remaining parts to spend
 them on, and the third pick takes whatever is left, so an early choice costs a later one.
@@ -32,8 +25,8 @@ per pick.
 
 ## Status
 
-Playable. Open `http://localhost:8080`, enter a name, and build a roster: spin a team, spin
-a player, choose what you take from them. Scores update live from real games, there is a
+Playable. Open `http://localhost:8080`, enter a name, and build a roster one pick at a time:
+spin a team, spin a player, choose what you take from them. Both wheels animate. There is a
 weekly leaderboard, and entries persist across restarts and across weeks.
 
 Weeks come from ESPN, so preseason, regular season and playoffs all work without a calendar
@@ -99,11 +92,10 @@ Endpoints, all temporary scaffolding:
 | `POST /api/play/open?owner=` | Open or resume this week's entry |
 | `POST /api/play/open?owner=&season=&week=` | Open an archived week |
 | `GET /api/play/archive` | Which seasons the archive can reach |
-| `POST /api/play/{id}/slot/{i}/team?respin=` | Spin a team |
-| `POST /api/play/{id}/slot/{i}/player?respin=` | Spin a player |
-| `POST /api/play/{id}/slot/{i}/choose?option=` | Take a body part |
+| `POST /api/play/{id}/pick/{i}/team?respin=` | Spin a team |
+| `POST /api/play/{id}/pick/{i}/player?respin=` | Spin a player |
+| `POST /api/play/{id}/pick/{i}/choose?option=` | Take a body part |
 | `GET /api/play/leaderboard` | This week's standings |
-| `GET /api/play/archive` | Which seasons the archive can reach |
 | `GET /api/play/history?owner=` | Every week you have played |
 
 ## Design notes
