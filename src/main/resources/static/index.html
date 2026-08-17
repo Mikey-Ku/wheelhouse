@@ -8,14 +8,29 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root{--bg:#08090C;--surface:#101319;--surface-hi:#161A22;--line:#21262F;--line-hi:#2E3540;
-    --text:#F2F4F7;--muted:#8A93A3;--dim:#5A6373;--accent:#C8FF33;--accent-ink:#1B2400;--live:#FF4D4D;
-    --display:"Barlow Condensed","Helvetica Neue",sans-serif;--sans:"Inter",-apple-system,sans-serif}
+  /* Sleeper's own tokens, read off their CSS bundle rather than eyeballed. */
+  :root{
+    --bg:#05091d;            /* palette-gray900, page base */
+    --surface:#131b38;       /* palette-gray700, cards and controls */
+    --surface-deep:#0b1028;  /* dls surface, headers and insets */
+    --line:#25345d;          /* palette-gray600, the everyday border */
+    --line-hi:#344677;       /* palette-gray500, emphasised divider */
+    --text:#ffffff;
+    --secondary:#98b3d6;     /* palette-gray200 */
+    --muted:#5f7ba9;         /* palette-gray300 */
+    --dim:#4c5e93;           /* palette-gray400 */
+    --accent:#00fff9;        /* palette-emerald, the brand cyan */
+    --accent-deep:#04abb0;   /* dls primary-600, for fills behind white text */
+    --accent-ink:#05091d;
+    --violet:#8c64ff;        /* dls decoration-yam, control borders */
+    --loss:#ff4d6d;
+    --display:"Barlow Condensed","Helvetica Neue",sans-serif;
+    --sans:"Inter",-apple-system,sans-serif}
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;padding-bottom:80px}
   .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
 
-  nav{border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10;background:rgba(8,9,12,.92);backdrop-filter:blur(12px)}
+  nav{border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10;background:rgba(5,9,29,.94);backdrop-filter:blur(12px)}
   .nav-inner{display:flex;align-items:center;gap:20px;height:62px}
   .logo{font-family:var(--display);font-weight:700;font-size:24px;letter-spacing:.04em;text-transform:uppercase}
   .logo span{color:var(--accent)}
@@ -31,59 +46,76 @@
   button:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
   button:disabled{opacity:.3;cursor:not-allowed}
   button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-  button.primary:hover:not(:disabled){opacity:.88;color:var(--accent-ink)}
-  button.ghost{padding:7px 12px;font-size:11px;color:var(--dim);border-color:var(--line)}
-  input{font-family:var(--sans);font-size:15px;padding:11px 14px;border-radius:8px;border:1px solid var(--line-hi);background:var(--surface);color:var(--text);min-width:230px}
+  button.primary:hover:not(:disabled){opacity:.85;color:var(--accent-ink)}
+  button.ghost{padding:7px 12px;font-size:11px;color:var(--muted);border-color:var(--line)}
+  input{font-family:var(--sans);font-size:15px;padding:11px 14px;border-radius:8px;border:1px solid var(--line-hi);background:var(--surface-deep);color:var(--text);min-width:230px}
   input:focus{outline:none;border-color:var(--accent)}
-  select{font-family:var(--sans);font-size:14px;padding:10px 12px;border-radius:8px;border:1px solid var(--line-hi);background:var(--surface-hi);color:var(--text)}
+  select{font-family:var(--sans);font-size:14px;padding:10px 12px;border-radius:8px;border:1px solid var(--line-hi);background:var(--surface);color:var(--text)}
   select:focus{outline:none;border-color:var(--accent)}
 
   .start{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:28px 34px}
   .split{margin-top:24px;padding-top:22px;border-top:1px solid var(--line)}
   .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
   .badge{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:3px 10px;margin-left:10px}
-  .backlink{background:none;border:none;color:var(--dim);padding:0;font-size:11px;letter-spacing:.1em;text-decoration:underline;margin-left:12px}
+  .backlink{background:none;border:none;color:var(--muted);padding:0;font-size:11px;letter-spacing:.1em;text-decoration:underline;margin-left:12px}
   .backlink:hover{color:var(--accent)}
+  .notice{background:var(--surface-deep);border:1px solid var(--line);border-left:3px solid var(--violet);border-radius:0 10px 10px 0;padding:14px 18px;margin-bottom:16px;font-size:14px;color:var(--secondary)}
 
   .stage{background:var(--surface);border:1px solid var(--line-hi);border-radius:16px;padding:28px 32px}
   .stage-head{display:flex;align-items:baseline;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:22px}
-  .step{font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
-  .respins{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+  .step{font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+  .respins{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
   .respins b{color:var(--accent);font-weight:600}
-  .reveal{display:flex;align-items:center;gap:22px;flex-wrap:wrap;margin-bottom:20px}
-  .teambox{font-family:var(--display);font-weight:700;font-size:52px;letter-spacing:.03em;line-height:1}
+  .reveal{display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:20px}
+  .face{width:74px;height:74px;border-radius:50%;object-fit:cover;object-position:top center;background:var(--surface-deep);border:1px solid var(--line-hi);flex-shrink:0}
+  .teambox{font-family:var(--display);font-weight:700;font-size:50px;letter-spacing:.03em;line-height:1}
   .whobox .nm{font-family:var(--display);font-weight:700;font-size:32px;letter-spacing:.02em;line-height:1.1}
-  .whobox .sub{font-size:12px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-top:3px}
-  .prompt{color:var(--muted);font-size:14px}
+  .whobox .sub{font-size:12px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-top:3px}
+  .prompt{color:var(--secondary);font-size:14px}
 
-  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
-  .opt{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:14px 16px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--text);cursor:pointer;text-transform:none;letter-spacing:0;font-size:14px;font-weight:400;text-align:left}
+  .reel{height:64px;overflow:hidden;position:relative;min-width:220px}
+  .reel::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(var(--surface),transparent 34%,transparent 66%,var(--surface))}
+  .reel-strip{position:absolute;top:0;left:0;right:0;will-change:transform}
+  .reel-item{height:64px;display:flex;align-items:center;font-family:var(--display);
+    font-weight:700;font-size:46px;letter-spacing:.03em;line-height:1;white-space:nowrap;color:var(--muted)}
+  .reel-item.name{font-size:30px}
+  @keyframes reelspin{from{transform:translateY(0)}to{transform:translateY(-1280px)}}
+  .reel-strip.spinning{animation:reelspin .55s linear infinite}
+
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
+  .opt{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:14px 16px;border-radius:10px;border:1px solid var(--line);background:var(--surface-deep);color:var(--text);cursor:pointer;text-transform:none;letter-spacing:0;font-size:14px;font-weight:400;text-align:left}
   .opt:hover:not(:disabled){border-color:var(--accent)}
   .opt .part{font-family:var(--display);font-weight:700;font-size:21px;letter-spacing:.02em}
-  .opt .stat{font-size:11px;color:var(--dim);letter-spacing:.08em;text-transform:uppercase}
-  .opt .val{font-family:var(--display);font-weight:700;font-size:19px;color:var(--accent);margin-top:5px}
+  .opt .stat{font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+  .opt .val{font-family:var(--display);font-weight:700;font-size:19px;color:var(--accent);margin-top:6px}
+  .opt .raw{font-size:11px;color:var(--dim);letter-spacing:.06em;text-transform:uppercase}
 
-  .positions{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+  .positions{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
   .pos{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
   .pos.active{border-color:var(--accent)}
   .pos-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px}
-  .pos-name{font-family:var(--display);font-weight:700;font-size:20px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .pos-name{font-family:var(--display);font-weight:700;font-size:20px;letter-spacing:.06em;text-transform:uppercase;color:var(--secondary)}
   .pos-total{font-family:var(--display);font-weight:700;font-size:24px;color:var(--accent)}
-  .part-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--line);font-size:13px}
-  .part-row .lbl{color:var(--dim);font-size:11px;letter-spacing:.1em;text-transform:uppercase;min-width:74px}
+  .pos-total small{display:block;font-family:var(--sans);font-size:10px;font-weight:400;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);text-align:right}
+  .part-row{display:flex;align-items:center;gap:9px;padding:8px 0;border-top:1px solid var(--line);font-size:13px}
+  .part-row .lbl{color:var(--muted);font-size:11px;letter-spacing:.1em;text-transform:uppercase;min-width:70px}
   .part-row .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .part-row .pt{font-family:var(--display);font-weight:700;font-size:16px}
+  .part-row .pt.up{color:var(--accent)} .part-row .pt.down{color:var(--loss)}
   .part-row.empty .nm{color:var(--dim)}
+  .mini{width:26px;height:26px;border-radius:50%;object-fit:cover;object-position:top center;background:var(--surface-deep);flex-shrink:0}
 
   .total{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:14px}
   .total .n{font-family:var(--display);font-weight:700;font-size:44px;color:var(--accent);line-height:1}
+  .total .vs{font-size:12px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;text-align:right}
   table{width:100%;border-collapse:collapse;font-size:14px}
-  th{font-size:11px;font-weight:400;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);text-align:left;padding-bottom:9px}
+  th{font-size:11px;font-weight:400;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-align:left;padding-bottom:9px}
   td{padding:11px 0;border-top:1px solid var(--line)}
   td.n{text-align:right;font-family:var(--display);font-weight:700;font-size:19px}
   .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 22px}
-  .err{color:var(--live);font-size:13px;min-height:18px;margin-top:10px}
-  .lock{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--live)}
+  .err{color:var(--loss);font-size:13px;min-height:18px;margin-top:10px}
+  .lock{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--loss)}
 </style>
 </head>
 <body>
@@ -97,6 +129,7 @@
   <section>
     <div class="eyebrow"><span id="weekLabel">Loading</span></div>
     <h2 id="headline">Build your guy</h2>
+    <div id="notice"></div>
 
     <div id="start" class="start" style="display:none">
       <div class="row">
@@ -110,7 +143,7 @@
           <select id="season"></select>
           <select id="week"></select>
           <button id="archiveBtn">Play it</button>
-          <span style="font-size:12px;color:var(--dim)">Results are already known, so this is a sandbox, not a ranked week.</span>
+          <span style="font-size:12px;color:var(--muted)">You draft against projections, same as anyone would have before kickoff.</span>
         </div>
       </div>
     </div>
@@ -124,9 +157,12 @@
     <h2>Assembled so far</h2>
     <div id="positions" class="positions"></div>
     <div class="total">
-      <div><div class="eyebrow" style="margin:0">Total</div>
-        <div style="font-size:13px;color:var(--dim)">Updates as games play</div></div>
-      <div class="n" id="totalN">0</div>
+      <div><div class="eyebrow" style="margin:0" id="totalLabel">Projected</div>
+        <div style="font-size:13px;color:var(--muted)" id="totalHint">Results arrive once all twelve picks are in</div></div>
+      <div style="display:flex;align-items:center;gap:22px">
+        <div class="vs" id="totalVs"></div>
+        <div class="n" id="totalN">0</div>
+      </div>
     </div>
   </section>
 
@@ -144,6 +180,7 @@
 <script>
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const fmt = n => n == null ? "0" : (Math.round(n * 100) / 100).toString();
+const NOPHOTO = "https://a.espncdn.com/i/headshots/nophoto.png";
 
 let entry = null;
 let owner = localStorage.getItem("wh.owner") || "";
@@ -159,14 +196,32 @@ async function api(method, path, params) {
 const showError = e => document.getElementById("err").textContent = e ? e.message : "";
 const pickAt = i => entry.positions.flatMap(p => p.picks).find(p => p.pickIndex === i);
 const posLabel = (slot, index) => slot === "FLEX" ? "Flex " + (index - 1) : slot;
-// Split only at lowercase-to-uppercase boundaries so "passingYards" becomes "passing yards"
-// while an acronym stays intact.
+// Split only at lowercase-to-uppercase boundaries, so "passingYards" reads as two words
+// while an acronym survives intact.
 const statLabel = s => s.split(".")[1].replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
+
+// A missing headshot is a bare 404, not a placeholder, so without this the browser paints a
+// broken-image icon.
+const faceTag = (url, cls) => url
+  ? `<img class="${cls}" src="${esc(url)}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${NOPHOTO}'">`
+  : `<img class="${cls}" src="${NOPHOTO}" alt="">`;
 
 async function loadContest() {
   const c = await api("GET", "/contest");
   document.getElementById("weekLabel").textContent = c.label;
   if (c.locked) document.getElementById("lockNote").textContent = "week locked";
+  showNotice(c);
+}
+
+function showNotice(c) {
+  const host = document.getElementById("notice");
+  if (c && c.hasProjections === false) {
+    host.innerHTML = `<div class="notice"><b>${esc(c.label)} has no projections.</b>
+      Sleeper only forecasts the regular season, and the game is played against forecasts, so
+      this week cannot be scored properly. Pick a past week below instead.</div>`;
+  } else {
+    host.innerHTML = "";
+  }
 }
 
 async function loadArchiveOptions() {
@@ -185,8 +240,11 @@ function renderStage() {
   const host = document.getElementById("stage");
 
   if (entry.activePick == null) {
+    const d = entry.total - entry.projectedTotal;
     host.innerHTML = `<div class="stage-head"><span class="step">Roster complete</span></div>
-      <div class="prompt">All twelve picks are in. Scores update as games play.</div>`;
+      <div class="prompt">All twelve picks are in and the week has resolved. You were projected
+      for ${fmt(entry.projectedTotal)} and scored <b style="color:var(--accent)">${fmt(entry.total)}</b>,
+      ${d >= 0 ? "beating" : "missing"} the forecast by ${fmt(Math.abs(d))}.</div>`;
     return;
   }
 
@@ -204,6 +262,7 @@ function renderStage() {
       <button class="ghost" data-act="team" data-respin="1" ${entry.teamRespins > 0 ? "" : "disabled"}>Respin team</button>`;
   } else {
     reveal = `<div class="reveal">
+        ${faceTag(p.image, "face")}
         <div class="teambox">${esc(pick.team)}</div>
         <div class="whobox"><div class="nm">${esc(p.name)}</div>
           <div class="sub">${esc(p.position)} &middot; ${esc(p.team)}</div></div>
@@ -215,7 +274,8 @@ function renderStage() {
       <button class="opt" data-act="choose" data-opt="${esc(o.key)}">
         <span class="part">${esc(o.part)}</span>
         <span class="stat">${esc(statLabel(o.stat))}</span>
-        <span class="val">${o.points == null ? "&middot;" : fmt(o.points)}</span>
+        <span class="val">${o.projectedPoints == null ? "&middot;" : fmt(o.projectedPoints)}</span>
+        <span class="raw">proj ${fmt(o.projectedRaw)}</span>
       </button>`).join("") + `</div>`;
   }
 
@@ -224,7 +284,8 @@ function renderStage() {
       <span class="step">Pick ${entry.activePick + 1} of ${entry.totalPicks} &middot; ${esc(posLabel(pick.slot, pick.position))}</span>
       <span class="respins">respins &nbsp; team <b>${entry.teamRespins}</b> &nbsp; player <b>${entry.playerRespins}</b></span>
     </div>
-    ${reveal}
+    <div id="revealArea">${reveal}</div>
+    <div id="reelHost"></div>
     <div class="row" style="margin-bottom:${options ? "18px" : "0"}">${controls}</div>
     ${options}`;
 
@@ -233,6 +294,8 @@ function renderStage() {
 }
 
 function renderRoster() {
+  const revealed = entry.revealed;
+
   document.getElementById("positions").innerHTML = entry.positions.map(pos => {
     const active = entry.activePick != null
       && pos.picks.some(p => p.pickIndex === entry.activePick);
@@ -244,17 +307,29 @@ function renderRoster() {
           <span class="pt" style="color:var(--dim)">&middot;</span></div>`;
       }
       const part = (p.options.find(o => o.key === p.chosen) || {}).part || p.chosen;
-      return `<div class="part-row"><span class="lbl">${esc(part)}</span>
+      const shown = revealed ? p.points : p.projectedPoints;
+      const cls = revealed ? (p.points >= p.projectedPoints ? "up" : "down") : "";
+      return `<div class="part-row">${faceTag(p.player.image, "mini")}
+        <span class="lbl">${esc(part)}</span>
         <span class="nm">${esc(p.player.name)}</span>
-        <span class="pt">${fmt(p.points)}</span></div>`;
+        <span class="pt ${cls}">${fmt(shown)}</span></div>`;
     }).join("");
 
+    const headline = revealed ? pos.total : pos.projectedTotal;
     return `<div class="pos ${active ? "active" : ""}">
       <div class="pos-head"><span class="pos-name">${esc(posLabel(pos.slot, pos.index))}</span>
-        <span class="pos-total">${fmt(pos.total)}</span></div>${rows}</div>`;
+        <span class="pos-total">${fmt(headline)}
+          <small>${revealed ? "proj " + fmt(pos.projectedTotal) : "projected"}</small></span></div>
+      ${rows}</div>`;
   }).join("");
 
-  document.getElementById("totalN").textContent = fmt(entry.total);
+  document.getElementById("totalLabel").textContent = revealed ? "Final" : "Projected";
+  document.getElementById("totalHint").textContent = revealed
+    ? "Every pick has resolved"
+    : "Results arrive once all twelve picks are in";
+  document.getElementById("totalN").textContent = fmt(revealed ? entry.total : entry.projectedTotal);
+  document.getElementById("totalVs").innerHTML = revealed
+    ? `projected ${fmt(entry.projectedTotal)}` : "";
 }
 
 function render() {
@@ -262,10 +337,11 @@ function render() {
   document.getElementById("start").style.display = building ? "none" : "block";
   document.getElementById("stage").style.display = building ? "block" : "none";
   document.getElementById("rosterSection").style.display = building ? "block" : "none";
-  if (!building) return;
+  if (!building) { loadContest(); return; }
 
   const c = entry.contest || {};
   document.getElementById("weekLabel").textContent = c.label || "";
+  showNotice(c);
   document.getElementById("headline").innerHTML =
     esc(entry.owner) + "'s roster"
     + (c.archive ? '<span class="badge">historic</span>' : "")
@@ -283,13 +359,80 @@ function render() {
   renderRoster();
 }
 
+/* ---------- the slot reel ----------
+   The server has already decided the result before any of this runs. The reel only shows its
+   work: it starts spinning the instant you click, keeps spinning while the request is in
+   flight, then decelerates onto the answer, pausing on a wrong one first. */
+
+const ITEM_H = 64;
+const FILLERS = 40;
+
+function buildReel(host, items, className) {
+  const draw = () => items.length ? items[Math.floor(Math.random() * items.length)] : "?";
+  const strip = [];
+  for (let i = 0; i < FILLERS; i++) strip.push(draw());
+  host.innerHTML = `<div class="reel"><div class="reel-strip spinning">` +
+    strip.map(v => `<div class="reel-item ${className}">${esc(v)}</div>`).join("") +
+    `</div></div>`;
+  return host.querySelector(".reel-strip");
+}
+
+function landReel(strip, items, result, className) {
+  return new Promise(resolve => {
+    const decoys = items.filter(v => v !== result);
+    const decoy = decoys.length ? decoys[Math.floor(Math.random() * decoys.length)] : result;
+
+    strip.insertAdjacentHTML("beforeend",
+      `<div class="reel-item ${className}">${esc(decoy)}</div>` +
+      `<div class="reel-item ${className}" style="color:var(--text)">${esc(result)}</div>`);
+
+    // Freeze wherever the loop happens to be, so there is no visible jump.
+    const y = new DOMMatrix(getComputedStyle(strip).transform).m42;
+    strip.classList.remove("spinning");
+    strip.style.transform = `translateY(${y}px)`;
+    void strip.offsetHeight;
+
+    strip.style.transition = "transform 1.45s cubic-bezier(.12,.72,.24,1)";
+    strip.style.transform = `translateY(${-(FILLERS * ITEM_H)}px)`;
+
+    setTimeout(() => {
+      strip.style.transition = "transform .6s cubic-bezier(.3,1.4,.5,1)";
+      strip.style.transform = `translateY(${-((FILLERS + 1) * ITEM_H)}px)`;
+      setTimeout(resolve, 620);
+    }, 1470);
+  });
+}
+
+async function spinFor(d, index) {
+  const before = pickAt(index);
+  const isTeam = d.act === "team";
+  const items = (before.reel && before.reel.length) ? before.reel : ["?"];
+  const className = isTeam ? "" : "name";
+
+  document.getElementById("revealArea").style.display = "none";
+  const strip = buildReel(document.getElementById("reelHost"), items, className);
+  document.querySelectorAll("#stage button").forEach(b => b.disabled = true);
+
+  let updated;
+  try {
+    updated = await api("POST", `/${entry.entryId}/pick/${index}/${isTeam ? "team" : "player"}`,
+                        d.respin ? { respin: true } : null);
+  } catch (e) {
+    showError(e); render(); return;
+  }
+
+  const after = updated.positions.flatMap(p => p.picks).find(p => p.pickIndex === index);
+  await landReel(strip, items, isTeam ? after.team : (after.player ? after.player.name : "?"), className);
+  entry = updated;
+  render();
+  refreshTables();
+}
+
 async function act(d, index) {
   showError(null);
+  if (d.act === "team" || d.act === "player") return spinFor(d, index);
   try {
-    const respin = d.respin ? { respin: true } : null;
-    if (d.act === "team")   entry = await api("POST", `/${entry.entryId}/pick/${index}/team`, respin);
-    if (d.act === "player") entry = await api("POST", `/${entry.entryId}/pick/${index}/player`, respin);
-    if (d.act === "choose") entry = await api("POST", `/${entry.entryId}/pick/${index}/choose`, { option: d.opt });
+    entry = await api("POST", `/${entry.entryId}/pick/${index}/choose`, { option: d.opt });
     render();
     refreshTables();
   } catch (e) { showError(e); }
@@ -302,9 +445,9 @@ async function refreshTables() {
       document.getElementById("lbSection").style.display = "block";
       document.getElementById("lb").innerHTML =
         `<tr><th style="width:44px">#</th><th>Player</th><th style="text-align:right">Score</th></tr>` +
-        lb.map((r, i) => `<tr><td style="color:var(--dim)">${i + 1}</td>
+        lb.map((r, i) => `<tr><td style="color:var(--muted)">${i + 1}</td>
           <td>${esc(r.owner)}${r.complete ? "" : ' <span style="color:var(--dim);font-size:12px">building</span>'}</td>
-          <td class="n">${fmt(r.total)}</td></tr>`).join("");
+          <td class="n">${r.complete ? fmt(r.total) : "&middot;"}</td></tr>`).join("");
     }
   } catch (e) { /* not worth surfacing */ }
 
@@ -316,7 +459,8 @@ async function refreshTables() {
       document.getElementById("histSection").style.display = "block";
       document.getElementById("hist").innerHTML =
         `<tr><th>Week</th><th style="text-align:right">Score</th></tr>` +
-        past.map(h => `<tr><td>${esc(h.contestId)}</td><td class="n">${fmt(h.total)}</td></tr>`).join("");
+        past.map(h => `<tr><td>${esc(h.contestId)}</td>
+          <td class="n">${h.complete ? fmt(h.total) : "&middot;"}</td></tr>`).join("");
     }
   } catch (e) { /* no history yet */ }
 }
@@ -362,7 +506,7 @@ async function startArchive() {
   render();
   refreshTables();
 
-  // Scores move while games are on; the board should not need a manual refresh.
+  // A live week's results move while games are on, so the board refreshes itself.
   setInterval(async () => {
     if (!entry) return;
     try { entry = await api("GET", "/" + entry.entryId); render(); refreshTables(); } catch (e) {}

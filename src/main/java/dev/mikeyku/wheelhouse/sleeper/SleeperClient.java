@@ -30,8 +30,14 @@ public class SleeperClient {
     private static final Logger log = LoggerFactory.getLogger(SleeperClient.class);
 
     private static final String PLAYERS = "https://api.sleeper.app/v1/players/nfl";
+    /**
+     * All four positions in one request. The season type must be passed through rather than
+     * hardcoded: asking for regular-season data while playing a preseason week returns a full,
+     * plausible payload for the wrong games, which is far worse than returning nothing.
+     */
     private static final String PROJECTIONS =
-            "https://api.sleeper.com/projections/nfl/%d/%d?season_type=regular&order_by=ppr";
+            "https://api.sleeper.com/projections/nfl/%d/%d?season_type=%s"
+                    + "&position[]=QB&position[]=RB&position[]=WR&position[]=TE";
 
     private final HttpClient http = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
@@ -54,10 +60,23 @@ public class SleeperClient {
         return cached("players-nfl.json", PLAYERS);
     }
 
-    /** Weekly per-stat projections, sourced by Sleeper from Rotowire. */
-    public JsonNode projections(int season, int week) throws IOException, InterruptedException {
-        return cached("projections-%d-%d.json".formatted(season, week),
-                PROJECTIONS.formatted(season, week));
+    /**
+     * Weekly per-stat projections, sourced by Sleeper from Rotowire.
+     *
+     * <p>Only the regular season has any. Preseason and postseason return a well formed
+     * response in which every stats object is empty, so callers must judge availability by
+     * inspecting the rows rather than by the status code, which is always 200 even for a
+     * season that does not exist.
+     */
+    public JsonNode projections(int season, int seasonType, int week)
+            throws IOException, InterruptedException {
+        String type = switch (seasonType) {
+            case 1 -> "pre";
+            case 3 -> "post";
+            default -> "regular";
+        };
+        return cached("projections-%d-%s-%d.json".formatted(season, type, week),
+                PROJECTIONS.formatted(season, week, type));
     }
 
     private JsonNode cached(String filename, String url) throws IOException, InterruptedException {

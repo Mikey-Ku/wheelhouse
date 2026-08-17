@@ -21,22 +21,32 @@ public enum Slot {
     // stat in the game, from about 2 to about 39 a week, which turns the QB slot into a real
     // question: the pocket passer's arm, or the scrambler's legs.
     QB(Set.of("QB"), List.of(
-            new StatOption("arm", "Arm", "passing", "passingYards"),
-            new StatOption("legs", "Legs", "rushing", "rushingYards"),
-            new StatOption("shoulders", "Shoulders", "passing", "passingTouchdowns"))),
+            new StatOption("arm", "Arm", "passing", "passingYards", "pass_yd"),
+            new StatOption("legs", "Legs", "rushing", "rushingYards", "rush_yd"),
+            new StatOption("shoulders", "Shoulders", "passing", "passingTouchdowns", "pass_td"))),
 
     RB(Set.of("RB"), List.of(
-            new StatOption("legs", "Legs", "rushing", "rushingYards"),
-            new StatOption("hands", "Hands", "receiving", "receptions"),
-            new StatOption("chest", "Chest", "receiving", "receivingYards"))),
+            new StatOption("legs", "Legs", "rushing", "rushingYards", "rush_yd"),
+            new StatOption("hands", "Hands", "receiving", "receptions", "rec"),
+            new StatOption("chest", "Chest", "receiving", "receivingYards", "rec_yd"))),
 
     FLEX(Set.of("WR", "TE"), List.of(
-            new StatOption("chest", "Chest", "receiving", "receivingYards"),
-            new StatOption("hands", "Hands", "receiving", "receptions"),
-            new StatOption("feet", "Feet", "receiving", "receivingTouchdowns")));
+            new StatOption("chest", "Chest", "receiving", "receivingYards", "rec_yd"),
+            new StatOption("hands", "Hands", "receiving", "receptions", "rec"),
+            new StatOption("feet", "Feet", "receiving", "receivingTouchdowns", "rec_td")));
 
-    /** One harvestable stat, with the anatomy label the UI shows for it. */
-    public record StatOption(String key, String label, String category, String stat) {
+    /**
+     * One harvestable stat, with the anatomy label the UI shows for it.
+     *
+     * <p>Two vocabularies, deliberately carried side by side. {@code category} and {@code stat}
+     * name the stat as ESPN reports it in a box score; {@code projectionStat} names the same
+     * thing as Sleeper reports it in a projection. They agree on nothing (ESPN says
+     * receivingTouchdowns, Sleeper says rec_td) and the two feeds key players differently as
+     * well, so the bridge has to live somewhere. This is the one place both names are stated
+     * together.
+     */
+    public record StatOption(String key, String label, String category, String stat,
+                             String projectionStat) {
         public StatKey keyFor(String espnAthleteId) {
             return new StatKey(espnAthleteId, category, stat);
         }

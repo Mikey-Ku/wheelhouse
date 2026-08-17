@@ -12,9 +12,17 @@ available on each.
 Four slots: one QB, one RB, two flex. Each slot spins for a team, then you pick a player
 from that team, with one respin available on each.
 
-The twist is that a player contributes **only the one stat you choose from them**, named
-after the body part it comes from. Landing a star is not the win. Deciding what you want
-from them is, and a star's best piece is not always his most famous one.
+Each position is assembled from **three different players of that position**: your
+quarterback is passing yards from one, touchdowns from another, rushing yards from a third.
+Twelve players in all.
+
+The wheel decides who you get. You decide which of the position's remaining parts to spend
+them on, and the third pick takes whatever is left, so an early choice costs a later one.
+
+You choose against **projections**, never results. Actual numbers are withheld by the server
+until all twelve picks are in, then the whole roster resolves at once against what really
+happened. Respins are a budget for the whole build (three team, three player) rather than one
+per pick.
 
 | Slot | Options |
 |---|---|
@@ -33,16 +41,20 @@ to maintain. The week locks at its first kickoff.
 
 ### Historic mode
 
-Pick any season back to 2001 and play a week that already happened. Week 8 of 2007 hands you
-Derek Anderson mid-Pro-Bowl-season and Hines Ward with two touchdowns; week 10 of 2013 has
-rookie Case Keenum and DeMarco Murray.
+Pick any of the last five completed seasons and play a week that already happened. Week 10 of
+2023 hands you Tommy DeVito starting for the Giants and a Trey McBride breakout.
+
+The range is five seasons rather than everything ESPN has, because the game is played against
+projections and Sleeper only publishes those from 2019. A season without forecasts is
+unplayable rather than merely old.
 
 This exists for three reasons. It makes the game playable in the offseason, it lets a week be
 tested in seconds instead of waiting for Sunday, and old rosters are genuinely funny.
 
-It is explicitly a sandbox and not a ranked competition, because the results are a search
-away. Leaderboards are per week, so an archived week has its own and never mixes with a live
-one.
+Drafting blind against projections is what keeps a finished week honest: you see the same
+forecast anyone would have had before kickoff, and the results only arrive once you have
+committed all twelve picks. Leaderboards are per week, so an archived week has its own and
+never mixes with a live one.
 
 ## Running it
 
@@ -91,6 +103,7 @@ Endpoints, all temporary scaffolding:
 | `POST /api/play/{id}/slot/{i}/player?respin=` | Spin a player |
 | `POST /api/play/{id}/slot/{i}/choose?option=` | Take a body part |
 | `GET /api/play/leaderboard` | This week's standings |
+| `GET /api/play/archive` | Which seasons the archive can reach |
 | `GET /api/play/history?owner=` | Every week you have played |
 
 ## Design notes
@@ -121,6 +134,31 @@ box scores. So `AthleteResolver` learns the mapping from the box scores themselv
 every athlete who plays arrives with an id, a name and a team, which is enough to match
 against the catalog by normalised name. It only has to resolve players who actually play,
 which is precisely the set that can have scored anything.
+
+**Actuals are withheld on the server, not hidden by the page.** While a roster is being
+built the API response contains projections and nothing else: no actual values, no actual
+points, and no `total` key at all. A blind draft that ships the answers in the same payload is
+theatre, and the leaderboard withholds incomplete entries' scores for the same reason.
+
+**Projections are deliberately not routed through `StatKey` or `AthleteResolver`.** Those are
+built on ESPN athlete ids, which are only learned once a player has appeared in a box score.
+Before kickoff that is nobody, so routing forecasts through them would leave the entire wheel
+reading zero.
+
+**Sleeper's `espn_id` is dead for modern players.** It is null for everyone whose rookie year
+is 2021 or later: 0 of 367 for 2021, 0 of 840 for 2024. Trevor Lawrence, Ja'Marr Chase, Puka
+Nacua and Jayden Daniels all have none. Anything keyed on it silently drops the majority of
+relevant players and gets worse every season, which is why `AthleteResolver` learns the
+mapping from box scores by name and team instead.
+
+**Points come from the scored roster, never by searching the options list.** The options now
+carry projections, so deriving displayed points from them would have quietly converted the
+entire scoreboard to forecast numbers with no error anywhere.
+
+**The projections endpoint needs the season type passed through.** It was hardcoded to
+`regular`. Asking for regular-season data while playing a preseason week returns a full,
+plausible payload for the wrong games, which is far worse than returning nothing. Preseason
+and postseason have no projections at all, and the UI says so rather than showing zeroes.
 
 **Scoring is standard PPR, chosen over fitted weights on purpose.** A touchdown is six and a
 hundred yards is ten because that is what every fantasy player already expects. Fitted

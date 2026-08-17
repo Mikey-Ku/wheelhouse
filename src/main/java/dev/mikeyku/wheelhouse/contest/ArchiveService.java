@@ -4,9 +4,11 @@ import dev.mikeyku.wheelhouse.espn.BoxscoreParser;
 import dev.mikeyku.wheelhouse.espn.EspnClient;
 import dev.mikeyku.wheelhouse.ingest.IngestService;
 import dev.mikeyku.wheelhouse.model.GameSnapshot;
+import dev.mikeyku.wheelhouse.projection.ProjectionService;
 import dev.mikeyku.wheelhouse.sleeper.AthleteResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -29,32 +31,57 @@ public class ArchiveService {
 
     private static final Logger log = LoggerFactory.getLogger(ArchiveService.class);
 
-    /** ESPN has no usable box scores before this. */
-    public static final int EARLIEST_SEASON = 2001;
-
     private final EspnClient espn;
     private final BoxscoreParser parser;
     private final IngestService ingest;
     private final AthleteResolver resolver;
+    private final ContestService contests;
+    private final ProjectionService projections;
+    private final int seasonsBack;
 
     private final Set<String> loaded = ConcurrentHashMap.newKeySet();
 
     public ArchiveService(EspnClient espn, BoxscoreParser parser, IngestService ingest,
-                          AthleteResolver resolver) {
+                          AthleteResolver resolver, ContestService contests,
+                          ProjectionService projections,
+                          @Value("${wheelhouse.archive.seasons:5}") int seasonsBack) {
         this.espn = espn;
         this.parser = parser;
         this.ingest = ingest;
         this.resolver = resolver;
+        this.contests = contests;
+        this.projections = projections;
+        this.seasonsBack = seasonsBack;
+    }
+
+    /** The most recent completed season. The current one is still being played. */
+    public int latestSeason() {
+        return contests.current().season() - 1;
+    }
+
+    /**
+     * ESPN serves box scores back to about 2001, but the archive is deliberately narrower.
+     * The game is played against projections, and Sleeper only publishes those from 2019, so a
+     * season without them is unplayable rather than merely old.
+     */
+    public int earliestSeason() {
+        return latestSeason() - (seasonsBack - 1);
     }
 
     public Contest load(int season, int week) {
-        if (season < EARLIEST_SEASON) {
-            throw new IllegalArgumentException("no box scores before " + EARLIEST_SEASON);
+        if (season < earliestSeason() || season > latestSeason()) {
+            throw new IllegalArgumentException(
+                    "archive covers " + earliestSeason() + " to " + latestSeason());
         }
         Contest contest = Contest.archived(season, week);
-        if (loaded.contains(contest.id()) && ingest.hasContest(contest.id())) {
+        // Projections are part of being loaded. Without them in the latch, the second visit to
+        // a week short-circuits before they are ever fetched and the whole wheel reads zero.
+        if (loaded.contains(contest.id())
+                && ingest.hasContest(contest.id())
+                && projections.available(contest.id())) {
             return contest;
         }
+        projections.load(contest);
 
         try {
             List<EspnClient.GameRef> games = espn.scoreboard(season, 2, week);

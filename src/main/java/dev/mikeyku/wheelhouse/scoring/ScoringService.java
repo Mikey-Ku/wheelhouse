@@ -4,6 +4,7 @@ import dev.mikeyku.wheelhouse.ingest.IngestService;
 import dev.mikeyku.wheelhouse.model.Player;
 import dev.mikeyku.wheelhouse.model.Roster;
 import dev.mikeyku.wheelhouse.model.Slot;
+import dev.mikeyku.wheelhouse.projection.ProjectionService;
 import dev.mikeyku.wheelhouse.sleeper.AthleteResolver;
 import dev.mikeyku.wheelhouse.sleeper.PlayerCatalog;
 import org.springframework.stereotype.Service;
@@ -11,11 +12,15 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 /**
- * Turns a roster into a number.
+ * Turns a roster into two numbers: what was forecast, and what happened.
  *
- * <p>Pure function of the current stat readings: the same roster against the same stats
- * always scores the same. Nothing is accumulated and nothing is cached, which is what will
- * let a stat correction be handled by simply scoring again.
+ * <p>Pure function of the current readings. The same roster against the same stats always
+ * scores the same, nothing is accumulated and nothing is cached, which is what will let a
+ * stat correction be handled by simply scoring again.
+ *
+ * <p>The two sides come from different places on purpose. Actuals are ESPN box score values
+ * reached by athlete id; projections are Sleeper forecasts reached by Sleeper id or by name.
+ * Both are converted to points by the same multipliers, so the comparison is honest.
  */
 @Service
 public class ScoringService {
@@ -23,13 +28,15 @@ public class ScoringService {
     private final PlayerCatalog catalog;
     private final AthleteResolver resolver;
     private final IngestService ingest;
+    private final ProjectionService projections;
     private final ScoringConfig config;
 
-    public ScoringService(PlayerCatalog catalog, AthleteResolver resolver,
-                          IngestService ingest, ScoringConfig config) {
+    public ScoringService(PlayerCatalog catalog, AthleteResolver resolver, IngestService ingest,
+                          ProjectionService projections, ScoringConfig config) {
         this.catalog = catalog;
         this.resolver = resolver;
         this.ingest = ingest;
+        this.projections = projections;
         this.config = config;
     }
 
@@ -41,18 +48,44 @@ public class ScoringService {
             String part,
             String stat,
             Double raw,
+            Double projectedRaw,
             double multiplier,
             double points,
+            double projectedPoints,
             String note) {}
 
-    public record ScoredRoster(String rosterId, String owner, List<ScoredPick> picks, double total) {}
+    public record ScoredRoster(String rosterId, String owner, List<ScoredPick> picks,
+                               double total, double projectedTotal) {}
 
     public ScoredRoster score(Roster roster) {
         List<ScoredPick> scored = roster.picks().stream()
                 .map(pick -> scorePick(roster.contestId(), pick))
                 .toList();
-        double total = scored.stream().mapToDouble(ScoredPick::points).sum();
-        return new ScoredRoster(roster.id(), roster.owner(), scored, round(total));
+        return new ScoredRoster(
+                roster.id(), roster.owner(), scored,
+                round(scored.stream().mapToDouble(ScoredPick::points).sum()),
+                round(scored.stream().mapToDouble(ScoredPick::projectedPoints).sum()));
+    }
+
+    /** One player against one stat, priced both ways. */
+    public ScoredPick scoreOne(String contestId, Slot slot, Player player, Slot.StatOption option) {
+        double multiplier = config.multiplier(slot, option);
+
+        Double projectedRaw = projections.projected(contestId, player, option);
+
+        // Actuals need an ESPN athlete id, which is only known once the player has appeared in
+        // a box score. Before kickoff that is nobody, and that is fine: the absence of a result
+        // is the normal state while a week is being built, not an error.
+        String espnId = resolver.espnIdFor(player);
+        Double raw = espnId == null ? null : ingest.statValue(contestId, option.keyFor(espnId));
+
+        return new ScoredPick(
+                slot, player.id(), player.name(), player.team(),
+                option.label(), option.category() + "." + option.stat(),
+                raw, projectedRaw, multiplier,
+                round((raw == null ? 0.0 : raw) * multiplier),
+                round((projectedRaw == null ? 0.0 : projectedRaw) * multiplier),
+                raw == null ? "no result yet" : "");
     }
 
     private ScoredPick scorePick(String contestId, Roster.Pick pick) {
@@ -60,29 +93,11 @@ public class ScoringService {
         if (player == null) {
             return empty(pick, null, "unknown player");
         }
-
         Slot.StatOption option = pick.slot().option(pick.option()).orElse(null);
         if (option == null) {
             return empty(pick, player, "no such option for " + pick.slot());
         }
-        String espnId = resolver.espnIdFor(player);
-        if (espnId == null) {
-            return empty(pick, player, "not yet seen in any box score");
-        }
-
-        Double raw = ingest.statValue(contestId, option.keyFor(espnId));
-        double multiplier = config.multiplier(pick.slot(), option);
-
-        // A stat absent from the box score means the player has not recorded one yet, which
-        // is a legitimate zero rather than missing data. Everyone appears in the box score
-        // once their game is live.
-        double value = raw == null ? 0.0 : raw;
-
-        return new ScoredPick(
-                pick.slot(), player.id(), player.name(), player.team(),
-                option.label(), option.category() + "." + option.stat(),
-                raw, multiplier, round(value * multiplier),
-                raw == null ? "not yet playing" : "");
+        return scoreOne(contestId, pick.slot(), player, option);
     }
 
     private ScoredPick empty(Roster.Pick pick, Player player, String note) {
@@ -90,7 +105,7 @@ public class ScoringService {
                 pick.slot(), pick.playerId(),
                 player == null ? null : player.name(),
                 player == null ? null : player.team(),
-                pick.option(), null, null, 0, 0, note);
+                pick.option(), null, null, null, 0, 0, 0, note);
     }
 
     private double round(double v) {

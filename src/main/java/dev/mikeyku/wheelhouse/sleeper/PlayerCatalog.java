@@ -30,6 +30,16 @@ public class PlayerCatalog {
     private volatile Map<String, Player> byEspnId = Map.of();
     private volatile Map<String, Player> byNameTeam = Map.of();
 
+    /**
+     * Sleeper id to ESPN id for every player Sleeper has ever heard of, active or not.
+     *
+     * <p>The playable catalog above is filtered to active players, which is right for the
+     * wheel and wrong for everything else. Archived weeks are full of players who have since
+     * retired, and projections for those weeks still have to join to their box score lines,
+     * so resolution needs the unfiltered map.
+     */
+    private volatile Map<String, String> espnIdBySleeperId = Map.of();
+
     public PlayerCatalog(SleeperClient sleeper) {
         this.sleeper = sleeper;
     }
@@ -41,9 +51,16 @@ public class PlayerCatalog {
             Map<String, Player> loaded = new HashMap<>();
             Map<String, Player> byEspn = new HashMap<>();
             Map<String, Player> byNameTeam = new HashMap<>();
+            Map<String, String> espnIds = new HashMap<>();
 
             for (String id : root.propertyNames()) {
                 JsonNode n = root.path(id);
+
+                // Resolution covers everyone; only the playable catalog is filtered to active.
+                String anyEspnId = text(n, "espn_id");
+                if (anyEspnId != null) {
+                    espnIds.put(id, anyEspnId);
+                }
                 if (!n.path("active").asBoolean(false)) {
                     continue;
                 }
@@ -72,9 +89,11 @@ public class PlayerCatalog {
             byId = Map.copyOf(loaded);
             byEspnId = Map.copyOf(byEspn);
             this.byNameTeam = Map.copyOf(byNameTeam);
-            log.info("player catalog: {} active, {} with espn ids ({}%), {} name+team keys, {} teams",
+            this.espnIdBySleeperId = Map.copyOf(espnIds);
+            log.info("player catalog: {} active, {} with espn ids ({}%), {} name+team keys, "
+                            + "{} espn ids across all players, {} teams",
                     byId.size(), byEspnId.size(), 100 * byEspnId.size() / Math.max(1, byId.size()),
-                    this.byNameTeam.size(), teams().size());
+                    this.byNameTeam.size(), this.espnIdBySleeperId.size(), teams().size());
         } catch (Exception e) {
             log.warn("player catalog refresh failed: {}", e.toString());
         }
@@ -101,6 +120,11 @@ public class PlayerCatalog {
 
     public void registerArchived(Player player) {
         archived.putIfAbsent(player.id(), player);
+    }
+
+    /** ESPN id for any Sleeper player, retired or not. Null when Sleeper carries none. */
+    public String espnIdForSleeperId(String sleeperId) {
+        return espnIdBySleeperId.get(sleeperId);
     }
 
     public Player byId(String id) {

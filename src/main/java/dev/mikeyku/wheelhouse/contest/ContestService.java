@@ -1,6 +1,7 @@
 package dev.mikeyku.wheelhouse.contest;
 
 import dev.mikeyku.wheelhouse.espn.EspnClient;
+import dev.mikeyku.wheelhouse.projection.ProjectionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -25,10 +26,12 @@ public class ContestService {
     private static final Logger log = LoggerFactory.getLogger(ContestService.class);
 
     private final EspnClient espn;
+    private final ProjectionService projections;
     private volatile Contest current;
 
-    public ContestService(EspnClient espn) {
+    public ContestService(EspnClient espn, ProjectionService projections) {
         this.espn = espn;
+        this.projections = projections;
     }
 
     @Scheduled(initialDelay = 0, fixedDelayString = "${wheelhouse.contest.refresh-ms:300000}")
@@ -53,6 +56,7 @@ public class ContestService {
                         refreshed.label(), refreshed.id(), refreshed.lockAt());
             }
             current = refreshed;
+            projections.load(refreshed);
         } catch (Exception e) {
             log.warn("contest refresh failed: {}", e.toString());
         }
