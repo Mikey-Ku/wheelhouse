@@ -90,6 +90,21 @@ public class PlayController {
         return view(entries.byId(entryId));
     }
 
+    /**
+     * Resolves both reels in one call, because the client spins them side by side and a player
+     * cannot be drawn until the team is known. A team respin necessarily re-rolls the player
+     * too; a player respin keeps the team.
+     */
+    @PostMapping("/{entryId}/pick/{index}/spin")
+    public Map<String, Object> spin(@PathVariable String entryId, @PathVariable int index,
+                                    @RequestParam(defaultValue = "false") boolean respinTeam,
+                                    @RequestParam(defaultValue = "false") boolean respinPlayer) {
+        if (!respinPlayer) {
+            entries.spinTeam(entryId, index, respinTeam);
+        }
+        return view(entries.spinPlayer(entryId, index, respinPlayer));
+    }
+
     @PostMapping("/{entryId}/pick/{index}/team")
     public Map<String, Object> spinTeam(@PathVariable String entryId, @PathVariable int index,
                                         @RequestParam(defaultValue = "false") boolean respin) {
@@ -254,7 +269,11 @@ public class PlayController {
             Map<String, Object> om = new LinkedHashMap<>();
             om.put("key", o.key());
             om.put("part", o.label());
-            om.put("stat", o.category() + "." + o.stat());
+            om.put("stat", o.description());
+            // The card shows its own arithmetic: how many of the thing, times what, equals the
+            // points. A score nobody can check is worse than one that is imperfectly balanced.
+            om.put("multiplier", scoring.multiplierFor(pick.slot(), o));
+            om.put("volatile", o.volatile_());
             if (player != null) {
                 ScoringService.ScoredPick probe =
                         scoring.scoreOne(entry.contestId(), pick.slot(), player, o);
@@ -283,15 +302,33 @@ public class PlayController {
         // just showing its work.
         EntryRecord.PickRecord active = entry.activePick();
         if (active != null && active.pickIndex() == pick.pickIndex()) {
-            if (pick.team() == null) {
-                m.put("reel", pool.teams(entry.contestId(), pick.slot()).stream()
-                        .limit(REEL_SIZE).toList());
-            } else if (pick.playerId() == null) {
-                m.put("reel", pool.candidates(entry.contestId(), pick.slot(), pick.team()).stream()
-                        .map(Player::name).filter(Objects::nonNull).limit(REEL_SIZE).toList());
-            }
+            m.put("teamReel", pool.teams(entry.contestId(), pick.slot()).stream()
+                    .limit(REEL_SIZE).toList());
+            m.put("playerReel", playerReel(entry.contestId(), pick));
         }
         return m;
+    }
+
+    /**
+     * Names for the player reel to blur through.
+     *
+     * <p>Padded with league-wide candidates, because a team can have exactly one eligible
+     * quarterback and a reel showing the same name forty times does not read as a spin. The
+     * padding is decoration only: the server has already decided the result.
+     */
+    private List<String> playerReel(String contestId, EntryRecord.PickRecord pick) {
+        List<String> names = new ArrayList<>();
+        if (pick.team() != null) {
+            pool.candidates(contestId, pick.slot(), pick.team()).stream()
+                    .map(Player::name).filter(Objects::nonNull).forEach(names::add);
+        }
+        pool.candidates(contestId, pick.slot()).stream()
+                .map(Player::name)
+                .filter(Objects::nonNull)
+                .filter(n -> !names.contains(n))
+                .limit(Math.max(0, REEL_SIZE - names.size()))
+                .forEach(names::add);
+        return names.stream().limit(REEL_SIZE).toList();
     }
 
     /**

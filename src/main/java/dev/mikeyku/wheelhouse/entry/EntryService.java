@@ -93,7 +93,17 @@ public class EntryService {
             }
         }
 
-        List<String> options = pool.teams(entry.contestId(), pick.slot());
+        // With six picks per position the wheel will land on a team whose only eligible
+        // quarterback you already own: fifteen of thirty-two teams have exactly one. Exhausted
+        // teams are filtered out before the spin rather than erroring after it.
+        Set<String> rostered = rosteredPlayerIds(entry, pick.pickIndex());
+        List<String> options = pool.teams(entry.contestId(), pick.slot()).stream()
+                .filter(team -> pool.candidates(entry.contestId(), pick.slot(), team).stream()
+                        .anyMatch(c -> !rostered.contains(c.id())))
+                .toList();
+        if (options.isEmpty()) {
+            throw new IllegalStateException("no team has an eligible " + pick.slot() + " left");
+        }
         // A respin that could hand back the same team is not a respin.
         if (respin && options.size() > 1) {
             String current = pick.team();
@@ -132,13 +142,7 @@ public class EntryService {
             }
         }
 
-        // Nobody appears twice on the same roster, in any position.
-        Set<String> taken = entry.picks().stream()
-                .filter(p -> p.pickIndex() != pickIndex)
-                .map(EntryRecord.PickRecord::playerId)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
-
+        Set<String> taken = rosteredPlayerIds(entry, pickIndex);
         List<Player> options = pool.candidates(entry.contestId(), pick.slot(), pick.team()).stream()
                 .filter(p -> !taken.contains(p.id()))
                 .toList();
@@ -191,6 +195,15 @@ public class EntryService {
             entry.submittedAt(Instant.now());
         }
         return entries.save(entry);
+    }
+
+    /** Nobody appears twice on the same roster, in any position. */
+    private Set<String> rosteredPlayerIds(EntryRecord entry, int excludingPick) {
+        return entry.picks().stream()
+                .filter(p -> p.pickIndex() != excludingPick)
+                .map(EntryRecord.PickRecord::playerId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
     }
 
     /** Parts nobody in this position has taken yet. */

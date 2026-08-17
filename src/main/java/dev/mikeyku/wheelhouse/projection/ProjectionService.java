@@ -92,7 +92,12 @@ public class ProjectionService {
         }
         // Sleeper omits a key entirely rather than sending zero, and an omitted stat genuinely
         // means "not expected to record any", so absent reads as zero rather than unknown.
-        return stats.getOrDefault(option.projectionStat(), 0.0);
+        // A part like total touchdowns spans several fields and is the sum of them.
+        double total = 0;
+        for (String field : option.projectionStats()) {
+            total += stats.getOrDefault(field, 0.0);
+        }
+        return total;
     }
 
     private Week fetch(Contest contest) {

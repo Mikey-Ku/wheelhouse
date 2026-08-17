@@ -67,6 +67,11 @@ public class ScoringService {
                 round(scored.stream().mapToDouble(ScoredPick::projectedPoints).sum()));
     }
 
+    /** The points-per-unit for a part, so the UI can show its own arithmetic. */
+    public double multiplierFor(Slot slot, Slot.StatOption option) {
+        return config.multiplier(slot, option);
+    }
+
     /** One player against one stat, priced both ways. */
     public ScoredPick scoreOne(String contestId, Slot slot, Player player, Slot.StatOption option) {
         double multiplier = config.multiplier(slot, option);
@@ -77,15 +82,31 @@ public class ScoringService {
         // a box score. Before kickoff that is nobody, and that is fine: the absence of a result
         // is the normal state while a week is being built, not an error.
         String espnId = resolver.espnIdFor(player);
-        Double raw = espnId == null ? null : ingest.statValue(contestId, option.keyFor(espnId));
+        Double raw = espnId == null ? null : actual(contestId, espnId, option);
 
         return new ScoredPick(
                 slot, player.id(), player.name(), player.team(),
-                option.label(), option.category() + "." + option.stat(),
+                option.label(), option.description(),
                 raw, projectedRaw, multiplier,
                 round((raw == null ? 0.0 : raw) * multiplier),
                 round((projectedRaw == null ? 0.0 : projectedRaw) * multiplier),
                 raw == null ? "no result yet" : "");
+    }
+
+    /**
+     * Sums a part's components. Null only when the box score has none of them at all, which
+     * means the player has not been seen yet; a player who took the field but did not record
+     * the stat is a real zero.
+     */
+    private Double actual(String contestId, String espnId, Slot.StatOption option) {
+        Double total = null;
+        for (Slot.StatRef ref : option.stats()) {
+            Double value = ingest.statValue(contestId, ref.keyFor(espnId));
+            if (value != null) {
+                total = (total == null ? 0.0 : total) + value;
+            }
+        }
+        return total;
     }
 
     private ScoredPick scorePick(String contestId, Roster.Pick pick) {

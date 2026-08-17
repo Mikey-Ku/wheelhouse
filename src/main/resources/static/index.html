@@ -73,13 +73,18 @@
   .whobox .sub{font-size:12px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-top:3px}
   .prompt{color:var(--secondary);font-size:14px}
 
-  .reel{height:64px;overflow:hidden;position:relative;min-width:220px}
+  .reels{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.7fr);gap:12px;margin-bottom:18px}
+  .reelbox{background:var(--surface-deep);border:1px solid var(--line);border-radius:12px;padding:12px 14px;overflow:hidden}
+  .reelbox.landed{border-color:var(--accent)}
+  .reelcap{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
+  .reel{height:64px;overflow:hidden;position:relative;min-width:0}
   .reel::after{content:"";position:absolute;inset:0;pointer-events:none;
-    background:linear-gradient(var(--surface),transparent 34%,transparent 66%,var(--surface))}
+    background:linear-gradient(var(--surface-deep),transparent 34%,transparent 66%,var(--surface-deep))}
   .reel-strip{position:absolute;top:0;left:0;right:0;will-change:transform}
   .reel-item{height:64px;display:flex;align-items:center;font-family:var(--display);
-    font-weight:700;font-size:46px;letter-spacing:.03em;line-height:1;white-space:nowrap;color:var(--muted)}
-  .reel-item.name{font-size:30px}
+    font-weight:700;font-size:44px;letter-spacing:.03em;line-height:1;white-space:nowrap;color:var(--muted)}
+  .reel-item.name{font-size:26px;overflow:hidden;text-overflow:ellipsis;display:block;line-height:64px}
+  .reel-item.hit{color:var(--text)}
   @keyframes reelspin{from{transform:translateY(0)}to{transform:translateY(-1280px)}}
   .reel-strip.spinning{animation:reelspin .55s linear infinite}
 
@@ -88,8 +93,12 @@
   .opt:hover:not(:disabled){border-color:var(--accent)}
   .opt .part{font-family:var(--display);font-weight:700;font-size:21px;letter-spacing:.02em}
   .opt .stat{font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
-  .opt .val{font-family:var(--display);font-weight:700;font-size:19px;color:var(--accent);margin-top:6px}
-  .opt .raw{font-size:11px;color:var(--dim);letter-spacing:.06em;text-transform:uppercase}
+  .opt .val{font-family:var(--display);font-weight:700;font-size:26px;color:var(--accent);margin-top:8px;line-height:1}
+  .opt .val small{font-family:var(--sans);font-size:10px;font-weight:600;letter-spacing:.14em;color:var(--accent-deep);margin-left:5px}
+  .opt .math{font-size:11px;color:var(--dim);margin-top:3px;font-variant-numeric:tabular-nums}
+  .opt .math b{color:var(--secondary);font-weight:500}
+  .opt .boom{position:absolute;top:11px;right:12px;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--violet)}
+  .opt{position:relative}
 
   .positions{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
   .pos{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
@@ -161,7 +170,10 @@
         <div style="font-size:13px;color:var(--muted)" id="totalHint">Results arrive once all twelve picks are in</div></div>
       <div style="display:flex;align-items:center;gap:22px">
         <div class="vs" id="totalVs"></div>
-        <div class="n" id="totalN">0</div>
+        <div style="display:flex;align-items:baseline;gap:6px">
+          <div class="n" id="totalN">0</div>
+          <div style="font-size:11px;font-weight:600;letter-spacing:.14em;color:var(--accent-deep)">PTS</div>
+        </div>
       </div>
     </div>
   </section>
@@ -250,32 +262,49 @@ function renderStage() {
 
   const pick = pickAt(entry.activePick);
   const p = pick.player;
-  let reveal, controls, options = "";
+  const landedTeam = !!pick.team;
+  const landedPlayer = !!p;
 
-  if (!pick.team) {
-    reveal = `<div class="prompt">Spin to see which team you are drawing from.</div>`;
-    controls = `<button class="primary" data-act="team">Spin team</button>`;
-  } else if (!p) {
-    reveal = `<div class="reveal"><div class="teambox">${esc(pick.team)}</div>
-      <div class="prompt">Now spin for a ${pick.slot === "FLEX" ? "receiver" : esc(pick.slot)}.</div></div>`;
-    controls = `<button class="primary" data-act="player">Spin player</button>
-      <button class="ghost" data-act="team" data-respin="1" ${entry.teamRespins > 0 ? "" : "disabled"}>Respin team</button>`;
-  } else {
-    reveal = `<div class="reveal">
-        ${faceTag(p.image, "face")}
-        <div class="teambox">${esc(pick.team)}</div>
-        <div class="whobox"><div class="nm">${esc(p.name)}</div>
-          <div class="sub">${esc(p.position)} &middot; ${esc(p.team)}</div></div>
+  // Both reels are on screen from the start. Before a spin they idle on a blurred sample; after
+  // one, each shows what it landed on. That is what makes the causality legible: you watch the
+  // player reel repopulate to the team the first reel just picked.
+  const reels = `<div class="reels">
+      <div class="reelbox ${landedTeam ? "landed" : ""}" id="teamBox">
+        <div class="reelcap">Team</div>
+        <div id="teamReel">${landedTeam
+          ? `<div class="reel"><div class="reel-strip"><div class="reel-item hit">${esc(pick.team)}</div></div></div>`
+          : `<div class="reel"><div class="reel-strip"><div class="reel-item">&mdash;</div></div></div>`}</div>
       </div>
-      <div class="prompt" style="margin-bottom:14px">What are you taking from them?${
-        pick.options.length === 1 ? " Only one part left in this position." : ""}</div>`;
-    controls = `<button class="ghost" data-act="player" data-respin="1" ${entry.playerRespins > 0 ? "" : "disabled"}>Respin player</button>`;
+      <div class="reelbox ${landedPlayer ? "landed" : ""}" id="playerBox">
+        <div class="reelcap">${pick.slot === "FLEX" ? "Receiver" : esc(pick.slot)}</div>
+        <div id="playerReel">${landedPlayer
+          ? `<div class="reel"><div class="reel-strip"><div class="reel-item name hit">${esc(p.name)}</div></div></div>`
+          : `<div class="reel"><div class="reel-strip"><div class="reel-item name">&mdash;</div></div></div>`}</div>
+      </div>
+    </div>`;
+
+  let controls, options = "", who = "";
+
+  if (!landedPlayer) {
+    controls = `<button class="primary" data-act="spin">Spin</button>`;
+  } else {
+    who = `<div class="reveal">
+        ${faceTag(p.image, "face")}
+        <div class="whobox"><div class="nm">${esc(p.name)}</div>
+          <div class="sub">${esc(p.position)} &middot; ${esc(p.team)}${
+            pick.opponent ? " &nbsp;vs&nbsp; " + esc(pick.opponent) : ""}</div></div>
+      </div>
+      <div class="prompt" style="margin-bottom:14px">What are you taking from ${
+        pick.options.length === 1 ? "him? Only one part left in this position." : "him?"}</div>`;
+    controls = `<button class="ghost" data-act="spin" data-respin="team" ${entry.teamRespins > 0 ? "" : "disabled"}>Respin team</button>
+      <button class="ghost" data-act="spin" data-respin="player" ${entry.playerRespins > 0 ? "" : "disabled"}>Respin player</button>`;
     options = `<div class="opts">` + pick.options.map(o => `
       <button class="opt" data-act="choose" data-opt="${esc(o.key)}">
+        ${o["volatile"] ? '<span class="boom">boom</span>' : ""}
         <span class="part">${esc(o.part)}</span>
-        <span class="stat">${esc(statLabel(o.stat))}</span>
-        <span class="val">${o.projectedPoints == null ? "&middot;" : fmt(o.projectedPoints)}</span>
-        <span class="raw">proj ${fmt(o.projectedRaw)}</span>
+        <span class="stat">${esc(o.stat)}</span>
+        <span class="val">${o.projectedPoints == null ? "&middot;" : fmt(o.projectedPoints)}<small>PTS</small></span>
+        <span class="math"><b>${fmt(o.projectedRaw)}</b> projected &times; ${fmt(o.multiplier)}</span>
       </button>`).join("") + `</div>`;
   }
 
@@ -284,8 +313,8 @@ function renderStage() {
       <span class="step">Pick ${entry.activePick + 1} of ${entry.totalPicks} &middot; ${esc(posLabel(pick.slot, pick.position))}</span>
       <span class="respins">respins &nbsp; team <b>${entry.teamRespins}</b> &nbsp; player <b>${entry.playerRespins}</b></span>
     </div>
-    <div id="revealArea">${reveal}</div>
-    <div id="reelHost"></div>
+    ${reels}
+    ${who}
     <div class="row" style="margin-bottom:${options ? "18px" : "0"}">${controls}</div>
     ${options}`;
 
@@ -312,7 +341,7 @@ function renderRoster() {
       return `<div class="part-row">${faceTag(p.player.image, "mini")}
         <span class="lbl">${esc(part)}</span>
         <span class="nm">${esc(p.player.name)}</span>
-        <span class="pt ${cls}">${fmt(shown)}</span></div>`;
+        <span class="pt ${cls}">${fmt(shown)}<small style="font-size:9px;letter-spacing:.1em;color:var(--dim);margin-left:3px">PTS</small></span></div>`;
     }).join("");
 
     const headline = revealed ? pos.total : pos.projectedTotal;
@@ -384,7 +413,7 @@ function landReel(strip, items, result, className) {
 
     strip.insertAdjacentHTML("beforeend",
       `<div class="reel-item ${className}">${esc(decoy)}</div>` +
-      `<div class="reel-item ${className}" style="color:var(--text)">${esc(result)}</div>`);
+      `<div class="reel-item ${className} hit">${esc(result)}</div>`);
 
     // Freeze wherever the loop happens to be, so there is no visible jump.
     const y = new DOMMatrix(getComputedStyle(strip).transform).m42;
@@ -403,26 +432,42 @@ function landReel(strip, items, result, className) {
   });
 }
 
+/** Both reels spin together; the team settles first, then the player reel resolves to it. */
 async function spinFor(d, index) {
   const before = pickAt(index);
-  const isTeam = d.act === "team";
-  const items = (before.reel && before.reel.length) ? before.reel : ["?"];
-  const className = isTeam ? "" : "name";
+  const teamItems = (before.teamReel && before.teamReel.length) ? before.teamReel : ["?"];
+  const playerItems = (before.playerReel && before.playerReel.length) ? before.playerReel : ["?"];
 
-  document.getElementById("revealArea").style.display = "none";
-  const strip = buildReel(document.getElementById("reelHost"), items, className);
+  const teamStrip = buildReel(document.getElementById("teamReel"), teamItems, "");
+  const playerStrip = buildReel(document.getElementById("playerReel"), playerItems, "name");
+  document.getElementById("teamBox").classList.remove("landed");
+  document.getElementById("playerBox").classList.remove("landed");
   document.querySelectorAll("#stage button").forEach(b => b.disabled = true);
+
+  const params = {};
+  if (d.respin === "team") params.respinTeam = true;
+  if (d.respin === "player") params.respinPlayer = true;
 
   let updated;
   try {
-    updated = await api("POST", `/${entry.entryId}/pick/${index}/${isTeam ? "team" : "player"}`,
-                        d.respin ? { respin: true } : null);
+    updated = await api("POST", `/${entry.entryId}/pick/${index}/spin`,
+                        Object.keys(params).length ? params : null);
   } catch (e) {
     showError(e); render(); return;
   }
 
-  const after = updated.positions.flatMap(p => p.picks).find(p => p.pickIndex === index);
-  await landReel(strip, items, isTeam ? after.team : (after.player ? after.player.name : "?"), className);
+  const after = updated.positions.flatMap(x => x.picks).find(x => x.pickIndex === index);
+
+  await landReel(teamStrip, teamItems, after.team, "");
+  document.getElementById("teamBox").classList.add("landed");
+
+  // The player reel has been blurring a league-wide sample; now that the team is known it
+  // switches to that roster before it lands, so the result never comes out of nowhere.
+  const roster = (after.playerReel && after.playerReel.length) ? after.playerReel : playerItems;
+  const restrip = buildReel(document.getElementById("playerReel"), roster, "name");
+  await landReel(restrip, roster, after.player ? after.player.name : "?", "name");
+  document.getElementById("playerBox").classList.add("landed");
+
   entry = updated;
   render();
   refreshTables();
@@ -430,7 +475,7 @@ async function spinFor(d, index) {
 
 async function act(d, index) {
   showError(null);
-  if (d.act === "team" || d.act === "player") return spinFor(d, index);
+  if (d.act === "spin") return spinFor(d, index);
   try {
     entry = await api("POST", `/${entry.entryId}/pick/${index}/choose`, { option: d.opt });
     render();

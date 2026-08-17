@@ -42,7 +42,7 @@ public class WheelController {
                         "options", s.options().stream()
                                 .map(o -> Map.of(
                                         "part", o.label(),
-                                        "stat", o.category() + "." + o.stat()))
+                                        "stat", o.description()))
                                 .toList()))
                 .toList();
     }

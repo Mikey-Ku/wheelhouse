@@ -9,8 +9,8 @@ import java.util.List;
  * another, and rushing yards from a third, which is coherent in a way blending a passer with
  * a receiver never was: every piece of a composite QB comes from someone playing that job.
  *
- * <p>Twelve players, twelve picks. The decision each time is not who you got, since the wheel
- * decides that, but which of the position's remaining parts you spend them on. The third pick
+ * <p>Eighteen players, eighteen picks. The decision each time is not who you got, since the wheel
+ * decides that, but which of the position's remaining parts you spend them on. The last pick
  * in a position takes whatever is left, so an early choice costs you a later one.
  */
 public record Roster(String id, String contestId, String owner, List<Pick> picks) {
@@ -21,16 +21,30 @@ public record Roster(String id, String contestId, String owner, List<Pick> picks
     /** One QB, one RB, two flex. */
     public static final List<Slot> POSITIONS = List.of(Slot.QB, Slot.RB, Slot.FLEX, Slot.FLEX);
 
-    /** Every position offers three parts, and a full roster fills all of them. */
-    public static final int PARTS_PER_POSITION = 3;
+    /**
+     * Positions no longer hold the same number of parts: five at quarterback and running back,
+     * four at flex. So a flat pick index has to be walked rather than divided.
+     */
+    public static final int TOTAL_PICKS =
+            POSITIONS.stream().mapToInt(s -> s.options().size()).sum();
 
-    public static final int TOTAL_PICKS = POSITIONS.size() * PARTS_PER_POSITION;
-
-    public static Slot slotForPick(int pickIndex) {
-        return POSITIONS.get(pickIndex / PARTS_PER_POSITION);
+    public static int partsIn(int position) {
+        return POSITIONS.get(position).options().size();
     }
 
     public static int positionOf(int pickIndex) {
-        return pickIndex / PARTS_PER_POSITION;
+        int remaining = pickIndex;
+        for (int position = 0; position < POSITIONS.size(); position++) {
+            int parts = partsIn(position);
+            if (remaining < parts) {
+                return position;
+            }
+            remaining -= parts;
+        }
+        throw new IllegalArgumentException("no position holds pick " + pickIndex);
+    }
+
+    public static Slot slotForPick(int pickIndex) {
+        return POSITIONS.get(positionOf(pickIndex));
     }
 }
