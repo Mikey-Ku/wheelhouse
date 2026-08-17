@@ -37,3 +37,7 @@ build/
 
 # local h2 database
 .data/
+
+# the pricing workbench is analysis, not the game
+src/main/java/dev/mikeyku/wheelhouse/quant/
+src/main/java/dev/mikeyku/wheelhouse/web/QuantController.java

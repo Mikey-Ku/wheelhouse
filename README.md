@@ -98,61 +98,6 @@ Endpoints, all temporary scaffolding:
 | `GET /api/play/leaderboard` | This week's standings |
 | `GET /api/play/history?owner=` | Every week you have played |
 
-## The pricing workbench
-
-Not linked from the game and not part of it. It answers the question the composite concept
-raises but the game never asks: if you had to put a number on an assembled roster, what would
-it be, and how wide would the spread have to be to survive the correlation between its parts?
-
-```
-POST /api/quant/calibrate?season=2023&fromWeek=1&toWeek=8
-GET  /api/quant/price/{entryId}?trials=50000
-```
-
-Calibration replays finished weeks and compares every projection to what actually happened.
-Eight weeks of 2023 gives 6,530 player-weeks, and the fits are the point:
-
-| stat | kind | n | mean ratio | sd | zero rate |
-|---|---|---|---|---|---|
-| passing yards | continuous | 225 | 1.02 | 0.34 | 0% |
-| receiving yards | continuous | 1542 | 1.27 | 1.39 | 10% |
-| rushing yards | continuous | 654 | 1.20 | 1.34 | 2% |
-| receptions | count | 582 | 1.06 | 0.58 | 9% |
-| rushing touchdowns | count | 206 | 1.00 | 0.50 | 82% |
-
-Receiving yards are roughly four times noisier than passing yards, and rushing touchdowns are
-zero 82% of the time. A roster built on receivers and touchdowns is a completely different bet
-from one built on completions, even at an identical projected total, and that is exactly what
-a single projected number hides.
-
-Pricing then runs a Monte Carlo with a Gaussian copula: sample correlated normals, push them
-through the normal CDF to uniforms, and invert each part's own marginal. Counts use Poisson
-with the projection as the rate; continuous stats use a lognormal fitted from the ratios. The
-copula is what lets a lumpy touchdown count and a heavy-tailed yardage total share one
-simulation while still moving together.
-
-A real 18-leg roster from 2023 week 1:
-
-```
-projected total (sum of means)    72.61
-simulated mean                    76.47
-fair line (median)                74.56
-standard deviation                15.68
-90% interval              55.37 - 103.34
-actual result                     67.26
-```
-
-The sum of means is not the line. It came out two points under the median because the
-marginals are right-skewed, which is the sort of thing that only shows up once you simulate.
-
-Known limitations, stated rather than buried. The Gaussian copula has no tail dependence, so
-it under-prices everything going right at once, which is the case a book cares most about; a
-t-copula is the usual fix and is not built. The correlation structure is three hand-set
-constants rather than estimated per player-pair, because estimating a full matrix needs far
-more player-weeks than the archive holds and a badly estimated correlation is worse than an
-openly approximate one. And the mean-of-ratios is a biased estimator when projections are
-small; a higher threshold or a log-space fit would be better.
-
 ## Design notes
 
 **Snapshots, not events.** ESPN serves cumulative totals rather than a play stream, so
