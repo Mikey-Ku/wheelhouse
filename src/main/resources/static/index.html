@@ -53,7 +53,28 @@
   select{font-family:var(--sans);font-size:14px;padding:10px 12px;border-radius:8px;border:1px solid var(--line-hi);background:var(--surface);color:var(--text)}
   select:focus{outline:none;border-color:var(--accent)}
 
+  /* ---- landing ---- */
+  .hero{padding:26px 0 6px}
+  .hero h1{font-family:var(--display);font-weight:700;font-size:clamp(42px,7vw,74px);line-height:.94;
+    letter-spacing:.01em;text-transform:uppercase;margin-bottom:14px}
+  .hero h1 em{font-style:normal;color:var(--accent)}
+  .hero .lede{font-size:17px;color:var(--secondary);max-width:600px;line-height:1.55}
+  .how{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin:26px 0 4px}
+  .how-step{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+  .how-step .n{font-family:var(--display);font-weight:700;font-size:15px;color:var(--accent);letter-spacing:.1em}
+  .how-step .t{font-weight:500;margin:6px 0 4px}
+  .how-step .d{font-size:13px;color:var(--muted);line-height:1.5}
+
   .start{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:28px 34px}
+
+  /* ---- loading a historic week ---- */
+  .loader{background:var(--surface);border:1px solid var(--line-hi);border-radius:16px;padding:44px 34px;text-align:center}
+  .loader .big{font-family:var(--display);font-weight:700;font-size:34px;text-transform:uppercase;letter-spacing:.03em}
+  .loader .sub{color:var(--muted);font-size:14px;margin-top:6px;min-height:21px}
+  .bar{height:3px;background:var(--surface-deep);border-radius:2px;overflow:hidden;margin:22px auto 0;max-width:420px}
+  .bar span{display:block;height:100%;width:34%;background:var(--accent);border-radius:2px;
+    animation:sweep 1.1s cubic-bezier(.5,0,.5,1) infinite}
+  @keyframes sweep{0%{transform:translateX(-100%)}100%{transform:translateX(400%)}}
   .split{margin-top:24px;padding-top:22px;border-top:1px solid var(--line)}
   .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
   .badge{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:3px 10px;margin-left:10px}
@@ -137,8 +158,32 @@
 <div class="wrap">
   <section>
     <div class="eyebrow"><span id="weekLabel">Loading</span></div>
-    <h2 id="headline">Build your guy</h2>
+    <h2 id="headline" style="display:none">Build your guy</h2>
+
+    <div id="hero" class="hero" style="display:none">
+      <h1>Build a guy out of<br><em>eighteen other guys</em></h1>
+      <p class="lede">The wheel picks a team, then a player. You decide which single part of
+        him you want. Do it eighteen times and you have a quarterback, a back and two receivers
+        assembled from pieces of the whole league.</p>
+      <div class="how">
+        <div class="how-step"><div class="n">01</div><div class="t">Spin</div>
+          <div class="d">Two reels. A team, then one of its players. You do not choose either.</div></div>
+        <div class="how-step"><div class="n">02</div><div class="t">Take one part</div>
+          <div class="d">His arm, his legs, his hands. Each part can only be used once per position.</div></div>
+        <div class="how-step"><div class="n">03</div><div class="t">Guess blind</div>
+          <div class="d">You see his projection, never his result. Those stay hidden until the roster is full.</div></div>
+        <div class="how-step"><div class="n">04</div><div class="t">Find out</div>
+          <div class="d">Eighteen picks in, the week resolves at once against what really happened.</div></div>
+      </div>
+    </div>
+
     <div id="notice"></div>
+
+    <div id="loader" class="loader" style="display:none">
+      <div class="big" id="loaderTitle">Pulling that week</div>
+      <div class="sub" id="loaderSub">Finding the games</div>
+      <div class="bar"><span></span></div>
+    </div>
 
     <div id="start" class="start" style="display:none">
       <div class="row">
@@ -206,6 +251,31 @@ async function api(method, path, params) {
 }
 
 const showError = e => document.getElementById("err").textContent = e ? e.message : "";
+const show = (id, on) => document.getElementById(id).style.display = on ? "block" : "none";
+
+/* Pulling a historic week fetches a full slate of box scores plus that week's projections, so
+   it takes a few seconds. Narrating the steps is the difference between "loading" and feeling
+   like something substantial is being assembled for you. */
+const LOAD_STEPS = [
+  "Finding the games",
+  "Pulling every box score",
+  "Matching players across two feeds",
+  "Reading that week's projections",
+  "Locking the results away",
+];
+
+function runLoader(label) {
+  loading = true;
+  document.getElementById("loaderTitle").textContent = label;
+  render();
+  let i = 0;
+  const sub = document.getElementById("loaderSub");
+  sub.textContent = LOAD_STEPS[0];
+  return setInterval(() => {
+    i = Math.min(i + 1, LOAD_STEPS.length - 1);
+    sub.textContent = LOAD_STEPS[i];
+  }, 1400);
+}
 const pickAt = i => entry.positions.flatMap(p => p.picks).find(p => p.pickIndex === i);
 const posLabel = (slot, index) => slot === "FLEX" ? "Flex " + (index - 1) : slot;
 // Split only at lowercase-to-uppercase boundaries, so "passingYards" reads as two words
@@ -361,11 +431,17 @@ function renderRoster() {
     ? `projected ${fmt(entry.projectedTotal)}` : "";
 }
 
+let loading = false;
+
 function render() {
   const building = !!entry;
-  document.getElementById("start").style.display = building ? "none" : "block";
-  document.getElementById("stage").style.display = building ? "block" : "none";
-  document.getElementById("rosterSection").style.display = building ? "block" : "none";
+  show("hero", !building && !loading);
+  show("start", !building && !loading);
+  show("loader", loading);
+  show("stage", building);
+  show("rosterSection", building);
+  document.getElementById("headline").style.display = building ? "block" : "none";
+  if (loading) return;
   if (!building) { loadContest(); return; }
 
   const c = entry.contest || {};
@@ -525,14 +601,17 @@ async function start(params) {
   } catch (e) { showError(e); }
 }
 
-// Loading a historic week pulls a full slate of box scores, so it is not instant.
 async function startArchive() {
-  const btn = document.getElementById("archiveBtn");
-  const label = btn.textContent;
-  btn.disabled = true; btn.textContent = "Loading";
-  await start({ season: document.getElementById("season").value,
-                week: document.getElementById("week").value });
-  btn.disabled = false; btn.textContent = label;
+  const name = document.getElementById("owner").value.trim();
+  if (!name) { showError(new Error("enter a name first")); return; }
+  const season = document.getElementById("season").value;
+  const week = document.getElementById("week").value;
+
+  const ticker = runLoader(season + " week " + week);
+  await start({ season, week });
+  clearInterval(ticker);
+  loading = false;
+  render();
 }
 
 (async function init() {

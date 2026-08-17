@@ -83,9 +83,13 @@ public class ProjectionService {
         if (week == null || player == null) {
             return null;
         }
-        Map<String, Double> stats = week.bySleeperId().get(player.id());
+        // Immutable maps throw on a null key rather than returning null, so every lookup key
+        // has to be checked first. A player with no team is a free agent, which is exactly the
+        // case that produces one.
+        Map<String, Double> stats = player.id() == null ? null : week.bySleeperId().get(player.id());
         if (stats == null) {
-            stats = week.byNameTeam().get(nameTeamKey(player.searchName(), player.team()));
+            String key = nameTeamKey(player.searchName(), player.team());
+            stats = key == null ? null : week.byNameTeam().get(key);
         }
         if (stats == null) {
             return null;
