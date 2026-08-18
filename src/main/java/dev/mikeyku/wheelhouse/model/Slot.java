@@ -9,8 +9,13 @@ import java.util.stream.Stream;
 /**
  * The three roster positions and the parts each one can harvest.
  *
- * <p>Five parts at quarterback and running back, four at flex, so a full roster is eighteen
- * real players across four positions.
+ * <p>Four parts at quarterback, five at running back, four at flex, so a full roster is
+ * seventeen real players across four positions.
+ *
+ * <p>Every part is a stat standard PPR actually scores. Completions were a quarterback part
+ * until it became obvious that no fantasy league pays for them, which meant its weight was
+ * invented rather than inherited, and a made-up number is exactly the thing a player cannot
+ * sanity check.
  *
  * <p>Every part is a stat that exists in <em>both</em> feeds: Sleeper has to project it and
  * ESPN has to report it. That rules out otherwise appealing options like first downs and
@@ -26,8 +31,7 @@ public enum Slot {
                     StatOption.of("arm", "Arm", "passing", "passingYards", "pass_yd"),
                     StatOption.of("shoulders", "Shoulders", "passing", "passingTouchdowns", "pass_td"),
                     StatOption.of("legs", "Legs", "rushing", "rushingYards", "rush_yd"),
-                    StatOption.of("cleats", "Cleats", "rushing", "rushingTouchdowns", "rush_td"),
-                    StatOption.of("eyes", "Eyes", "passing", "completions", "pass_cmp")),
+                    StatOption.of("cleats", "Cleats", "rushing", "rushingTouchdowns", "rush_td")),
             StatOption.of("head", "Head", "passing", "interceptions", "pass_int")),
 
     RB(Set.of("RB"),
@@ -86,6 +90,29 @@ public enum Slot {
         /** Splits only at lowercase-to-uppercase boundaries, so acronyms survive. */
         private static String humanise(String stat) {
             return stat.replaceAll("([a-z])([A-Z])", "$1 $2").toLowerCase();
+        }
+
+        /**
+         * A short unit for the raw number.
+         *
+         * <p>"1.9 projected x 4" asks the reader to look back up at the card heading to find
+         * out what 1.9 counts, and by the time five cards are on screen that is five lookups.
+         * "1.9 TD projected x 4" answers it in place.
+         *
+         * <p>Derived from the description rather than stored, so a new part cannot be added
+         * with a stat name and no unit to go with it.
+         */
+        public String unit() {
+            String s = description();
+            if (s.contains("touchdown")) return "TD";
+            if (s.contains("yards")) return "yds";
+            if (s.contains("receptions")) return "rec";
+            if (s.contains("targets")) return "tgt";
+            if (s.contains("attempts")) return "att";
+            if (s.contains("completions")) return "cmp";
+            if (s.contains("interceptions")) return "int";
+            if (s.contains("fumbles")) return "fum";
+            return "";
         }
 
         /** True when this part is scored on touchdowns, which is what makes it a gamble. */

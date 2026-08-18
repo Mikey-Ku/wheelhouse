@@ -14,9 +14,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Read-only view of the wheel's inputs. Spinning itself is not built yet: a spin has to be
+ * Read-only view of the wheel's inputs: which slots exist, which teams and players can come
+ * up, and how big the catalog is.
+ *
+ * <p>Inspection only. Spinning lives in {@link PlayController} because a spin has to be
  * server-authoritative and recorded on first request, otherwise anyone can re-roll by
- * refreshing.
+ * refreshing. Nothing here reveals a result, so it is safe to serve: the pool is who could
+ * come up, not what they did.
  */
 @RestController
 @RequestMapping("/api/wheel")

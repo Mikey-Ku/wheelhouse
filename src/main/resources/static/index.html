@@ -461,9 +461,9 @@
     <div id="hero" class="hero" style="display:none">
       <h1>Test your football brain<br><em>one random week at a time</em></h1>
       <p class="lede">The wheel deals you a player. You decide which one of his stats is most
-        likely to beat its projection, and you only get to use each stat once. Eighteen calls
-        later, the week resolves and you find out whether you read it better than the forecast
-        did.</p>
+        likely to beat its projection, and you only get to use each stat once. <b data-picks>17</b>
+        calls later, the week resolves and you find out whether you read it better than the
+        forecast did.</p>
 
       <div class="cta">
         <input id="owner" placeholder="your name" autocomplete="off">
@@ -508,7 +508,7 @@
           <span class="sec-note" id="rosterNote"></span></div>
         <div class="total" id="totalBar">
           <div><div class="tlabel" id="totalLabel">Projected</div>
-            <div class="thint" id="totalHint">Results arrive once all eighteen picks are in</div></div>
+            <div class="thint" id="totalHint">Results arrive once every pick is in</div></div>
           <div class="tnum"><div class="n" id="totalN">0</div><small>PTS</small></div>
           <div class="vs" id="totalVs"></div>
         </div>
@@ -519,7 +519,7 @@
 
   <section id="howto" class="howto" style="display:none">
     <div class="sec-head"><h2>How it works</h2>
-      <span class="sec-note">Four steps, eighteen picks</span></div>
+      <span class="sec-note">Four steps, <b data-picks>17</b> picks</span></div>
     <div class="rail">
       <div><b>01</b>
         <svg viewBox="0 0 120 52" aria-hidden="true">
@@ -570,7 +570,7 @@
           <rect class="dim" x="38" y="34" width="26" height="3" rx="1.5"/>
           <rect class="hi" x="66" y="40" width="16" height="6" rx="2"/>
         </svg>
-        <span><i>Eighteen calls, then the truth.</i> The whole week resolves at once and
+        <span><i>Every call in, then the truth.</i> The whole week resolves at once and
           prints as a slip against what actually happened.</span></div>
     </div>
   </section>
@@ -689,6 +689,11 @@ let archiveRange = { earliest: 2020, latest: 2024, weeks: 18 };
 async function loadArchiveOptions() {
   const a = await api("GET", "/archive");
   archiveRange = a;
+  // The roster length is a property of the slot definitions, so the page is told it rather
+  // than repeating it. Dropping one part from one position changes the whole draft.
+  if (a.totalPicks) {
+    document.querySelectorAll("[data-picks]").forEach(el => el.textContent = a.totalPicks);
+  }
   const years = [];
   for (let y = a.latest; y >= a.earliest; y--) years.push(y);
   document.getElementById("season").innerHTML = years.map(y => `<option>${y}</option>`).join("");
@@ -817,8 +822,8 @@ function renderStage() {
   if (entry.activePick == null) {
     // The slip below carries the numbers now, so this only has to say the week is over.
     host.innerHTML = `<div class="stage-head"><span class="step">Roster complete</span></div>
-      <div class="prompt">Eighteen picks, all resolved against what actually happened.
-      Your slip is printed below.</div>`;
+      <div class="prompt">${entry.totalPicks} picks, all resolved against what actually
+      happened. Your slip is printed below.</div>`;
     return;
   }
 
@@ -893,7 +898,8 @@ function renderStage() {
           <span class="part">${esc(o.part)}</span>
           <span class="stat">${esc(o.stat)}</span>
           <span class="val">${o.projectedPoints == null ? "&middot;" : fmt(o.projectedPoints)}<small>PTS</small></span>
-          <span class="math"><b>${fmt(o.projectedRaw)}</b> projected &times; ${fmt(o.multiplier)}</span>
+          <span class="math"><b>${fmt(o.projectedRaw)}</b>${
+            o.unit ? " " + esc(o.unit) : ""} projected &times; ${fmt(o.multiplier)}</span>
         </button>
         ${o.form ? `<button class="opt-log" data-act="log" data-opt="${esc(o.key)}">
           ${formStrip(o.form)}</button>` : ""}
@@ -970,7 +976,7 @@ function renderSlip() {
   }
 }
 
-/* Eighteen picks resolve at once on the server, so the page is the only thing that can make
+/* Every pick resolves at once on the server, so the page is the only thing that can make
    that land as an event rather than a number quietly changing. Each line prints in turn with
    the total climbing behind it. */
 async function printSlip() {

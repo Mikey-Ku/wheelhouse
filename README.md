@@ -5,23 +5,28 @@ platform underneath it. Working name.
 
 ## The game
 
-Four positions: one QB, one RB, two flex. Each is assembled from **three different players of
-that position**: your quarterback is passing yards from one, touchdowns from another, rushing
-yards from a third. Twelve players in all.
+Four positions: one QB, one RB, two flex. Each is assembled from **several different players
+of that position**: your quarterback is passing yards from one, touchdowns from another,
+rushing yards from a third. Seventeen players in all.
 
 The wheel decides who you get. You decide which of the position's remaining parts to spend
-them on, and the third pick takes whatever is left, so an early choice costs a later one.
+them on, and each part goes only once per position, so the last pick takes whatever is left
+and an early choice costs a later one.
 
 You choose against **projections**, never results. Actual numbers are withheld by the server
-until all twelve picks are in, then the whole roster resolves at once against what really
-happened. Respins are a budget for the whole build (three team, three player) rather than one
-per pick.
+until every pick is in, then the whole roster resolves at once against what really happened
+and prints as a slip. Respins are a budget for the whole build (three team, three player)
+rather than one per pick.
 
-| Slot | Options |
+| Slot | Parts |
 |---|---|
-| QB | Arm (passing yards) · Legs (rushing yards) · Shoulders (passing TDs) |
-| RB | Legs (rushing yards) · Hands (receptions) · Chest (receiving yards) |
-| Flex | Chest (receiving yards) · Hands (receptions) · Feet (receiving TDs) |
+| QB (4) | Arm (passing yards) · Shoulders (passing TDs) · Legs (rushing yards) · Cleats (rushing TDs) |
+| RB (5) | Legs (rushing yards) · Hands (receptions) · Chest (receiving yards) · Nose (total TDs) · Motor (carries) |
+| Flex (4) | Hands (receptions) · Chest (receiving yards) · Nose (total TDs) · Eyes (targets) |
+
+Every weight is standard PPR except `rb.motor` and `flex.eyes`. Carries and targets are not
+scored by any real league, so those two multipliers are invented rather than inherited, and
+they are the next candidates for removal.
 
 ## Status
 
@@ -46,8 +51,25 @@ tested in seconds instead of waiting for Sunday, and old rosters are genuinely f
 
 Drafting blind against projections is what keeps a finished week honest: you see the same
 forecast anyone would have had before kickoff, and the results only arrive once you have
-committed all twelve picks. Leaderboards are per week, so an archived week has its own and
-never mixes with a live one.
+committed every pick. Leaderboards are per week, so an archived week has its own and never
+mixes with a live one.
+
+### Reading the form
+
+Every option carries the player's last six games at that exact stat, and clicking one opens
+the full table: every stat as a column, every prior game as a row, with the average, this
+week's projection, and how often he cleared it underneath. Reading down a column tells you
+about the stat; reading across a row tells you about the matchup.
+
+Nothing from the week being drafted is ever included. ESPN's game log returns the whole
+season, which for an archived contest contains the answer, so the filter is strict and lives
+in one place.
+
+### The slip
+
+A finished roster prints as a betting slip: every pick with its raw stat and points, position
+subtotals, projected against final. It is the only light surface in the product, which is the
+point — it reads as an object you were handed rather than another panel.
 
 ## Running it
 
@@ -87,7 +109,6 @@ Endpoints, all temporary scaffolding:
 | `GET /api/wheel/slots` | Roster shape and each slot's options |
 | `GET /api/wheel/teams?slot=FLEX` | Teams the wheel can land on |
 | `GET /api/wheel/players?slot=FLEX&team=SF` | Who a team spin resolves to |
-| `POST /api/roster/score` | Score an ad-hoc roster of picks |
 | `GET /api/play/contest` | Current week and lock time |
 | `POST /api/play/open?owner=` | Open or resume this week's entry |
 | `POST /api/play/open?owner=&season=&week=` | Open an archived week |
@@ -169,7 +190,7 @@ a back's 2 receptions (2.0) beat both his 19 rushing yards (1.9) and his 15 rece
 `tools/calibrate.py` reports how lopsided each slot currently is, and can still solve for
 balanced weights if that trade ever looks worth making.
 
-**Completions had to be cut from the QB slot.** Every starting quarterback projects to about
+**Completions were cut from the QB slot.** Every starting quarterback projects to about
 the same completions (20 ± 1.3) and the same passing yards (223 ± 17). Spread of 0.07 and
 0.08, against 0.37 for flex options. The choice would have been decided by noise. Rushing
 yards has the widest spread of any stat in the game at 0.65, ranging from about 2 to 39 a
@@ -212,7 +233,7 @@ is both legible and proportionate.
 | Source | Used for | Notes |
 |---|---|---|
 | ESPN site API | Live box scores, schedule, week calendar | Undocumented, no key, UA-sensitive |
-| Sleeper API | Player table for the wheel pool | Documented, free, carries `espn_id` so no separate ID crosswalk is needed |
+| Sleeper API | Player table and weekly projections | Documented, free; its `espn_id` is unusable for modern players, see below |
 | nflverse | Historical play-by-play for the replayer | Not wired up yet |
 
 Sleeper's `search_rank` is what keeps the wheel playable. Filtering to rostered, active
@@ -229,11 +250,13 @@ for kickoff.
 
 - **Persist stat snapshots.** Entries survive a restart, stats do not, so scores drop to zero
   and climb back as games are re-fetched. This is the biggest remaining hole.
-- **Decide whether the lopsided choice needs a fix.** Standard scoring means the highest
-  expected option is nearly always the same one. The cheapest lever is a uniqueness rule:
-  each body part usable only once per roster, so two flex slots cannot both take Chest and
-  the question becomes which receiver gets the good part. Worth playing a few weeks before
-  deciding whether it is actually a problem.
+- **Drop the two invented multipliers.** `rb.motor` (carries) and `flex.eyes` (targets) are
+  not scored by real leagues, so their weights are made up. Removing both takes the roster to
+  fourteen picks, which is a noticeably shorter game; worth playing seventeen first.
+- **Decide whether the lopsided choice still needs a fix.** Standard scoring means the highest
+  expected option is nearly always the same one. The uniqueness rule is now in (each part goes
+  once per position), which turns the question into which player gets the good part. Worth
+  playing a few weeks before deciding whether anything further is needed.
 - **The replayer**: stream a finished game through the pipeline at speed, so scoring can be
   developed out of season and the determinism claim can actually be tested.
 - Accounts, so a name is not the only identity. Deliberately deferred: the game has to be

@@ -33,7 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-/** The build-and-score flow: eighteen picks across four composite positions. */
+/** The build-and-score flow: seventeen picks across four composite positions. */
 @RestController
 @RequestMapping("/api/play")
 public class PlayController {
@@ -73,13 +73,20 @@ public class PlayController {
         return describe(contests.current());
     }
 
-    /** Which seasons the archive can reach. */
+    /**
+     * Which seasons the archive can reach, and how long a roster is.
+     *
+     * <p>The pick count ships from here so the page never hardcodes it. Dropping a single part
+     * from one position changes the length of the whole draft, and the last time that happened
+     * the word "eighteen" was left behind in six places.
+     */
     @GetMapping("/archive")
     public Map<String, Object> archiveRange() {
         return Map.of(
                 "earliest", archive.earliestSeason(),
                 "latest", archive.latestSeason(),
-                "weeks", 18);
+                "weeks", 18,
+                "totalPicks", Roster.TOTAL_PICKS);
     }
 
     @PostMapping("/open")
@@ -257,7 +264,7 @@ public class PlayController {
         m.put("chosen", pick.option());
 
         // The form guide is only assembled for the pick being played. Every other pick is
-        // already decided, and building it for all eighteen would mean an outbound request per
+        // already decided, and building it for every pick would mean an outbound request per
         // player on a view the client polls every fifteen seconds.
         EntryRecord.PickRecord active = entry.activePick();
         boolean isActive = active != null && active.pickIndex() == pick.pickIndex();
@@ -295,6 +302,7 @@ public class PlayController {
             om.put("key", o.key());
             om.put("part", o.label());
             om.put("stat", o.description());
+            om.put("unit", o.unit());
             // The card shows its own arithmetic: how many of the thing, times what, equals the
             // points. A score nobody can check is worse than one that is imperfectly balanced.
             om.put("multiplier", scoring.multiplierFor(pick.slot(), o));

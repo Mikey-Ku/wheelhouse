@@ -17,9 +17,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * A window into the ingestion pipeline while it runs. Temporary scaffolding, not the
- * eventual public API, but it is how you confirm the parser and the differ are correct
- * against a real live game.
+ * A window into the ingestion pipeline while it runs, and how you confirm the parser and the
+ * differ are behaving against a real live game.
+ *
+ * <p>Everything here is scoped to the live contest. The same differ also ingests archived
+ * weeks, and those are the weeks people are drafting blind, so they must not surface on a
+ * public read.
  */
 @RestController
 @RequestMapping("/api")
@@ -40,10 +43,20 @@ public class IngestController {
         return poller.currentLiveGames();
     }
 
+    /**
+     * Recent changes in the live game only.
+     *
+     * <p>Scoped to the current contest, which {@code /games/{id}} already was and this was not.
+     * Loading an archived week pushes its whole slate through the same differ, so an unscoped
+     * feed served the box score of a week somebody might be midway through drafting. Live
+     * games are on television; a finished one you are being asked to guess at is not.
+     */
     @GetMapping("/deltas")
     public List<Map<String, Object>> deltas(@RequestParam(defaultValue = "50") int limit) {
+        String live = contests.current().id();
         List<StatDelta> all = ingest.recentDeltas();
         return all.reversed().stream()
+                .filter(d -> ingest.snapshot(live, d.eventId()) != null)
                 .limit(limit)
                 .map(d -> Map.<String, Object>of(
                         "player", nameOf(d),
