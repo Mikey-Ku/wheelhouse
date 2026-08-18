@@ -739,6 +739,32 @@ function formStrip(f) {
     <span class="formtxt">last ${f.played} &middot; avg <b>${fmt(f.average)}</b>${tail}</span></span>`;
 }
 
+/* A player the game can tell you nothing about.
+ *
+ * Two things can be missing and they are not the same. A backup nobody forecast has no
+ * projection to judge him against. A player who has not taken a snap this season has no game
+ * log to read. Someone called on in relief in week four often has neither, and the honest
+ * thing is to say which, rather than to render a card of zeroes and a table that silently
+ * fails to appear. */
+function blankSlate(pick, p) {
+  const noLine = pick.options.every(o => o.projectedRaw == null);
+  const noPast = !pick.options.some(o => o.form && o.form.games.length);
+  if (!noLine && !noPast) return "";
+
+  const body = noLine && noPast
+    ? `Nobody forecast him this week and he has not taken a snap before it, so there is
+       neither a number to judge him against nor a history to read. He played, so whatever he
+       did still scores, but this pick is completely blind.`
+    : noLine
+      ? `Nobody forecast him this week, so there is no projection to judge him against and no
+         line for his history to be measured on. He played, so whatever he did still scores.`
+      : `He has not taken a snap before this week, so there is no form to read. You still have
+         his projection.`;
+  return `<div class="notice"><b>${esc(p.name)}:
+    ${noLine && noPast ? "nothing to go on." : noLine ? "no projection." : "no history."}</b>
+    ${body} This is what the respins are for.</div>`;
+}
+
 /* Which column is emphasised in the table, if any. The table itself is always on: it shows
    every stat for the player in front of you, so hiding it behind a click on one stat asked
    you to choose a column before you were allowed to compare columns. Reset whenever the pick
@@ -870,10 +896,7 @@ function renderStage() {
       </div>
       <div class="prompt" style="margin-bottom:14px">What are you taking from ${
         pick.options.length === 1 ? "him? Only one part left in this position." : "him?"}</div>
-      ${pick.options.every(o => o.projectedRaw == null) ? `<div class="notice">
-        <b>Nobody forecast ${esc(p.name)} this week.</b> He took the field, so whatever he did
-        still scores, but there is no projection to judge him against and no line for his
-        history to be measured on. This is what the respins are for.</div>` : ""}`;
+      ${blankSlate(pick, p)}`;
 
     // The budget sits on the button that spends it, and the arrow says at a glance that these
     // re-roll rather than confirm. Two identical bordered pills read as a pair of choices; the
