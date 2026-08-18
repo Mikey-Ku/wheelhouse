@@ -5,6 +5,8 @@ import dev.mikeyku.wheelhouse.contest.Contest;
 import dev.mikeyku.wheelhouse.contest.ContestService;
 import dev.mikeyku.wheelhouse.entry.EntryRecord;
 import dev.mikeyku.wheelhouse.entry.EntryService;
+import dev.mikeyku.wheelhouse.form.FormService;
+import dev.mikeyku.wheelhouse.ingest.IngestService;
 import dev.mikeyku.wheelhouse.model.Player;
 import dev.mikeyku.wheelhouse.model.Roster;
 import dev.mikeyku.wheelhouse.model.Slot;
@@ -31,7 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-/** The build-and-score flow: twelve picks across four composite positions. */
+/** The build-and-score flow: eighteen picks across four composite positions. */
 @RestController
 @RequestMapping("/api/play")
 public class PlayController {
@@ -47,10 +49,13 @@ public class PlayController {
     private final ScoringService scoring;
     private final ProjectionService projections;
     private final WheelPool pool;
+    private final FormService form;
+    private final IngestService ingest;
 
     public PlayController(EntryService entries, ContestService contests, ArchiveService archive,
                           PlayerCatalog catalog, AthleteResolver resolver, ScoringService scoring,
-                          ProjectionService projections, WheelPool pool) {
+                          ProjectionService projections, WheelPool pool, FormService form,
+                          IngestService ingest) {
         this.entries = entries;
         this.contests = contests;
         this.archive = archive;
@@ -59,6 +64,8 @@ public class PlayController {
         this.scoring = scoring;
         this.projections = projections;
         this.pool = pool;
+        this.form = form;
+        this.ingest = ingest;
     }
 
     @GetMapping("/contest")
@@ -243,7 +250,17 @@ public class PlayController {
         m.put("position", pick.position());
         m.put("slot", pick.slot().name());
         m.put("team", pick.team());
+        m.put("teamLogo", logo(pick.team()));
+        String opponent = ingest.opponentOf(entry.contestId(), pick.team());
+        m.put("opponent", opponent);
+        m.put("opponentLogo", logo(opponent));
         m.put("chosen", pick.option());
+
+        // The form guide is only assembled for the pick being played. Every other pick is
+        // already decided, and building it for all eighteen would mean an outbound request per
+        // player on a view the client polls every fifteen seconds.
+        EntryRecord.PickRecord active = entry.activePick();
+        boolean isActive = active != null && active.pickIndex() == pick.pickIndex();
 
         Player player = pick.playerId() == null ? null : catalog.byId(pick.playerId());
         if (player != null) {
@@ -252,6 +269,14 @@ public class PlayController {
             p.put("name", player.name() == null ? "" : player.name());
             p.put("position", player.position() == null ? "" : player.position());
             p.put("team", player.team() == null ? "" : player.team());
+            // An injury status is a reading of today, not of the week on screen. Attaching it
+            // to an archived contest would report a player as out of a game he has already
+            // played, using a knock he picked up two seasons later.
+            Contest now = contests.byId(entry.contestId());
+            if (now != null && !now.archive()
+                    && player.injuryStatus() != null && !player.injuryStatus().isBlank()) {
+                p.put("injury", player.injuryStatus());
+            }
             String image = headshot(player);
             if (image != null) {
                 p.put("image", image);
@@ -279,6 +304,13 @@ public class PlayController {
                         scoring.scoreOne(entry.contestId(), pick.slot(), player, o);
                 om.put("projectedRaw", probe.projectedRaw());
                 om.put("projectedPoints", probe.projectedPoints());
+                if (isActive) {
+                    FormService.Form recent =
+                            formFor(entry, player, o, probe.projectedRaw());
+                    if (recent != null) {
+                        om.put("form", recent);
+                    }
+                }
                 if (revealed) {
                     om.put("raw", probe.raw());
                     om.put("points", probe.points());
@@ -300,13 +332,31 @@ public class PlayController {
         // The reel the client scrolls through before landing. Only the pick being played needs
         // it, and only the names: the server has already decided the result, the animation is
         // just showing its work.
-        EntryRecord.PickRecord active = entry.activePick();
-        if (active != null && active.pickIndex() == pick.pickIndex()) {
+        if (isActive) {
             m.put("teamReel", pool.teams(entry.contestId(), pick.slot()).stream()
                     .limit(REEL_SIZE).toList());
             m.put("playerReel", playerReel(entry.contestId(), pick));
         }
         return m;
+    }
+
+    /**
+     * How this player has done at this part in the weeks leading up to the one being drafted.
+     *
+     * <p>Bounded to the regular season on purpose. Preseason and playoff weeks both number
+     * themselves from one, so week two of the playoffs would silently match against week two of
+     * the regular season and present a divisional round as early-September form.
+     */
+    private FormService.Form formFor(EntryRecord entry, Player player,
+                                     Slot.StatOption option, Double line) {
+        Contest contest = contests.byId(entry.contestId());
+        if (contest == null || contest.seasonType() != 2 || contest.week() <= 1) {
+            return null;
+        }
+        String espnId = resolver.espnIdFor(player);
+        return espnId == null
+                ? null
+                : form.formFor(espnId, contest.season(), contest.week(), option, line);
     }
 
     /**
@@ -340,6 +390,27 @@ public class PlayController {
      * has not yet appeared in a box score and Sleeper stopped publishing them altogether for
      * players who arrived from 2021 onward.
      */
+    /**
+     * A club crest for an abbreviation.
+     *
+     * <p>ESPN keys these by lowercase abbreviation and its vocabulary is the same one the box
+     * scores use, so no mapping table is needed. Washington is the exception both feeds have
+     * disagreed on for years.
+     *
+     * <p>The {@code 500-dark} set, not the default one. Roughly a third of the league has a
+     * navy or black primary crest, and on this page those render as a slightly darker smudge
+     * on an already dark panel: the Rams measure 67 of 255 in average brightness against a
+     * background of about 30. The dark-mode set inverts exactly those and leaves the rest
+     * alone, so the Rams come back at 255 and the Bears are served unchanged.
+     */
+    private String logo(String team) {
+        if (team == null || team.isBlank() || team.equals("?")) {
+            return null;
+        }
+        String abbr = team.equalsIgnoreCase("WAS") ? "wsh" : team.toLowerCase();
+        return "https://a.espncdn.com/i/teamlogos/nfl/500-dark/" + abbr + ".png";
+    }
+
     private String headshot(Player player) {
         String espnId = resolver.espnIdFor(player);
         if (espnId != null && !espnId.isBlank()) {

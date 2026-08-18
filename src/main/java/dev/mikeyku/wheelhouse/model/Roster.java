@@ -3,7 +3,7 @@ package dev.mikeyku.wheelhouse.model;
 import java.util.List;
 
 /**
- * One entry: four composite positions, each assembled from three real players.
+ * One entry: four composite positions, each assembled from four or five real players.
  *
  * <p>Your quarterback is not a quarterback. It is passing yards from one, touchdowns from
  * another, and rushing yards from a third, which is coherent in a way blending a passer with

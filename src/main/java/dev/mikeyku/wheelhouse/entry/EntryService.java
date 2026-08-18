@@ -20,7 +20,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * The build flow, twelve picks long: spin a team, spin a player, then decide which of the
+ * The build flow, eighteen picks long: spin a team, spin a player, then decide which of the
  * position's remaining parts you spend them on.
  *
  * <p>The wheel decides who you get; you decide what they are for. The third pick in any

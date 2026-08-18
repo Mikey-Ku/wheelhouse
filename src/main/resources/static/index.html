@@ -6,7 +6,7 @@
 <title>Wheelhouse</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   /* Sleeper's own tokens, read off their CSS bundle rather than eyeballed. */
   :root{
@@ -25,10 +25,51 @@
     --violet:#8c64ff;        /* dls decoration-yam, control borders */
     --loss:#ff4d6d;
     --display:"Barlow Condensed","Helvetica Neue",sans-serif;
-    --sans:"Inter",-apple-system,sans-serif}
+    --sans:"Inter",-apple-system,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+    --paper:#f4f1e8;         /* the slip, the one light surface in the whole product */
+    --ink:#16181d}
   *{box-sizing:border-box;margin:0;padding:0}
-  body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;padding-bottom:80px}
-  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+  /* The base colour lives on html so body's own layers can sit above it. Clipped horizontally
+     because the hero's floodlight deliberately hangs past the right edge, and without this it
+     pushes the page 130px wider than the viewport and hands every visitor a sideways scrollbar.
+     Clip rather than hidden: hidden would make html a scroll container and break the fixed
+     background layers underneath. */
+  html{background:var(--bg);overflow-x:clip}
+  /* html's value propagates to the viewport and html itself then behaves as visible, so the
+     clip has to be repeated here to actually form a clipping box. */
+  body{background:transparent;color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;padding-bottom:80px;overflow-x:clip}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px;transition:max-width .2s}
+  /* The draft needs room for five option cards beside a roster rail; the landing does not. */
+  body.playing .wrap{max-width:1400px}
+
+  /* ---- the draft: stage on the left, roster pinned on the right ----
+     The roster was underneath, which meant the one thing you are building was off screen
+     exactly when you were deciding what to add to it. Pinned, you can see what a position
+     still has open while you are looking at the part that would fill it. */
+  .pgrid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
+  .pmain{min-width:0}
+  .pside{position:sticky;top:76px;max-height:calc(100vh - 96px);overflow-y:auto;
+    scrollbar-width:thin;scrollbar-color:var(--line-hi) transparent}
+  .pside::-webkit-scrollbar{width:6px}
+  .pside::-webkit-scrollbar-thumb{background:var(--line-hi);border-radius:3px}
+  .pside .sec-head{margin-bottom:14px}
+  .pside .sec-head h2{font-size:19px}
+  /* Below this the rail would squeeze the option cards more than it helps, so it goes back
+     under the stage and stops being sticky. */
+  @media (max-width:1180px){
+    .pgrid{grid-template-columns:minmax(0,1fr)}
+    .pside{position:static;max-height:none;overflow:visible;margin-top:34px}
+  }
+
+  /* ---- ground ----
+     Wet turf under a floodlight, fixed rather than scrolling: a texture that travels with the
+     page reads as wallpaper, one that stays put reads as the surface the page is lying on.
+     Grain over the top, because a perfectly smooth dark field is the thing that makes a page
+     look generated more than any single element does. */
+  body::before,body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none}
+  body::before{background:url("img/turf.jpg") center/cover no-repeat;opacity:.14}
+  body::after{opacity:.05;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
 
   nav{border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10;background:rgba(5,9,29,.94);backdrop-filter:blur(12px)}
   .nav-inner{display:flex;align-items:center;gap:20px;height:62px}
@@ -38,7 +79,6 @@
   .nav-links a{font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-decoration:none;padding:6px 0;border-bottom:2px solid transparent}
   .nav-links a.on{color:var(--text);border-bottom-color:var(--accent)}
 
-  .eyebrow{font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:9px}
   h2{font-family:var(--display);font-weight:700;font-size:30px;letter-spacing:.02em;text-transform:uppercase;margin-bottom:18px}
   section{margin-top:38px}
 
@@ -53,19 +93,57 @@
   select{font-family:var(--sans);font-size:14px;padding:10px 12px;border-radius:8px;border:1px solid var(--line-hi);background:var(--surface);color:var(--text)}
   select:focus{outline:none;border-color:var(--accent)}
 
-  /* ---- landing ---- */
-  .hero{padding:26px 0 6px}
-  .hero h1{font-family:var(--display);font-weight:700;font-size:clamp(42px,7vw,74px);line-height:.94;
-    letter-spacing:.01em;text-transform:uppercase;margin-bottom:14px}
+  /* ---- landing ----
+     The floodlight is composited with screen rather than masked into place, so the black sky
+     it was shot against drops out entirely and only the light itself lands on the page. */
+  .hero{padding:26px 0 6px;position:relative}
+  .hero::before{content:"";position:absolute;z-index:0;pointer-events:none;
+    top:-96px;right:-130px;width:min(720px,84%);aspect-ratio:3/2;
+    background:url("img/lights.jpg") center/cover no-repeat;
+    mix-blend-mode:screen;opacity:.6;
+    -webkit-mask-image:radial-gradient(ellipse 74% 70% at 74% 32%,#000 14%,transparent 78%);
+    mask-image:radial-gradient(ellipse 74% 70% at 74% 32%,#000 14%,transparent 78%)}
+  .hero > *{position:relative;z-index:1}
+  @media (max-width:700px){.hero::before{opacity:.4;right:-60px}}
+  .hero h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,5.2vw,56px);line-height:.96;
+    letter-spacing:.01em;text-transform:uppercase;margin-bottom:13px}
   .hero h1 em{font-style:normal;color:var(--accent)}
-  .hero .lede{font-size:17px;color:var(--secondary);max-width:600px;line-height:1.55}
-  .how{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin:26px 0 4px}
-  .how-step{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
-  .how-step .n{font-family:var(--display);font-weight:700;font-size:15px;color:var(--accent);letter-spacing:.1em}
-  .how-step .t{font-weight:500;margin:6px 0 4px}
-  .how-step .d{font-size:13px;color:var(--muted);line-height:1.5}
+  .hero .lede{font-size:16px;color:var(--secondary);max-width:540px;line-height:1.55}
 
-  .start{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:28px 34px}
+  /* ---- the one thing to do ----
+     Name and spin sit on one line and nothing else competes with them. Everything the player
+     might want but almost never needs is behind the disclosure below. */
+  .cta{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:28px}
+  .cta input{min-width:210px;padding:14px 16px}
+  button.big{font-size:14px;padding:15px 30px}
+  .cta-note{font-size:13.5px;color:var(--muted);margin-top:13px;max-width:520px;line-height:1.6}
+
+  /* Vertical padding rather than a bigger font: the label should stay quiet, but an 11px
+     line of text is a target you can miss, and a control you miss reads as broken. */
+  .disclose{background:none;border:none;padding:9px 2px;margin-top:14px;color:var(--muted);
+    font-size:11.5px;letter-spacing:.13em;text-transform:uppercase;
+    display:inline-flex;align-items:center;gap:8px}
+  .disclose::after{content:"";width:6px;height:6px;margin-top:-3px;
+    border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;
+    transform:rotate(45deg);transition:transform .16s}
+  .disclose[aria-expanded="true"]::after{transform:rotate(-135deg);margin-top:1px}
+  .disclose:hover{color:var(--accent);border:none}
+  /* Translucent so the ground still shows through and the drawer reads as sitting on the page
+     rather than punched into it. */
+  .more{margin-top:6px;padding:18px 20px;border:1px solid var(--line);border-radius:12px;
+    background:rgba(19,27,56,.72)}
+  /* Labelled controls that sit on one baseline. Two bare dropdowns and a button gave no clue
+     which was the year and which was the week until you opened them. */
+  .pickrow{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+  .pickrow label{display:flex;flex-direction:column;gap:6px}
+  .pickrow label span{font-size:10px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--dim)}
+  .pickrow select{min-width:118px}
+  .pickrow button{padding:11px 20px}
+  .more .notice{margin:16px 0 0}
+
+  /* How it works sits under the action, not in front of it. */
+  .howto{margin-top:52px}
 
   /* ---- loading a historic week ---- */
   .loader{background:var(--surface);border:1px solid var(--line-hi);border-radius:16px;padding:44px 34px;text-align:center}
@@ -75,12 +153,13 @@
   .bar span{display:block;height:100%;width:34%;background:var(--accent);border-radius:2px;
     animation:sweep 1.1s cubic-bezier(.5,0,.5,1) infinite}
   @keyframes sweep{0%{transform:translateX(-100%)}100%{transform:translateX(400%)}}
-  .split{margin-top:24px;padding-top:22px;border-top:1px solid var(--line)}
   .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
   .badge{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:3px 10px;margin-left:10px}
   .backlink{background:none;border:none;color:var(--muted);padding:0;font-size:11px;letter-spacing:.1em;text-decoration:underline;margin-left:12px}
   .backlink:hover{color:var(--accent)}
-  .notice{background:var(--surface-deep);border:1px solid var(--line);border-left:3px solid var(--violet);border-radius:0 10px 10px 0;padding:14px 18px;margin-bottom:16px;font-size:14px;color:var(--secondary)}
+  .notice{background:var(--surface-deep);border:1px solid var(--line);border-radius:10px;
+    padding:14px 18px;margin-bottom:16px;font-size:13.5px;line-height:1.6;color:var(--secondary)}
+  .notice b{color:var(--text);font-weight:600}
 
   .stage{background:var(--surface);border:1px solid var(--line-hi);border-radius:16px;padding:28px 32px}
   .stage-head{display:flex;align-items:baseline;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:22px}
@@ -89,13 +168,18 @@
   .respins b{color:var(--accent);font-weight:600}
   .reveal{display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:20px}
   .face{width:74px;height:74px;border-radius:50%;object-fit:cover;object-position:top center;background:var(--surface-deep);border:1px solid var(--line-hi);flex-shrink:0}
-  .teambox{font-family:var(--display);font-weight:700;font-size:50px;letter-spacing:.03em;line-height:1}
   .whobox .nm{font-family:var(--display);font-weight:700;font-size:32px;letter-spacing:.02em;line-height:1.1}
   .whobox .sub{font-size:12px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-top:3px}
   .prompt{color:var(--secondary);font-size:14px}
 
   .reels{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.7fr);gap:12px;margin-bottom:18px}
-  .reelbox{background:var(--surface-deep);border:1px solid var(--line);border-radius:12px;padding:12px 14px;overflow:hidden}
+  /* Chipped enamel under the reels, tiled large enough that one panel never shows the seam,
+     and knocked back hard: it has to read as a surface, not compete with the names on it. */
+  .reelbox{background:
+      linear-gradient(rgba(11,16,40,.8),rgba(11,16,40,.86)),
+      url("img/metal.jpg") 0 0/360px repeat,
+      var(--surface-deep);
+    border:1px solid var(--line);border-radius:12px;padding:12px 14px;overflow:hidden}
   .reelbox.landed{border-color:var(--accent)}
   .reelcap{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
   .reel{height:64px;overflow:hidden;position:relative;min-width:0}
@@ -109,8 +193,11 @@
   @keyframes reelspin{from{transform:translateY(0)}to{transform:translateY(-1280px)}}
   .reel-strip.spinning{animation:reelspin .55s linear infinite}
 
-  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
-  .opt{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:14px 16px;border-radius:10px;border:1px solid var(--line);background:var(--surface-deep);color:var(--text);cursor:pointer;text-transform:none;letter-spacing:0;font-size:14px;font-weight:400;text-align:left}
+  /* Five parts of a quarterback have to fit one row. The stage leaves 966px inside its padding
+     and five cards plus four gaps must clear that, so the floor is 181px. At 210 the fifth
+     wrapped alone, which reads as a mistake rather than as a fifth option. */
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:9px}
+  .opt{display:flex;flex-direction:column;padding:0;border-radius:10px;border:1px solid var(--line);background:var(--surface-deep);color:var(--text);text-transform:none;letter-spacing:0;font-size:14px;font-weight:400;text-align:left;overflow:hidden}
   .opt:hover:not(:disabled){border-color:var(--accent)}
   .opt .part{font-family:var(--display);font-weight:700;font-size:21px;letter-spacing:.02em}
   .opt .stat{font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
@@ -136,48 +223,273 @@
   .part-row.empty .nm{color:var(--dim)}
   .mini{width:26px;height:26px;border-radius:50%;object-fit:cover;object-position:top center;background:var(--surface-deep);flex-shrink:0}
 
-  .total{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:14px}
-  .total .n{font-family:var(--display);font-weight:700;font-size:44px;color:var(--accent);line-height:1}
-  .total .vs{font-size:12px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;text-align:right}
+  /* The running total heads the rail rather than closing the page, because in a column it is
+     the summary of everything under it. */
+  .total{background:var(--surface);border:1px solid var(--line-hi);border-radius:12px;
+    padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:12px}
+  .total .tlabel{font-size:10px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--secondary)}
+  .total .thint{font-size:11.5px;color:var(--dim);line-height:1.45;margin-top:3px}
+  .total .tnum{margin-left:auto;display:flex;align-items:baseline;gap:4px}
+  .total .n{font-family:var(--display);font-weight:700;font-size:34px;color:var(--accent);line-height:1}
+  .total .tnum small{font-size:10px;font-weight:600;letter-spacing:.14em;color:var(--accent-deep)}
+  .total .vs{font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+  /* One position per row in a 340px rail. */
+  .pside .positions{grid-template-columns:minmax(0,1fr);gap:10px}
+  .pside .pos{padding:13px 15px}
+  .pside .part-row .lbl{min-width:56px;font-size:10px}
+  .pside .part-row{gap:7px;padding:7px 0}
   table{width:100%;border-collapse:collapse;font-size:14px}
   th{font-size:11px;font-weight:400;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-align:left;padding-bottom:9px}
   td{padding:11px 0;border-top:1px solid var(--line)}
   td.n{text-align:right;font-family:var(--display);font-weight:700;font-size:19px}
   .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 22px}
   .err{color:var(--loss);font-size:13px;min-height:18px;margin-top:10px}
-  .lock{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--loss)}
+
+  /* ---- week context, in the header rather than standing on its own ---- */
+  .nav-week{padding-left:17px;border-left:1px solid var(--line);line-height:1.25}
+  /* Brand focus ring. The browser default is a bright blue rectangle that reads as a bug. */
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .opt-take:focus-visible,.opt-log:focus-visible{outline-offset:-2px}
+  .nav-week b{display:block;font-size:9.5px;font-weight:500;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--dim)}
+  .nav-week span{font-size:13px;color:var(--secondary)}
+  .nav-week em{font-style:normal;color:var(--accent)}
+
+  /* ---- section headers: one rule, one line, no floating micro-label ---- */
+  .sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;
+    border-bottom:1px solid var(--line);padding-bottom:11px;margin-bottom:20px;flex-wrap:wrap}
+  .sec-head h2{margin:0;font-size:23px}
+  .sec-note{font-size:12.5px;color:var(--dim)}
+
+  /* ---- how it works ----
+     Each step gets a drawing of the thing it describes, because "take one part" means nothing
+     until you have seen what a part looks like. The panels are solid so the copy stays legible
+     over the turf, which it was not when these sat directly on the background. */
+  .rail{display:grid;grid-template-columns:repeat(auto-fit,minmax(196px,1fr));gap:14px;
+    margin:22px 0 4px}
+  .rail > div{background:rgba(19,27,56,.78);border:1px solid var(--line);border-radius:12px;
+    padding:18px}
+  .rail div b{font-family:var(--display);font-weight:700;font-size:12px;letter-spacing:.22em;
+    color:var(--dim);display:block;margin-bottom:12px}
+  .rail div span{font-size:13.5px;color:var(--secondary);line-height:1.6;display:block}
+  .rail div span i{font-style:normal;color:var(--text);font-weight:500}
+  .rail svg{display:block;margin-bottom:13px;width:100%;height:52px;overflow:visible}
+  .rail svg .fl{fill:var(--surface-deep);stroke:var(--line-hi);stroke-width:1.4}
+  .rail svg .hi{fill:var(--accent-deep)}
+  .rail svg .hs{stroke:var(--accent);stroke-width:1.6;fill:none}
+  .rail svg .dim{fill:var(--line-hi)}
+  /* Four across, or a square. Three and a stray one reads like the layout ran out of room. */
+  @media (max-width:1000px){.rail{grid-template-columns:1fr 1fr}}
+  @media (max-width:560px){.rail{grid-template-columns:1fr}}
+
+  /* ---- the start panel ---- */
+  button.big{font-size:14px;padding:14px 26px}
+  .reels.even{grid-template-columns:1fr 1fr}
+  #weekReels{margin:20px 0 0}
+
+  /* ---- form guide ---- */
+  .form{display:block;width:100%}
+  .bars{display:flex;align-items:flex-end;gap:3px;height:28px;margin-bottom:6px}
+  .bars i{flex:1;display:block;min-height:2px;border-radius:1px;background:var(--line-hi)}
+  .bars i.ok{background:var(--accent-deep)}
+  .formtxt{display:block;font-size:10.5px;letter-spacing:.04em;color:var(--dim);
+    font-variant-numeric:tabular-nums}
+  .formtxt b{color:var(--secondary);font-weight:600}
+  .formtxt b.cold{color:var(--loss)}
+  .formtxt b.hot{color:var(--accent)}
+  /* Form is worth reading at a glance across five cards, so it also gets an edge. */
+  .opt.hot{border-color:rgba(4,171,176,.6)}
+  .opt.cold{border-color:rgba(255,77,109,.42)}
+  .injury{color:var(--loss);letter-spacing:.1em}
+
+  /* ---- crests ---- */
+  .crest{width:22px;height:22px;object-fit:contain;flex-shrink:0}
+  .crest.lg{width:54px;height:54px}
+  .crest.sm{width:17px;height:17px}
+  .reel-team{display:flex;align-items:center;gap:14px}
+
+  /* ---- respins ----
+     Two identical ghost buttons said nothing about what they cost. The budget belongs on the
+     control that spends it, not in a separate line above. */
+  .respins-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:2px}
+  button.respin{display:inline-flex;align-items:center;gap:9px;padding:9px 10px 9px 12px;
+    border-color:var(--line-hi);background:var(--surface-deep);color:var(--secondary)}
+  button.respin .ri{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.7;
+    stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+  button.respin b{font-family:var(--display);font-size:14px;line-height:1;color:var(--accent);
+    background:rgba(0,255,249,.1);border-radius:5px;padding:4px 8px;font-weight:700;
+    min-width:22px;text-align:center}
+  button.respin:disabled b{color:var(--dim);background:rgba(255,255,255,.04)}
+  button.respin:hover:not(:disabled){color:var(--accent);background:rgba(0,255,249,.06)}
+  .respin-note{font-size:11.5px;color:var(--dim)}
+  @media (max-width:620px){.respin-note{display:none}}
+
+  /* ---- the game log ----
+     The bars answer "roughly how often"; this answers "against whom, and when". Opened from
+     the strip on a card and shown full width beneath the row, because six rows of real detail
+     do not fit in a fifth of the stage. */
+  .opt{display:flex;flex-direction:column}
+  .opt-take{all:unset;display:flex;flex-direction:column;align-items:flex-start;gap:2px;
+    cursor:pointer;box-sizing:border-box;width:100%;padding:14px 16px 12px;flex:1}
+  .opt-take:hover{background:rgba(0,255,249,.04)}
+  .opt-log{all:unset;display:block;cursor:pointer;box-sizing:border-box;width:100%;
+    padding:11px 16px 13px;border-top:1px solid var(--line)}
+  .opt-log:hover{background:rgba(0,255,249,.04)}
+  .opt-log:hover .formtxt{color:var(--secondary)}
+  .opt-log:hover .bars i{opacity:.75}
+  .opt.open{border-color:var(--accent)}
+
+  /* ---- the game table ----
+     Scrolls inside its own box rather than widening the page, because a quarterback with five
+     parts open is seven columns and a phone is not. */
+  /* The table is always on screen, so it needs to introduce itself rather than appear as an
+     unexplained grid of numbers under the cards. */
+  .tblhead{margin-top:22px;padding-top:16px;border-top:1px solid var(--line);
+    display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .tblhead b{font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:.03em;
+    text-transform:uppercase}
+  .tblhead span{font-size:12px;color:var(--dim);line-height:1.5}
+  .oppbox{margin-left:auto;display:flex;align-items:center;gap:11px}
+  .oppbox em{font-style:normal;font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--dim)}
+  .tblwrap{margin-top:11px;background:var(--surface-deep);border:1px solid var(--line-hi);
+    border-radius:12px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table.gt{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+  /* Tight enough that a five-part quarterback fits seven columns on a laptop without
+     scrolling. Wider positions still scroll rather than squeeze. */
+  table.gt th,table.gt td{padding:9px 9px;text-align:right;white-space:nowrap;border-top:none}
+  table.gt th:first-child,table.gt td:first-child{padding-left:14px}
+  table.gt th:last-child,table.gt td:last-child{padding-right:14px}
+  table.gt th.wk,table.gt th.opp,table.gt td.wk,table.gt td.opp{text-align:left}
+
+  table.gt thead th{font-size:10px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;
+    color:var(--dim);padding-top:14px;padding-bottom:11px;vertical-align:bottom;
+    border-bottom:1px solid var(--line-hi)}
+  table.gt thead th.sc .p{display:block;font-family:var(--display);font-weight:700;font-size:15px;
+    letter-spacing:.05em;color:var(--secondary)}
+  table.gt thead th.sc em{display:block;font-style:normal;font-size:9.5px;letter-spacing:.08em;
+    color:var(--dim);margin-top:2px}
+  table.gt thead th.sel .p{color:var(--accent)}
+
+  table.gt tbody td{border-top:1px solid rgba(37,52,93,.45);color:var(--muted)}
+  table.gt tbody tr:hover td{background:rgba(255,255,255,.022)}
+  table.gt td.wk{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)}
+  table.gt td.opp{color:var(--secondary)}
+  table.gt td.opp img{vertical-align:-4px;margin-left:6px}
+  table.gt td.v{font-family:var(--display);font-weight:700;font-size:16px;color:var(--muted)}
+  /* Lit means it beat this week's number. A column that is mostly lit is a number he clears. */
+  table.gt td.v.ok{color:var(--accent)}
+  table.gt .sel{background:rgba(0,255,249,.05)}
+
+  table.gt tfoot td{font-size:11.5px;color:var(--muted)}
+  table.gt tfoot tr.avg td{border-top:1px solid var(--line-hi);padding-top:11px}
+  table.gt tfoot td.wk{letter-spacing:.09em;text-transform:uppercase;color:var(--dim);font-size:10.5px}
+  table.gt tfoot tr.line td{color:var(--secondary)}
+  table.gt tfoot tr.rate b{font-weight:600;color:var(--secondary)}
+  table.gt tfoot tr.rate b.hot{color:var(--accent)}
+  table.gt tfoot tr.rate b.cold{color:var(--loss)}
+  table.gt tfoot tr.rate td{padding-bottom:15px}
+
+  /* ---- what is left in a position ---- */
+  .pos-open{margin-top:10px;padding-top:9px;border-top:1px solid var(--line);
+    font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+  .pos-open b{color:var(--secondary);font-weight:500}
+
+  /* ---- the slip ----
+     A finished roster is a betting slip in everything but the money, so it prints like one.
+     This is the only light surface in the product, which is the point: it reads as an object
+     you were handed rather than another panel in the same interface. */
+  .slip{position:relative;max-width:530px;margin:0 auto;background:var(--paper);color:var(--ink);
+    font-family:var(--mono);font-size:12.5px;line-height:1.72;padding:34px 30px 30px;
+    box-shadow:0 26px 70px rgba(0,0,0,.6);
+    /* Real paper fibre underneath, print banding on top. The scan is cropped to its interior
+       upstream, since the sheet came with its own torn edges and this draws its own. */
+    background-image:repeating-linear-gradient(rgba(0,0,0,.022) 0 1px,transparent 1px 3px),
+      url("img/paper.jpg");
+    background-size:auto,cover;
+    background-position:0 0,center top}
+  /* Torn off a roll at both ends. */
+  .slip::before,.slip::after{content:"";position:absolute;left:0;right:0;height:10px;
+    background:radial-gradient(circle at 5px 0,var(--paper) 5px,transparent 5px);
+    background-size:10px 10px}
+  .slip::before{top:-10px;transform:rotate(180deg)}
+  .slip::after{bottom:-10px}
+
+  .slip-brand{font-family:var(--display);font-weight:700;font-size:26px;letter-spacing:.34em;
+    text-align:center;text-transform:uppercase;margin-bottom:2px}
+  .slip-meta{display:flex;justify-content:space-between;font-size:11px;letter-spacing:.06em;
+    text-transform:uppercase;color:#5b5f68}
+  .slip-rule{border-top:1px dashed #b4afa2;margin:13px 0}
+  .slip-sec{font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:#7d8189;
+    margin:14px 0 3px}
+  /* Wide enough for SHOULDERS, which is the longest part name in the game. */
+  .slip-line{display:grid;grid-template-columns:76px 1fr 46px 56px;gap:9px;align-items:baseline;
+    opacity:0;transform:translateY(5px);transition:opacity .2s ease,transform .2s ease}
+  .slip-line.in,.slip.instant .slip-line{opacity:1;transform:none}
+  .sl-part{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:#7d8189}
+  .sl-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sl-raw,.sl-pts{text-align:right;font-variant-numeric:tabular-nums}
+  .sl-raw{color:#8b8f97}
+  .sl-pts{font-weight:600}
+  .slip-sub{display:flex;justify-content:space-between;font-size:11px;letter-spacing:.06em;
+    text-transform:uppercase;color:#7d8189;margin-top:5px;padding-top:5px;
+    border-top:1px solid #ded9cc}
+  .slip-foot{opacity:0;transition:opacity .3s ease}
+  .slip-foot.in,.slip.instant .slip-foot{opacity:1}
+  .slip-tot{display:flex;justify-content:space-between;align-items:baseline;margin-top:3px}
+  .slip-tot span:first-child{font-size:11px;letter-spacing:.18em;text-transform:uppercase}
+  .slip-tot .big{font-family:var(--display);font-weight:700;font-size:36px;line-height:1;
+    font-variant-numeric:tabular-nums}
+  .slip-verdict{text-align:center;font-size:11px;letter-spacing:.2em;text-transform:uppercase;
+    margin-top:14px;padding-top:13px;border-top:1px dashed #b4afa2;color:#5b5f68}
+  .slip-verdict b{font-weight:600;color:var(--ink)}
 </style>
 </head>
 <body>
 
 <nav><div class="wrap nav-inner">
   <div class="logo">Wheel<span>house</span></div>
+  <div class="nav-week" id="weekLabel"></div>
   <div class="nav-links"><a href="/" class="on">Play</a><a href="/live.html">Live</a></div>
 </div></nav>
 
 <div class="wrap">
   <section>
-    <div class="eyebrow"><span id="weekLabel">Loading</span></div>
     <h2 id="headline" style="display:none">Build your guy</h2>
 
     <div id="hero" class="hero" style="display:none">
-      <h1>Build a guy out of<br><em>eighteen other guys</em></h1>
-      <p class="lede">The wheel picks a team, then a player. You decide which single part of
-        him you want. Do it eighteen times and you have a quarterback, a back and two receivers
-        assembled from pieces of the whole league.</p>
-      <div class="how">
-        <div class="how-step"><div class="n">01</div><div class="t">Spin</div>
-          <div class="d">Two reels. A team, then one of its players. You do not choose either.</div></div>
-        <div class="how-step"><div class="n">02</div><div class="t">Take one part</div>
-          <div class="d">His arm, his legs, his hands. Each part can only be used once per position.</div></div>
-        <div class="how-step"><div class="n">03</div><div class="t">Guess blind</div>
-          <div class="d">You see his projection, never his result. Those stay hidden until the roster is full.</div></div>
-        <div class="how-step"><div class="n">04</div><div class="t">Find out</div>
-          <div class="d">Eighteen picks in, the week resolves at once against what really happened.</div></div>
+      <h1>Test your football brain<br><em>one random week at a time</em></h1>
+      <p class="lede">The wheel deals you a player. You decide which one of his stats is most
+        likely to beat its projection, and you only get to use each stat once. Eighteen calls
+        later, the week resolves and you find out whether you read it better than the forecast
+        did.</p>
+
+      <div class="cta">
+        <input id="owner" placeholder="your name" autocomplete="off">
+        <button class="primary big" id="rollBtn">Spin a week</button>
+      </div>
+      <p class="cta-note">Five seasons sit in the vault. You land on one at random and draft it
+        blind against the projections that were live at the time.</p>
+
+      <div class="reels even" id="weekReels" style="display:none">
+        <div class="reelbox" id="seasonBox"><div class="reelcap">Season</div>
+          <div id="seasonReel"><div class="reel"><div class="reel-strip"><div class="reel-item">&mdash;</div></div></div></div></div>
+        <div class="reelbox" id="wkBox"><div class="reelcap">Week</div>
+          <div id="wkReel"><div class="reel"><div class="reel-strip"><div class="reel-item">&mdash;</div></div></div></div></div>
+      </div>
+
+      <button class="disclose" id="moreBtn" aria-expanded="false">Choose a week yourself</button>
+      <div id="more" class="more" hidden>
+        <div class="pickrow">
+          <label><span>Season</span><select id="season"></select></label>
+          <label><span>Week</span><select id="week"></select></label>
+          <button id="archiveBtn">Play it</button>
+          <button class="ghost" id="liveBtn" hidden>Play the live week</button>
+        </div>
+        <div id="notice"></div>
       </div>
     </div>
-
-    <div id="notice"></div>
 
     <div id="loader" class="loader" style="display:none">
       <div class="big" id="loaderTitle">Pulling that week</div>
@@ -185,51 +497,99 @@
       <div class="bar"><span></span></div>
     </div>
 
-    <div id="start" class="start" style="display:none">
-      <div class="row">
-        <input id="owner" placeholder="your name" autocomplete="off">
-        <button class="primary" id="startBtn">Start this week</button>
-        <span class="lock" id="lockNote"></span>
+    <div class="pgrid" id="pgrid">
+      <div class="pmain">
+        <div id="stage" class="stage" style="display:none"></div>
+        <div class="err" id="err"></div>
       </div>
-      <div class="split">
-        <div class="eyebrow" style="margin-bottom:12px">Or play a week from the past</div>
-        <div class="row">
-          <select id="season"></select>
-          <select id="week"></select>
-          <button id="archiveBtn">Play it</button>
-          <span style="font-size:12px;color:var(--muted)">You draft against projections, same as anyone would have before kickoff.</span>
-        </div>
-      </div>
-    </div>
 
-    <div id="stage" class="stage" style="display:none"></div>
-    <div class="err" id="err"></div>
+      <aside class="pside" id="rosterSection" style="display:none">
+        <div class="sec-head"><h2>Your roster</h2>
+          <span class="sec-note" id="rosterNote"></span></div>
+        <div class="total" id="totalBar">
+          <div><div class="tlabel" id="totalLabel">Projected</div>
+            <div class="thint" id="totalHint">Results arrive once all eighteen picks are in</div></div>
+          <div class="tnum"><div class="n" id="totalN">0</div><small>PTS</small></div>
+          <div class="vs" id="totalVs"></div>
+        </div>
+        <div id="positions" class="positions"></div>
+      </aside>
+    </div>
   </section>
 
-  <section id="rosterSection" style="display:none">
-    <div class="eyebrow">Your roster</div>
-    <h2>Assembled so far</h2>
-    <div id="positions" class="positions"></div>
-    <div class="total">
-      <div><div class="eyebrow" style="margin:0" id="totalLabel">Projected</div>
-        <div style="font-size:13px;color:var(--muted)" id="totalHint">Results arrive once all twelve picks are in</div></div>
-      <div style="display:flex;align-items:center;gap:22px">
-        <div class="vs" id="totalVs"></div>
-        <div style="display:flex;align-items:baseline;gap:6px">
-          <div class="n" id="totalN">0</div>
-          <div style="font-size:11px;font-weight:600;letter-spacing:.14em;color:var(--accent-deep)">PTS</div>
-        </div>
-      </div>
+  <section id="howto" class="howto" style="display:none">
+    <div class="sec-head"><h2>How it works</h2>
+      <span class="sec-note">Four steps, eighteen picks</span></div>
+    <div class="rail">
+      <div><b>01</b>
+        <svg viewBox="0 0 120 52" aria-hidden="true">
+          <rect class="fl" x="1" y="8" width="50" height="36" rx="6"/>
+          <rect class="fl" x="59" y="8" width="60" height="36" rx="6"/>
+          <rect class="hi" x="9" y="22" width="34" height="8" rx="2"/>
+          <rect class="dim" x="67" y="16" width="44" height="6" rx="2"/>
+          <rect class="hi" x="67" y="27" width="30" height="7" rx="2"/>
+        </svg>
+        <span><i>The wheel spins twice.</i> First a team, then one of its players.
+          You choose neither.</span></div>
+
+      <div><b>02</b>
+        <svg viewBox="0 0 120 52" aria-hidden="true">
+          <rect class="fl" x="1" y="6" width="36" height="40" rx="6"/>
+          <rect class="fl" x="42" y="6" width="36" height="40" rx="6"/>
+          <rect class="fl" x="83" y="6" width="36" height="40" rx="6"/>
+          <rect class="hs" x="42" y="6" width="36" height="40" rx="6"/>
+          <rect class="dim" x="8" y="16" width="22" height="5" rx="2"/>
+          <rect class="hi" x="49" y="16" width="22" height="5" rx="2"/>
+          <rect class="dim" x="90" y="16" width="22" height="5" rx="2"/>
+          <rect class="dim" x="8" y="30" width="14" height="9" rx="2"/>
+          <rect class="hi" x="49" y="30" width="14" height="9" rx="2"/>
+          <rect class="dim" x="90" y="30" width="14" height="9" rx="2"/>
+        </svg>
+        <span><i>You take one stat off him.</i> His arm, his legs, his hands. Each stat goes
+          once per position, so spending it early costs you later.</span></div>
+
+      <div><b>03</b>
+        <svg viewBox="0 0 120 52" aria-hidden="true">
+          <rect class="dim" x="2"  y="30" width="14" height="14" rx="2"/>
+          <rect class="hi"  x="21" y="18" width="14" height="26" rx="2"/>
+          <rect class="dim" x="40" y="34" width="14" height="10" rx="2"/>
+          <rect class="hi"  x="59" y="12" width="14" height="32" rx="2"/>
+          <rect class="dim" x="78" y="28" width="14" height="16" rx="2"/>
+          <rect class="hi"  x="97" y="21" width="14" height="23" rx="2"/>
+          <line class="hs" x1="0" y1="24" x2="120" y2="24" stroke-dasharray="4 3"/>
+        </svg>
+        <span><i>You get his last six weeks.</i> How often he cleared this number before,
+          and against whom. You never get this week's result.</span></div>
+
+      <div><b>04</b>
+        <svg viewBox="0 0 120 52" aria-hidden="true">
+          <rect class="fl" x="30" y="2" width="60" height="48" rx="3"/>
+          <rect class="dim" x="38" y="11" width="30" height="4" rx="2"/>
+          <rect class="dim" x="38" y="20" width="44" height="3" rx="1.5"/>
+          <rect class="dim" x="38" y="27" width="44" height="3" rx="1.5"/>
+          <rect class="dim" x="38" y="34" width="26" height="3" rx="1.5"/>
+          <rect class="hi" x="66" y="40" width="16" height="6" rx="2"/>
+        </svg>
+        <span><i>Eighteen calls, then the truth.</i> The whole week resolves at once and
+          prints as a slip against what actually happened.</span></div>
     </div>
+  </section>
+
+  <section id="slipSection" style="display:none">
+    <div class="sec-head"><h2>Your slip</h2>
+      <span class="sec-note">Every pick, resolved</span></div>
+    <div id="slip" class="slip"></div>
   </section>
 
   <section id="lbSection" style="display:none">
-    <div class="eyebrow">This week</div><h2>Leaderboard</h2>
+    <div class="sec-head"><h2>Leaderboard</h2>
+      <span class="sec-note">Everyone who played this week</span></div>
     <div class="card"><table id="lb"></table></div>
   </section>
 
   <section id="histSection" style="display:none">
-    <div class="eyebrow">Your season</div><h2>Past weeks</h2>
+    <div class="sec-head"><h2>Your past weeks</h2>
+      <span class="sec-note">Rosters you have already resolved</span></div>
     <div class="card"><table id="hist"></table></div>
   </section>
 </div>
@@ -288,26 +648,47 @@ const faceTag = (url, cls) => url
   ? `<img class="${cls}" src="${esc(url)}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${NOPHOTO}'">`
   : `<img class="${cls}" src="${NOPHOTO}" alt="">`;
 
+/* Week context belongs beside the wordmark, not standing on its own above the page. A lone
+   label floating over a headline is the single most recognisable thing about a generated
+   layout, and it was carrying two words of information. */
+function setWeekLabel(c) {
+  const host = document.getElementById("weekLabel");
+  if (!c || !c.label) { host.innerHTML = ""; return; }
+  host.innerHTML = `<b>${c.archive ? "The vault" : "Live"}</b><span>${esc(c.label)}</span>`;
+}
+
 async function loadContest() {
   const c = await api("GET", "/contest");
-  document.getElementById("weekLabel").textContent = c.label;
-  if (c.locked) document.getElementById("lockNote").textContent = "week locked";
+  setWeekLabel(c);
   showNotice(c);
 }
 
+/* A week that cannot be drafted gets no button at all. A greyed-out control still asks to be
+   read and reasoned about; a sentence saying why does the same job in less space. */
 function showNotice(c) {
   const host = document.getElementById("notice");
+  const live = document.getElementById("liveBtn");
+  const playable = !!c && c.hasProjections !== false && !c.locked;
+  if (live) live.hidden = !playable;
+
   if (c && c.hasProjections === false) {
-    host.innerHTML = `<div class="notice"><b>${esc(c.label)} has no projections.</b>
-      Sleeper only forecasts the regular season, and the game is played against forecasts, so
-      this week cannot be scored properly. Pick a past week below instead.</div>`;
+    host.innerHTML = `<div class="notice"><b>The live week is ${esc(c.label)}.</b>
+      Nobody forecasts the preseason, and the game is played against forecasts, so there is
+      nothing to draft against until the season starts.</div>`;
+  } else if (c && c.locked) {
+    host.innerHTML = `<div class="notice"><b>${esc(c.label)} has kicked off.</b>
+      Live weeks lock at the first whistle, so nobody drafts with the scores already on
+      screen.</div>`;
   } else {
     host.innerHTML = "";
   }
 }
 
+let archiveRange = { earliest: 2020, latest: 2024, weeks: 18 };
+
 async function loadArchiveOptions() {
   const a = await api("GET", "/archive");
+  archiveRange = a;
   const years = [];
   for (let y = a.latest; y >= a.earliest; y--) years.push(y);
   document.getElementById("season").innerHTML = years.map(y => `<option>${y}</option>`).join("");
@@ -317,16 +698,127 @@ async function loadArchiveOptions() {
     weeks.map(w => `<option value="${w}">Week ${w}</option>`).join("");
 }
 
+/* The last six weeks of this player at this stat, measured against the number he is being
+   offered at right now. One bar per game, filled if it cleared the projection.
+
+   This is the only evidence the format gives you. A projection on its own says a receiver is
+   worth sixty yards; it cannot tell you he has hit sixty once since October, which is the
+   difference between a pick and a coin flip. Nothing here is from the week being drafted:
+   the server refuses to send it. */
+/* An edge on the card itself, so five options can be read without reading five sets of bars. */
+function formClass(f) {
+  if (!f || !f.played || f.line == null) return "";
+  const rate = f.cleared / f.played;
+  return rate >= 0.67 ? "hot" : rate <= 0.34 ? "cold" : "";
+}
+
+function formStrip(f) {
+  if (!f || !f.games || !f.games.length) return "";
+  const max = Math.max(...f.games.map(g => g.value), f.line || 0, 1);
+  const bars = f.games.map(g => {
+    const when = "Week " + g.week + (g.home ? " vs " : " at ") + g.opponent + ": " + fmt(g.value);
+    return `<i class="${g.cleared ? "ok" : ""}"
+      style="height:${Math.max(2, Math.round((g.value / max) * 28))}px"
+      title="${esc(when)}"></i>`;
+  }).join("");
+
+  // "2/6 over" rather than "cleared 2 of 6": it fits a five-across row without wrapping, and
+  // over is the precise word anyway, since the line it is measured against is the projection.
+  let tail = "";
+  if (f.line != null && f.played) {
+    const rate = f.cleared / f.played;
+    const cls = rate >= 0.67 ? "hot" : rate <= 0.34 ? "cold" : "";
+    tail = ` &middot; <b class="${cls}">${f.cleared}/${f.played}</b> over`;
+  }
+  return `<span class="form"><span class="bars">${bars}</span>
+    <span class="formtxt">last ${f.played} &middot; avg <b>${fmt(f.average)}</b>${tail}</span></span>`;
+}
+
+/* Which column is emphasised in the table, if any. The table itself is always on: it shows
+   every stat for the player in front of you, so hiding it behind a click on one stat asked
+   you to choose a column before you were allowed to compare columns. Reset whenever the pick
+   changes, because a highlight pointing at a player you no longer have is worse than none. */
+let openLog = null;
+
+const crestFor = t => t
+  ? `https://a.espncdn.com/i/teamlogos/nfl/500-dark/${
+      encodeURIComponent(t.toLowerCase() === "was" ? "wsh" : t.toLowerCase())}.png`
+  : null;
+
+/* The whole season so far, every stat at once, one row per game.
+ *
+ * A single stat's history answers "does he clear this number". It cannot answer the question
+ * people actually ask, which is "what does he do in games like this one" — and that needs the
+ * columns side by side, because the interesting weeks are the ones where the yardage came
+ * without the touchdown, or the catches came without the yards. Reading down a column tells
+ * you about the stat; reading across a row tells you about the matchup.
+ *
+ * Cells that beat the current projection are lit, so a column that is mostly lit is a number
+ * he clears and a column that is mostly dark is one the forecast is generous about.
+ */
+function renderStatTable(pick, player) {
+  // Every option gets a column, including any the game log has nothing for. The table is the
+  // full set of choices on this pick, so leaving one out would mean a part you could take
+  // from its card but not from here, and the two would disagree about what your options are.
+  const cols = pick.options || [];
+  const withForm = cols.filter(o => o.form && o.form.games.length);
+  if (!withForm.length) return "";
+
+  // Keyed by week rather than by position in the list. Every column is built from the same
+  // six games today, but a player who misses one leaves a gap, and a mis-aligned row would
+  // sit one week's yardage next to another week's touchdowns and read as fact.
+  const weeks = [...new Set(withForm.flatMap(o => o.form.games.map(g => g.week)))].sort((a, b) => b - a);
+  const meta = new Map();
+  withForm.forEach(o => o.form.games.forEach(g => { if (!meta.has(g.week)) meta.set(g.week, g); }));
+  const at = (o, wk) => o.form ? o.form.games.find(g => g.week === wk) : null;
+  const sel = o => o.key === openLog ? "sel" : "";
+
+  const head = cols.map(o => `<th class="sc ${sel(o)}">
+      <span class="p">${esc(o.part)}</span><em>${esc(o.stat)}</em></th>`).join("");
+
+  const body = weeks.map(wk => {
+    const m = meta.get(wk);
+    const cells = cols.map(o => {
+      const g = at(o, wk);
+      return `<td class="v ${sel(o)} ${g && g.cleared ? "ok" : ""}">${
+        g ? fmt(g.value) : "&middot;"}</td>`;
+    }).join("");
+    return `<tr><td class="wk">Wk ${m.week}</td>
+      <td class="opp">${m.home ? "vs" : "at"} ${esc(m.opponent)}
+        ${crestFor(m.opponent) ? `<img class="crest sm" src="${crestFor(m.opponent)}" alt="">` : ""}
+      </td>${cells}</tr>`;
+  }).join("");
+
+  const foot = (label, cls, fn) => `<tr class="${cls}"><td class="wk" colspan="2">${label}</td>${
+    cols.map(o => `<td class="${sel(o)}">${o.form ? fn(o.form) : "&middot;"}</td>`).join("")}</tr>`;
+
+  return `<div class="tblhead">
+      <b>${esc(player && player.name ? player.name : "This player")}, last ${weeks.length} games</b>
+      <span>A lit number beat the projection he is being offered at this week.
+        Read down a column for the stat, across a row for the matchup.</span>
+    </div>
+    <div class="tblwrap"><table class="gt">
+    <thead><tr><th class="wk">Week</th><th class="opp">Opponent</th>${head}</tr></thead>
+    <tbody>${body}</tbody>
+    <tfoot>
+      ${foot("Average", "avg", f => fmt(f.average))}
+      ${foot("Projected this week", "line", f => f.line == null ? "&middot;" : fmt(f.line))}
+      ${foot("Cleared it", "rate", f => f.line == null ? "&middot;"
+        : `<b class="${f.cleared / f.played >= 0.67 ? "hot" : f.cleared / f.played <= 0.34 ? "cold" : ""}">${
+            f.cleared}/${f.played}</b>`)}
+    </tfoot>
+  </table></div>`;
+}
+
 /* one pick at a time: spin a team, spin a player, decide what they are for */
 function renderStage() {
   const host = document.getElementById("stage");
 
   if (entry.activePick == null) {
-    const d = entry.total - entry.projectedTotal;
+    // The slip below carries the numbers now, so this only has to say the week is over.
     host.innerHTML = `<div class="stage-head"><span class="step">Roster complete</span></div>
-      <div class="prompt">All twelve picks are in and the week has resolved. You were projected
-      for ${fmt(entry.projectedTotal)} and scored <b style="color:var(--accent)">${fmt(entry.total)}</b>,
-      ${d >= 0 ? "beating" : "missing"} the forecast by ${fmt(Math.abs(d))}.</div>`;
+      <div class="prompt">Eighteen picks, all resolved against what actually happened.
+      Your slip is printed below.</div>`;
     return;
   }
 
@@ -341,9 +833,13 @@ function renderStage() {
   const reels = `<div class="reels">
       <div class="reelbox ${landedTeam ? "landed" : ""}" id="teamBox">
         <div class="reelcap">Team</div>
-        <div id="teamReel">${landedTeam
-          ? `<div class="reel"><div class="reel-strip"><div class="reel-item hit">${esc(pick.team)}</div></div></div>`
-          : `<div class="reel"><div class="reel-strip"><div class="reel-item">&mdash;</div></div></div>`}</div>
+        <div class="reel-team">
+          ${landedTeam && pick.teamLogo
+            ? `<img class="crest lg" src="${esc(pick.teamLogo)}" alt="">` : ""}
+          <div id="teamReel" style="flex:1;min-width:0">${landedTeam
+            ? `<div class="reel"><div class="reel-strip"><div class="reel-item hit">${esc(pick.team)}</div></div></div>`
+            : `<div class="reel"><div class="reel-strip"><div class="reel-item">&mdash;</div></div></div>`}</div>
+        </div>
       </div>
       <div class="reelbox ${landedPlayer ? "landed" : ""}" id="playerBox">
         <div class="reelcap">${pick.slot === "FLEX" ? "Receiver" : esc(pick.slot)}</div>
@@ -362,26 +858,53 @@ function renderStage() {
         ${faceTag(p.image, "face")}
         <div class="whobox"><div class="nm">${esc(p.name)}</div>
           <div class="sub">${esc(p.position)} &middot; ${esc(p.team)}${
-            pick.opponent ? " &nbsp;vs&nbsp; " + esc(pick.opponent) : ""}</div></div>
+            pick.opponent ? " &nbsp;vs&nbsp; " + esc(pick.opponent) : ""}${
+            p.injury ? ' &nbsp;<span class="injury">' + esc(p.injury) + "</span>" : ""}</div></div>
+        ${pick.opponentLogo ? `<span class="oppbox"><em>opponent</em>
+          <img class="crest lg" src="${esc(pick.opponentLogo)}" alt=""></span>` : ""}
       </div>
       <div class="prompt" style="margin-bottom:14px">What are you taking from ${
-        pick.options.length === 1 ? "him? Only one part left in this position." : "him?"}</div>`;
-    controls = `<button class="ghost" data-act="spin" data-respin="team" ${entry.teamRespins > 0 ? "" : "disabled"}>Respin team</button>
-      <button class="ghost" data-act="spin" data-respin="player" ${entry.playerRespins > 0 ? "" : "disabled"}>Respin player</button>`;
+        pick.options.length === 1 ? "him? Only one part left in this position." : "him?"}</div>
+      ${pick.options.every(o => o.projectedRaw == null) ? `<div class="notice">
+        <b>Nobody forecast ${esc(p.name)} this week.</b> He took the field, so whatever he did
+        still scores, but there is no projection to judge him against and no line for his
+        history to be measured on. This is what the respins are for.</div>` : ""}`;
+
+    // The budget sits on the button that spends it, and the arrow says at a glance that these
+    // re-roll rather than confirm. Two identical bordered pills read as a pair of choices; the
+    // icon plus the count reads as a resource you are about to spend.
+    const arrow = `<svg class="ri" viewBox="0 0 16 16" aria-hidden="true">
+        <path d="M14 8a6 6 0 1 1-1.9-4.4"/><path d="M13.6 1.3v3.1h-3.1"/></svg>`;
+    controls = `<div class="respins-row">
+      <button class="respin" data-act="spin" data-respin="team" ${entry.teamRespins > 0 ? "" : "disabled"}>
+        ${arrow}<span>Respin team</span><b>${entry.teamRespins}</b></button>
+      <button class="respin" data-act="spin" data-respin="player" ${entry.playerRespins > 0 ? "" : "disabled"}>
+        ${arrow}<span>Respin player</span><b>${entry.playerRespins}</b></button>
+      <span class="respin-note">Re-rolls this pick. You get three of each per roster.</span>
+    </div>`;
+
+    // Two targets per card: the body takes the part, the form strip opens its game log. They
+    // are separate buttons rather than one card with a mode, because a control that does
+    // different things depending on where you hit it is the fastest way to lose a pick.
     options = `<div class="opts">` + pick.options.map(o => `
-      <button class="opt" data-act="choose" data-opt="${esc(o.key)}">
+      <div class="opt ${formClass(o.form)} ${openLog === o.key ? "open" : ""}">
         ${o["volatile"] ? '<span class="boom">boom</span>' : ""}
-        <span class="part">${esc(o.part)}</span>
-        <span class="stat">${esc(o.stat)}</span>
-        <span class="val">${o.projectedPoints == null ? "&middot;" : fmt(o.projectedPoints)}<small>PTS</small></span>
-        <span class="math"><b>${fmt(o.projectedRaw)}</b> projected &times; ${fmt(o.multiplier)}</span>
-      </button>`).join("") + `</div>`;
+        <button class="opt-take" data-act="choose" data-opt="${esc(o.key)}">
+          <span class="part">${esc(o.part)}</span>
+          <span class="stat">${esc(o.stat)}</span>
+          <span class="val">${o.projectedPoints == null ? "&middot;" : fmt(o.projectedPoints)}<small>PTS</small></span>
+          <span class="math"><b>${fmt(o.projectedRaw)}</b> projected &times; ${fmt(o.multiplier)}</span>
+        </button>
+        ${o.form ? `<button class="opt-log" data-act="log" data-opt="${esc(o.key)}">
+          ${formStrip(o.form)}</button>` : ""}
+      </div>`).join("") + `</div>` + renderStatTable(pick, p);
   }
 
   host.innerHTML = `
     <div class="stage-head">
       <span class="step">Pick ${entry.activePick + 1} of ${entry.totalPicks} &middot; ${esc(posLabel(pick.slot, pick.position))}</span>
-      <span class="respins">respins &nbsp; team <b>${entry.teamRespins}</b> &nbsp; player <b>${entry.playerRespins}</b></span>
+      ${landedPlayer && pick.opponent
+        ? `<span class="respins">${esc(pick.team)} vs ${esc(pick.opponent)}</span>` : ""}
     </div>
     ${reels}
     ${who}
@@ -392,52 +915,142 @@ function renderStage() {
     el.addEventListener("click", () => act(el.dataset, entry.activePick)));
 }
 
+/* ---------- the slip ----------
+   Rendered only once the week has resolved, and it replaces the position cards rather than
+   sitting beside them: it carries strictly more than they did. "none" means it has not printed
+   yet, "playing" means it is printing and nothing may touch the DOM, "done" means redraws are
+   instant. Without that third state the fifteen-second poll would wipe the animation halfway. */
+let slipState = "none";
+
+const shortName = n => {
+  const parts = String(n || "").trim().split(/\s+/);
+  return parts.length > 1 ? parts[0][0] + ". " + parts.slice(1).join(" ") : (n || "");
+};
+
+function renderSlip() {
+  const host = document.getElementById("slip");
+  if (slipState === "playing") return;
+
+  const body = entry.positions.map(pos => {
+    const lines = pos.picks.map(p => {
+      const part = (p.options.find(o => o.key === p.chosen) || {}).part || p.chosen || "";
+      return `<div class="slip-line" data-pts="${p.points || 0}">
+        <span class="sl-part">${esc(part)}</span>
+        <span class="sl-name">${esc(shortName(p.player && p.player.name))}</span>
+        <span class="sl-raw">${fmt(p.raw)}</span>
+        <span class="sl-pts">${fmt(p.points)}</span></div>`;
+    }).join("");
+    return `<div class="slip-sec">${esc(posLabel(pos.slot, pos.index))}</div>${lines}
+      <div class="slip-sub"><span>subtotal</span><span>${fmt(pos.total)}</span></div>`;
+  }).join("");
+
+  const d = entry.total - entry.projectedTotal;
+  const c = entry.contest || {};
+  host.className = "slip" + (slipState === "done" ? " instant" : "");
+  host.innerHTML = `
+    <div class="slip-brand">Wheelhouse</div>
+    <div class="slip-meta"><span>${esc(c.label || "")}</span>
+      <span>${c.archive ? "Vault" : "Live"}</span></div>
+    <div class="slip-rule"></div>
+    <div class="slip-meta"><span>${esc(entry.owner)}</span>
+      <span>${esc(String(entry.entryId).slice(0, 8))}</span></div>
+    ${body}
+    <div class="slip-foot">
+      <div class="slip-rule"></div>
+      <div class="slip-meta"><span>projected</span><span>${fmt(entry.projectedTotal)}</span></div>
+      <div class="slip-tot"><span>Final</span>
+        <span class="big" id="slipTotal">${fmt(entry.total)}</span></div>
+      <div class="slip-verdict">${d >= 0 ? "beat the forecast by" : "missed the forecast by"}
+        <b>${fmt(Math.abs(d))}</b></div>
+    </div>`;
+
+  if (slipState === "none") {
+    slipState = "playing";
+    printSlip();
+  }
+}
+
+/* Eighteen picks resolve at once on the server, so the page is the only thing that can make
+   that land as an event rather than a number quietly changing. Each line prints in turn with
+   the total climbing behind it. */
+async function printSlip() {
+  const host = document.getElementById("slip");
+  const total = document.getElementById("slipTotal");
+  let running = 0;
+  total.textContent = "0";
+
+  for (const line of host.querySelectorAll(".slip-line")) {
+    line.classList.add("in");
+    running += Number(line.dataset.pts || 0);
+    total.textContent = fmt(Math.round(running * 100) / 100);
+    await new Promise(r => setTimeout(r, 95));
+  }
+  host.querySelector(".slip-foot").classList.add("in");
+  slipState = "done";
+}
+
 function renderRoster() {
   const revealed = entry.revealed;
+
+  // Once the week resolves the rail has nothing left to track and the slip carries strictly
+  // more than it did, so the layout drops back to one column for the reveal.
+  document.getElementById("rosterSection").style.display = revealed ? "none" : "block";
+  document.getElementById("slipSection").style.display = revealed ? "block" : "none";
+  if (revealed) { renderSlip(); return; }
+  // Set explicitly rather than through show(), which forces display:block and would flatten
+  // both the position grid and the total bar's flex row.
+  document.getElementById("positions").style.display = "grid";
+  document.getElementById("totalBar").style.display = "flex";
 
   document.getElementById("positions").innerHTML = entry.positions.map(pos => {
     const active = entry.activePick != null
       && pos.picks.some(p => p.pickIndex === entry.activePick);
 
-    const rows = pos.picks.map(p => {
-      if (!p.chosen) {
-        return `<div class="part-row empty"><span class="lbl">&mdash;</span>
-          <span class="nm">${p.player ? esc(p.player.name) : "not drafted"}</span>
-          <span class="pt" style="color:var(--dim)">&middot;</span></div>`;
-      }
+    // Filled rows only. Five identical "not drafted" lines told you nothing; what you actually
+    // want to know is which parts are still spendable here, and that is one line.
+    const rows = pos.picks.filter(p => p.chosen).map(p => {
       const part = (p.options.find(o => o.key === p.chosen) || {}).part || p.chosen;
-      const shown = revealed ? p.points : p.projectedPoints;
-      const cls = revealed ? (p.points >= p.projectedPoints ? "up" : "down") : "";
       return `<div class="part-row">${faceTag(p.player.image, "mini")}
+        ${p.teamLogo ? `<img class="crest sm" src="${esc(p.teamLogo)}" alt="">` : ""}
         <span class="lbl">${esc(part)}</span>
         <span class="nm">${esc(p.player.name)}</span>
-        <span class="pt ${cls}">${fmt(shown)}<small style="font-size:9px;letter-spacing:.1em;color:var(--dim);margin-left:3px">PTS</small></span></div>`;
+        <span class="pt">${fmt(p.projectedPoints)}<small style="font-size:9px;letter-spacing:.1em;color:var(--dim);margin-left:3px">PTS</small></span></div>`;
     }).join("");
 
-    const headline = revealed ? pos.total : pos.projectedTotal;
+    // Filled picks carry every part of their slot, unfilled ones carry only what is left, so
+    // the union across the position is the full set and the difference is what remains.
+    const all = new Map();
+    pos.picks.forEach(p => (p.options || []).forEach(o => all.set(o.key, o.part)));
+    pos.picks.filter(p => p.chosen).forEach(p => all.delete(p.chosen));
+    const open = [...all.values()];
+
     return `<div class="pos ${active ? "active" : ""}">
       <div class="pos-head"><span class="pos-name">${esc(posLabel(pos.slot, pos.index))}</span>
-        <span class="pos-total">${fmt(headline)}
-          <small>${revealed ? "proj " + fmt(pos.projectedTotal) : "projected"}</small></span></div>
-      ${rows}</div>`;
+        <span class="pos-total">${fmt(pos.projectedTotal)}
+          <small>projected</small></span></div>
+      ${rows}
+      ${open.length ? `<div class="pos-open">Open &nbsp;<b>${
+        open.map(esc).join(" &middot; ")}</b></div>` : ""}</div>`;
   }).join("");
 
-  document.getElementById("totalLabel").textContent = revealed ? "Final" : "Projected";
-  document.getElementById("totalHint").textContent = revealed
-    ? "Every pick has resolved"
-    : "Results arrive once all twelve picks are in";
-  document.getElementById("totalN").textContent = fmt(revealed ? entry.total : entry.projectedTotal);
-  document.getElementById("totalVs").innerHTML = revealed
-    ? `projected ${fmt(entry.projectedTotal)}` : "";
+  const picked = entry.positions.flatMap(p => p.picks).filter(p => p.chosen).length;
+  document.getElementById("rosterNote").textContent =
+    picked + " of " + entry.totalPicks + " picked";
+  document.getElementById("totalN").textContent = fmt(entry.projectedTotal);
 }
 
 let loading = false;
 
 function render() {
   const building = !!entry;
-  show("hero", !building && !loading);
-  show("start", !building && !loading);
+  const landing = !building && !loading;
+  show("hero", landing);
+  show("howto", landing);
   show("loader", loading);
+  // Widen the shell only while drafting: five option cards beside a roster rail need the room,
+  // and the landing reads better narrow.
+  document.body.classList.toggle("playing", building);
+  if (!building) { show("slipSection", false); }
   show("stage", building);
   show("rosterSection", building);
   document.getElementById("headline").style.display = building ? "block" : "none";
@@ -445,7 +1058,7 @@ function render() {
   if (!building) { loadContest(); return; }
 
   const c = entry.contest || {};
-  document.getElementById("weekLabel").textContent = c.label || "";
+  setWeekLabel(c);
   showNotice(c);
   document.getElementById("headline").innerHTML =
     esc(entry.owner) + "'s roster"
@@ -454,6 +1067,7 @@ function render() {
 
   document.getElementById("leaveBtn").addEventListener("click", () => {
     entry = null;
+    slipState = "none";
     localStorage.removeItem("wh.entry");
     document.getElementById("histSection").style.display = "none";
     loadContest();
@@ -551,6 +1165,14 @@ async function spinFor(d, index) {
 
 async function act(d, index) {
   showError(null);
+  if (d.act === "log") {
+    // Local only. Opening a log is a reading action and must not cost a request or disturb
+    // anything the server has decided.
+    openLog = openLog === d.opt ? null : d.opt;
+    renderStage();
+    return;
+  }
+  openLog = null;
   if (d.act === "spin") return spinFor(d, index);
   try {
     entry = await api("POST", `/${entry.entryId}/pick/${index}/choose`, { option: d.opt });
@@ -590,6 +1212,7 @@ async function start(params) {
   const name = document.getElementById("owner").value.trim();
   if (!name) { showError(new Error("enter a name first")); return; }
   owner = name;
+  slipState = "none";
   localStorage.setItem("wh.owner", name);
   try {
     entry = await api("POST", "/open", Object.assign({ owner: name }, params || {}));
@@ -614,18 +1237,72 @@ async function startArchive() {
   render();
 }
 
+/* Two dropdowns is a form. The same choice made by the same reels the rest of the game runs on
+   is an opening move, and it costs the player nothing to be handed a week they would never
+   have thought to pick. */
+async function rollWeek() {
+  const name = document.getElementById("owner").value.trim();
+  if (!name) { showError(new Error("enter a name first")); return; }
+  showError(null);
+
+  const seasons = [];
+  for (let y = archiveRange.earliest; y <= archiveRange.latest; y++) seasons.push(String(y));
+  // From week two, so there is always some form behind the players it deals you.
+  const weeks = [];
+  for (let w = 2; w <= archiveRange.weeks; w++) weeks.push(String(w));
+
+  const season = seasons[Math.floor(Math.random() * seasons.length)];
+  const week = weeks[Math.floor(Math.random() * weeks.length)];
+
+  document.getElementById("weekReels").style.display = "grid";
+  ["rollBtn", "archiveBtn", "liveBtn"].forEach(id => document.getElementById(id).disabled = true);
+  document.getElementById("seasonBox").classList.remove("landed");
+  document.getElementById("wkBox").classList.remove("landed");
+
+  // Both start spinning at once and settle one after the other, same as the draft reels.
+  const sStrip = buildReel(document.getElementById("seasonReel"), seasons, "");
+  const wStrip = buildReel(document.getElementById("wkReel"), weeks, "");
+
+  await landReel(sStrip, seasons, season, "");
+  document.getElementById("seasonBox").classList.add("landed");
+  await landReel(wStrip, weeks, week, "");
+  document.getElementById("wkBox").classList.add("landed");
+
+  const ticker = runLoader(season + " week " + week);
+  await start({ season, week });
+  clearInterval(ticker);
+  loading = false;
+  ["rollBtn", "archiveBtn", "liveBtn"].forEach(id => document.getElementById(id).disabled = false);
+  document.getElementById("weekReels").style.display = "none";
+  render();
+}
+
 (async function init() {
   await loadContest();
   await loadArchiveOptions();
-  document.getElementById("startBtn").addEventListener("click", () => start());
+  // Picking a specific week is a thing people do once, so it costs one click to reach and
+  // nothing to ignore. Only the label's chevron moves, because a button whose text changes
+  // under the cursor is the thing that makes a control feel unreliable.
+  document.getElementById("moreBtn").addEventListener("click", e => {
+    const more = document.getElementById("more");
+    more.hidden = !more.hidden;
+    e.currentTarget.setAttribute("aria-expanded", String(!more.hidden));
+  });
+
+  document.getElementById("rollBtn").addEventListener("click", rollWeek);
+  document.getElementById("liveBtn").addEventListener("click", () => start());
   document.getElementById("archiveBtn").addEventListener("click", startArchive);
-  document.getElementById("owner").addEventListener("keydown", e => { if (e.key === "Enter") start(); });
+  document.getElementById("owner").addEventListener("keydown", e => { if (e.key === "Enter") rollWeek(); });
 
   if (owner) document.getElementById("owner").value = owner;
   const saved = localStorage.getItem("wh.entry");
   if (saved) {
-    try { entry = await api("GET", "/" + saved); }
-    catch (e) { localStorage.removeItem("wh.entry"); }
+    try {
+      entry = await api("GET", "/" + saved);
+      // Resuming a week that already finished should not replay the reveal. That moment
+      // belongs to the pick that ended it, not to every page load afterwards.
+      if (entry.revealed) slipState = "done";
+    } catch (e) { localStorage.removeItem("wh.entry"); }
   }
   render();
   refreshTables();

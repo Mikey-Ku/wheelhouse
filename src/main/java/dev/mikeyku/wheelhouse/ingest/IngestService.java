@@ -89,6 +89,27 @@ public class IngestService {
     }
 
     /**
+     * Who a team played that week, read off the box score rather than a schedule table.
+     *
+     * <p>The snapshots already name both sides, so a separate schedule feed would be a second
+     * source of truth for something we can already see. This reveals nothing a draft should be
+     * hiding: the fixture list is public long before kickoff, and knowing the matchup is exactly
+     * the sort of thing a pick is supposed to turn on.
+     */
+    public String opponentOf(String contestId, String team) {
+        if (team == null) {
+            return null;
+        }
+        for (GameSnapshot snapshot : snapshots(contestId)) {
+            List<String> sides = snapshot.athleteTeams().values().stream().distinct().toList();
+            if (sides.contains(team)) {
+                return sides.stream().filter(t -> !t.equals(team)).findFirst().orElse(null);
+            }
+        }
+        return null;
+    }
+
+    /**
      * Value of one stat within one week.
      *
      * <p>A player appears in exactly one game per week, so scanning that week's snapshots is

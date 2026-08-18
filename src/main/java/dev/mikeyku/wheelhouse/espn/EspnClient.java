@@ -17,8 +17,9 @@ import java.util.List;
 /**
  * Reads ESPN's public site API. Undocumented but stable in practice, no key required.
  *
- * <p>Two endpoints do all the work: the scoreboard tells us which games exist and which
- * are in progress, and the summary gives us a full box score for one game.
+ * <p>Three endpoints do all the work: the scoreboard tells us which games exist and which
+ * are in progress, the summary gives us a full box score for one game, and the game log gives
+ * us one player's whole season in a single call.
  */
 @Component
 public class EspnClient {
@@ -27,6 +28,8 @@ public class EspnClient {
             "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard";
     private static final String SUMMARY =
             "https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=";
+    private static final String GAMELOG =
+            "https://site.api.espn.com/apis/common/v3/sports/football/nfl/athletes/%s/gamelog?season=%d";
 
     private final HttpClient http = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
@@ -100,6 +103,23 @@ public class EspnClient {
 
     public JsonNode summary(String eventId) throws IOException, InterruptedException {
         return get(SUMMARY + eventId);
+    }
+
+    /**
+     * One player's season, game by game, in a single request.
+     *
+     * <p>Building a form guide out of box scores would mean pulling every game of every prior
+     * week just to read one player's line, which is sixteen requests per week of history. This
+     * is one request per player, and it names its stats exactly as the box score does, so the
+     * two feeds need no translation between them.
+     *
+     * <p>It returns the <em>whole</em> season, including weeks that have not been played yet
+     * from the perspective of an archived contest. Filtering those out is the caller's job and
+     * it is not optional: this endpoint will happily hand back the answer to the week you are
+     * currently drafting.
+     */
+    public JsonNode gamelog(String athleteId, int season) throws IOException, InterruptedException {
+        return get(GAMELOG.formatted(athleteId, season));
     }
 
     private JsonNode get(String url) throws IOException, InterruptedException {

@@ -19,7 +19,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
-/** One player's roster for one week: four composite positions, twelve picks. */
+/** One player's roster for one week: four composite positions, eighteen picks. */
 @Entity
 @Table(name = "entries")
 public class EntryRecord {
@@ -31,18 +31,18 @@ public class EntryRecord {
     private String owner;
     private Instant createdAt;
 
-    /** Set once all twelve picks are filled. Null means still building. */
+    /** Set once all eighteen picks are filled. Null means still building. */
     private Instant submittedAt;
 
     /**
-     * Respins are a budget for the whole roster rather than one per pick. With twelve picks,
+     * Respins are a budget for the whole roster rather than one per pick. With eighteen picks,
      * per-pick respins would be two dozen free do-overs and nothing would ever feel risky.
      */
     private int teamRespins;
     private int playerRespins;
 
     // Eager on purpose. An entry is never useful without its picks, there are always exactly
-    // twelve, and open-in-view is off, so lazy loading would just fail outside the
+    // eighteen, and open-in-view is off, so lazy loading would just fail outside the
     // transaction that read the entry.
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @JoinColumn(name = "entry_id")
@@ -95,7 +95,7 @@ public class EntryRecord {
                 .orElseThrow(() -> new IllegalArgumentException("no pick " + index));
     }
 
-    /** One of the twelve: a player, and which part of their position they cover. */
+    /** One of the eighteen: a player, and which part of their position they cover. */
     @Entity
     @Table(name = "entry_picks")
     public static class PickRecord {
