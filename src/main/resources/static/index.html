@@ -404,6 +404,26 @@
   table.gt tfoot tr.rate b.cold{color:var(--loss)}
   table.gt tfoot tr.rate td{padding-bottom:15px}
 
+  /* ---- how you played, as opposed to how the wheel treated you ----
+     Deliberately not on the paper. The slip is the record of what happened; this is the verdict
+     on it, and it reads better as a separate object sitting underneath. */
+  .cap{max-width:530px;margin:16px auto 0;background:var(--surface);border:1px solid var(--line-hi);
+    border-radius:14px;padding:20px 22px}
+  .cap-head{display:flex;align-items:baseline;gap:18px;flex-wrap:wrap}
+  .cap-head > div:first-child{display:flex;align-items:baseline;gap:8px;flex-shrink:0}
+  .cap-head b{font-family:var(--display);font-weight:700;font-size:40px;line-height:1;
+    color:var(--secondary)}
+  .cap.hot .cap-head b{color:var(--accent)}
+  .cap.cold .cap-head b{color:var(--loss)}
+  .cap-head > div:first-child span{font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--dim)}
+  .cap-of{flex:1;min-width:220px;font-size:13px;color:var(--muted);line-height:1.55}
+  .cap-of b{font-family:var(--sans);font-size:13px;font-weight:600;color:var(--text)}
+  .cap-swap{margin-top:15px;padding-top:14px;border-top:1px solid var(--line);
+    font-size:13px;color:var(--muted);line-height:1.6}
+  .cap-swap b{color:var(--text);font-weight:600}
+  .cap-swap i{font-style:normal;color:var(--secondary)}
+
   /* ---- what is left in a position ---- */
   .pos-open{margin-top:10px;padding-top:9px;border-top:1px solid var(--line);
     font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
@@ -479,12 +499,14 @@
         forecast did.</p>
 
       <div class="cta">
-        <input id="owner" placeholder="your name" autocomplete="off">
-        <button class="primary big" id="rollBtn">Spin a week</button>
+        <button class="primary big" id="rollBtn">Play a week</button>
+        <button class="ghost" id="moreBtn" aria-expanded="false">Choose a week yourself</button>
       </div>
-      <p class="cta-note">Five seasons sit in the vault. You land on one at random and draft it
-        blind against the projections that were live at the time.</p>
+      <p class="cta-note">No sign-up. You land on a random week from five seasons of the vault
+        and draft it blind against the projections that were live at the time. Name it at the
+        end if you want to keep it.</p>
 
+      <input type="hidden" id="owner" value="">
       <div class="reels even" id="weekReels" style="display:none">
         <div class="reelbox" id="seasonBox"><div class="reelcap">Season</div>
           <div id="seasonReel"><div class="reel"><div class="reel-strip"><div class="reel-item">&mdash;</div></div></div></div></div>
@@ -492,7 +514,6 @@
           <div id="wkReel"><div class="reel"><div class="reel-strip"><div class="reel-item">&mdash;</div></div></div></div></div>
       </div>
 
-      <button class="disclose" id="moreBtn" aria-expanded="false">Choose a week yourself</button>
       <div id="more" class="more" hidden>
         <div class="pickrow">
           <label><span>Season</span><select id="season"></select></label>
@@ -592,6 +613,7 @@
     <div class="sec-head"><h2>Your slip</h2>
       <span class="sec-note">Every pick, resolved</span></div>
     <div id="slip" class="slip"></div>
+    <div id="captureCard"></div>
   </section>
 
   <section id="lbSection" style="display:none">
@@ -1021,10 +1043,37 @@ function renderSlip() {
         <b>${fmt(Math.abs(d))}</b></div>
     </div>`;
 
+  document.getElementById("captureCard").innerHTML = captureCard(entry);
+
   if (slipState === "none") {
     slipState = "playing";
     printSlip();
   }
+}
+
+/* The score says how the wheel treated you. This says how you played.
+ *
+ * Holding the exact players you were dealt, the ceiling is the best arrangement of parts that
+ * was available to you, so the percentage is your decisions with the luck divided out. The swap
+ * underneath is the one exchange that would have gained the most, which is the part somebody
+ * actually learns from: a whole optimal assignment is hard to argue with and harder to remember.
+ */
+function captureCard(entry) {
+  const c = entry.capture;
+  if (!c) return "";
+  const band = c.capturePercent >= 85 ? "hot" : c.capturePercent <= 55 ? "cold" : "";
+  const w = c.worstCall;
+  return `<div class="cap ${band}">
+    <div class="cap-head">
+      <div><b>${c.capturePercent}%</b><span>of your board</span></div>
+      <div class="cap-of">You scored <b>${fmt(c.scored)}</b>. The best use of the exact
+        players the wheel dealt you was <b>${fmt(c.ceiling)}</b>.</div>
+    </div>
+    ${w ? `<div class="cap-swap"><b>Your worst call.</b>
+      You took <i>${esc(w.fromPart)}</i> off ${esc(w.fromPlayer)} for ${fmt(w.fromScored)}
+      and <i>${esc(w.toPart)}</i> off ${esc(w.toPlayer)} for ${fmt(w.toScored)}.
+      The other way round was worth <b>${fmt(w.gain)}</b> more.</div>` : ""}
+  </div>`;
 }
 
 /* Every pick resolves at once on the server, so the page is the only thing that can make
@@ -1268,10 +1317,19 @@ async function refreshTables() {
   } catch (e) { /* no history yet */ }
 }
 
+/* Anonymous until it is worth not being.
+   Asking for a name before anyone has seen the game charges a stranger for something they have
+   no reason to want yet. The entry id in localStorage is what actually resumes a draft; the
+   name only matters once a finished slip is worth putting on a board. */
+function anonymousName() {
+  return "Player " + Math.random().toString(36).slice(2, 6).toUpperCase();
+}
+
 async function start(params) {
-  const name = document.getElementById("owner").value.trim();
-  if (!name) { showError(new Error("enter a name first")); return; }
+  const typed = document.getElementById("owner").value.trim();
+  const name = typed || owner || anonymousName();
   owner = name;
+  document.getElementById("owner").value = name;
   slipState = "none";
   localStorage.setItem("wh.owner", name);
   try {
@@ -1285,8 +1343,6 @@ async function start(params) {
 }
 
 async function startArchive() {
-  const name = document.getElementById("owner").value.trim();
-  if (!name) { showError(new Error("enter a name first")); return; }
   const season = document.getElementById("season").value;
   const week = document.getElementById("week").value;
 
@@ -1301,8 +1357,6 @@ async function startArchive() {
    is an opening move, and it costs the player nothing to be handed a week they would never
    have thought to pick. */
 async function rollWeek() {
-  const name = document.getElementById("owner").value.trim();
-  if (!name) { showError(new Error("enter a name first")); return; }
   showError(null);
 
   const seasons = [];
@@ -1352,9 +1406,8 @@ async function rollWeek() {
   document.getElementById("rollBtn").addEventListener("click", rollWeek);
   document.getElementById("liveBtn").addEventListener("click", () => start());
   document.getElementById("archiveBtn").addEventListener("click", startArchive);
-  document.getElementById("owner").addEventListener("keydown", e => { if (e.key === "Enter") rollWeek(); });
 
-  if (owner) document.getElementById("owner").value = owner;
+  document.getElementById("owner").value = owner || "";
   const saved = localStorage.getItem("wh.entry");
   if (saved) {
     try {

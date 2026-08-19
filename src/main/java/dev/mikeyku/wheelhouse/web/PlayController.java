@@ -12,6 +12,7 @@ import dev.mikeyku.wheelhouse.model.Roster;
 import dev.mikeyku.wheelhouse.model.Slot;
 import dev.mikeyku.wheelhouse.projection.PositionalField;
 import dev.mikeyku.wheelhouse.projection.ProjectionService;
+import dev.mikeyku.wheelhouse.scoring.CaptureRate;
 import dev.mikeyku.wheelhouse.scoring.ScoringService;
 import dev.mikeyku.wheelhouse.sleeper.AthleteResolver;
 import dev.mikeyku.wheelhouse.sleeper.PlayerCatalog;
@@ -53,11 +54,12 @@ public class PlayController {
     private final FormService form;
     private final IngestService ingest;
     private final PositionalField field;
+    private final CaptureRate capture;
 
     public PlayController(EntryService entries, ContestService contests, ArchiveService archive,
                           PlayerCatalog catalog, AthleteResolver resolver, ScoringService scoring,
                           ProjectionService projections, WheelPool pool, FormService form,
-                          IngestService ingest, PositionalField field) {
+                          IngestService ingest, PositionalField field, CaptureRate capture) {
         this.entries = entries;
         this.contests = contests;
         this.archive = archive;
@@ -69,6 +71,7 @@ public class PlayController {
         this.form = form;
         this.ingest = ingest;
         this.field = field;
+        this.capture = capture;
     }
 
     @GetMapping("/contest")
@@ -104,7 +107,28 @@ public class PlayController {
 
     @GetMapping("/{entryId}")
     public Map<String, Object> get(@PathVariable String entryId) {
-        return view(entries.byId(entryId));
+        EntryRecord entry = entries.byId(entryId);
+        // Entries are on disk now; the stats they are scored against and the player pool they
+        // name are not. A resumed archive week would otherwise come back scoring zero with
+        // "unknown player" on every row. Loading is idempotent and returns immediately once
+        // the week is already in memory.
+        if (entry != null) {
+            rehydrate(entry.contestId());
+        }
+        return view(entry);
+    }
+
+    /** Pulls an archived week back in if this process has not seen it yet. */
+    private void rehydrate(String contestId) {
+        Contest contest = contests.byId(contestId);
+        if (contest == null || !contest.archive()) {
+            return;
+        }
+        try {
+            archive.load(contest.season(), contest.week());
+        } catch (RuntimeException e) {
+            // Out of range now, or ESPN is unreachable. The view still renders what it holds.
+        }
     }
 
     /**
@@ -235,6 +259,12 @@ public class PlayController {
         out.put("projectedTotal", scored.projectedTotal());
         if (revealed) {
             out.put("total", scored.total());
+            // How much of the board you were dealt you actually took. Only meaningful once
+            // every pick is in, which is also the only point at which it can be computed.
+            CaptureRate.Result c = capture.of(entry);
+            if (c != null) {
+                out.put("capture", c);
+            }
         }
         out.put("teamRespins", entry.teamRespins());
         out.put("playerRespins", entry.playerRespins());

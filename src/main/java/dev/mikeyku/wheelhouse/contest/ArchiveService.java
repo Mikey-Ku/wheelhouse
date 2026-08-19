@@ -37,13 +37,14 @@ public class ArchiveService {
     private final AthleteResolver resolver;
     private final ContestService contests;
     private final ProjectionService projections;
+    private final ArchiveRoster roster;
     private final int seasonsBack;
 
     private final Set<String> loaded = ConcurrentHashMap.newKeySet();
 
     public ArchiveService(EspnClient espn, BoxscoreParser parser, IngestService ingest,
                           AthleteResolver resolver, ContestService contests,
-                          ProjectionService projections,
+                          ProjectionService projections, ArchiveRoster roster,
                           @Value("${wheelhouse.archive.seasons:5}") int seasonsBack) {
         this.espn = espn;
         this.parser = parser;
@@ -51,6 +52,7 @@ public class ArchiveService {
         this.resolver = resolver;
         this.contests = contests;
         this.projections = projections;
+        this.roster = roster;
         this.seasonsBack = seasonsBack;
     }
 
@@ -79,6 +81,7 @@ public class ArchiveService {
         if (loaded.contains(contest.id())
                 && ingest.hasContest(contest.id())
                 && projections.available(contest.id())) {
+            roster.players(contest.id());
             return contest;
         }
         projections.load(contest);
@@ -97,6 +100,10 @@ public class ArchiveService {
                 ingest.ingest(snapshot);
                 stats += snapshot.stats().size();
             }
+            // Derive the week's player pool here rather than waiting for the first spin. The
+            // pool is also what registers archived players in the catalog, and an entry resumed
+            // from disk needs them back before it can name anyone or score anything.
+            roster.players(contest.id());
             loaded.add(contest.id());
             log.info("archive loaded {} : {} games, {} stats", contest.label(), games.size(), stats);
             return contest;

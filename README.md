@@ -30,9 +30,10 @@ they are the next candidates for removal.
 
 ## Status
 
-Playable. Open `http://localhost:8080`, enter a name, and build a roster one pick at a time:
-spin a team, spin a player, choose what you take from them. Both wheels animate. There is a
-weekly leaderboard, and entries persist across restarts and across weeks.
+Playable, and playable without signing up for anything. Open `http://localhost:8080`, press
+play, and build a roster one pick at a time: spin a team, spin a player, choose what you take
+from them. Both wheels animate. Entries are stored in a file-backed database and survive a
+restart; an archived week rehydrates itself from ESPN when an old entry is resumed.
 
 Weeks come from ESPN, so preseason, regular season and playoffs all work without a calendar
 to maintain. The week locks at its first kickoff.
@@ -53,6 +54,18 @@ Drafting blind against projections is what keeps a finished week honest: you see
 forecast anyone would have had before kickoff, and the results only arrive once you have
 committed every pick. Leaderboards are per week, so an archived week has its own and never
 mixes with a live one.
+
+### How you played
+
+The score says how the wheel treated you; it does not say how you played. So a finished roster
+also reports what the best possible arrangement of parts would have been **for the exact players
+you were dealt**, and your score as a percentage of it. Luck divides out, because the ceiling
+moves with your draw.
+
+Each position is a small assignment problem: parts and players are equal in number and each part
+goes once, so it is a perfect matching over at most five elements and brute force is cheaper than
+an algorithm. The same pass finds the single swap that would have gained the most, which is the
+part anybody actually learns from.
 
 ### Reading the form
 
@@ -248,8 +261,10 @@ for kickoff.
 
 ## Next
 
-- **Persist stat snapshots.** Entries survive a restart, stats do not, so scores drop to zero
-  and climb back as games are re-fetched. This is the biggest remaining hole.
+- **Accounts.** Identity is still a display name, and the entry id in localStorage is the only
+  thing that resumes a draft. That is fine for a shared link and not fine for anything else:
+  `/history?owner=` takes any name, so a name is currently enough to read and alter somebody
+  else's in-progress roster. Drop the name as a lookup key first, then add OAuth.
 - **Drop the two invented multipliers.** `rb.motor` (carries) and `flex.eyes` (targets) are
   not scored by real leagues, so their weights are made up. Removing both takes the roster to
   fourteen picks, which is a noticeably shorter game; worth playing seventeen first.
