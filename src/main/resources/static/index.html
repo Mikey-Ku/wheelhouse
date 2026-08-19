@@ -205,7 +205,8 @@
   .opt .val small{font-family:var(--sans);font-size:10px;font-weight:600;letter-spacing:.14em;color:var(--accent-deep);margin-left:5px}
   .opt .math{font-size:11px;color:var(--dim);margin-top:3px;font-variant-numeric:tabular-nums}
   .opt .math b{color:var(--secondary);font-weight:500}
-  .opt .boom{position:absolute;top:11px;right:12px;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--violet)}
+  .opt .boom{position:absolute;top:11px;right:12px;font-size:8.5px;letter-spacing:.09em;
+    text-transform:uppercase;color:var(--violet);max-width:70px;text-align:right;line-height:1.25}
   .opt{position:relative}
 
   .positions{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
@@ -296,8 +297,20 @@
   .formtxt{display:block;font-size:10.5px;letter-spacing:.04em;color:var(--dim);
     font-variant-numeric:tabular-nums}
   .formtxt b{color:var(--secondary);font-weight:600}
-  .formtxt b.cold{color:var(--loss)}
-  .formtxt b.hot{color:var(--accent)}
+  /* The form line is secondary now; the rank meter carries the colour. */
+  .formtxt b{color:var(--secondary)}
+
+  /* ---- where this option sits in its field ----
+     One coloured element per card. Everything else is neutral so this is the thing you read. */
+  .rank{display:block;width:100%;margin-top:9px}
+  .rmeter{display:block;height:4px;border-radius:2px;background:var(--surface);overflow:hidden}
+  .rmeter i{display:block;height:100%;border-radius:2px;background:var(--line-hi)}
+  .rank.hot .rmeter i{background:var(--accent)}
+  .rank.cold .rmeter i{background:var(--loss)}
+  .rtxt{display:block;font-size:10.5px;letter-spacing:.03em;color:var(--dim);margin-top:5px}
+  .rtxt b{color:var(--secondary);font-weight:600}
+  .rank.hot .rtxt b{color:var(--accent)}
+  .rank.cold .rtxt b{color:var(--loss)}
   /* Form is worth reading at a glance across five cards, so it also gets an edge. */
   .opt.hot{border-color:rgba(4,171,176,.6)}
   .opt.cold{border-color:rgba(255,77,109,.42)}
@@ -710,11 +723,27 @@ async function loadArchiveOptions() {
    worth sixty yards; it cannot tell you he has hit sixty once since October, which is the
    difference between a pick and a coin flip. Nothing here is from the week being drafted:
    the server refuses to send it. */
-/* An edge on the card itself, so five options can be read without reading five sets of bars. */
-function formClass(f) {
-  if (!f || !f.played || f.line == null) return "";
-  const rate = f.cleared / f.played;
-  return rate >= 0.67 ? "hot" : rate <= 0.34 ? "cold" : "";
+/* The card's edge follows where the option sits in its field, not whether the player has been
+   beating his own forecast. Those are different questions and only one of them is the game:
+   points are what score, so out-scoring the other people who could have filled this part is
+   what makes a pick good. Missing your own line four weeks running and still being the best
+   passing-yards option on the board is an ordinary thing for a quarterback to be. */
+function rankClass(o) {
+  if (o.rank == null) return "";
+  return o.rank >= 70 ? "hot" : o.rank <= 30 ? "cold" : "";
+}
+
+/* A meter rather than a bare number, because "68" means nothing until you see it against the
+   bar it sits in. */
+function rankMeter(o) {
+  if (o.rank == null) return "";
+  const band = o.rank >= 70 ? "hot" : o.rank <= 30 ? "cold" : "";
+  const label = o.rank >= 70 ? "strong for the position"
+              : o.rank <= 30 ? "weak for the position"
+              : "middling for the position";
+  return `<span class="rank ${band}">
+      <span class="rmeter"><i style="width:${Math.max(3, o.rank)}%"></i></span>
+      <span class="rtxt">Beats <b>${o.rank}%</b> of the field &middot; ${label}</span></span>`;
 }
 
 function formStrip(f) {
@@ -722,8 +751,7 @@ function formStrip(f) {
   const max = Math.max(...f.games.map(g => g.value), f.line || 0, 1);
   const bars = f.games.map(g => {
     const when = "Week " + g.week + (g.home ? " vs " : " at ") + g.opponent + ": " + fmt(g.value);
-    return `<i class="${g.cleared ? "ok" : ""}"
-      style="height:${Math.max(2, Math.round((g.value / max) * 28))}px"
+    return `<i style="height:${Math.max(2, Math.round((g.value / max) * 28))}px"
       title="${esc(when)}"></i>`;
   }).join("");
 
@@ -731,9 +759,7 @@ function formStrip(f) {
   // over is the precise word anyway, since the line it is measured against is the projection.
   let tail = "";
   if (f.line != null && f.played) {
-    const rate = f.cleared / f.played;
-    const cls = rate >= 0.67 ? "hot" : rate <= 0.34 ? "cold" : "";
-    tail = ` &middot; <b class="${cls}">${f.cleared}/${f.played}</b> over`;
+    tail = ` &middot; <b>${f.cleared}/${f.played}</b> over`;
   }
   return `<span class="form"><span class="bars">${bars}</span>
     <span class="formtxt">last ${f.played} &middot; avg <b>${fmt(f.average)}</b>${tail}</span></span>`;
@@ -915,14 +941,16 @@ function renderStage() {
     // are separate buttons rather than one card with a mode, because a control that does
     // different things depending on where you hit it is the fastest way to lose a pick.
     options = `<div class="opts">` + pick.options.map(o => `
-      <div class="opt ${formClass(o.form)} ${openLog === o.key ? "open" : ""}">
-        ${o["volatile"] ? '<span class="boom">boom</span>' : ""}
+      <div class="opt ${rankClass(o)} ${openLog === o.key ? "open" : ""}">
+        ${o["volatile"] ? '<span class="boom" title="Scored on touchdowns, so it is all or nothing">all or nothing</span>' : ""}
         <button class="opt-take" data-act="choose" data-opt="${esc(o.key)}">
           <span class="part">${esc(o.part)}</span>
           <span class="stat">${esc(o.stat)}</span>
           <span class="val">${o.projectedPoints == null ? "&middot;" : fmt(o.projectedPoints)}<small>PTS</small></span>
           <span class="math"><b>${fmt(o.projectedRaw)}</b>${
-            o.unit ? " " + esc(o.unit) : ""} projected &times; ${fmt(o.multiplier)}</span>
+            o.unit ? " " + esc(o.unit) : ""} projected &times; ${fmt(o.multiplier)}${
+            o.fieldMedian != null ? ` &middot; median ${fmt(o.fieldMedian)}` : ""}</span>
+          ${rankMeter(o)}
         </button>
         ${o.form ? `<button class="opt-log" data-act="log" data-opt="${esc(o.key)}">
           ${formStrip(o.form)}</button>` : ""}

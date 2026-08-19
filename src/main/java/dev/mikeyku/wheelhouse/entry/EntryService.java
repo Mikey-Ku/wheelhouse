@@ -37,6 +37,9 @@ public class EntryService {
 
     private static final String TEAM = "TEAM";
     private static final String PLAYER = "PLAYER";
+    /** Distinct seed material, so a team rolled inside a player respin cannot land where a
+     *  separate team respin on the same pick would have. */
+    private static final String TEAM_WITH_PLAYER = "TEAM_WITH_PLAYER";
 
     private final EntryRepository entries;
     private final SpinRepository spins;
@@ -93,7 +96,25 @@ public class EntryService {
             }
         }
 
-        // With six picks per position the wheel will land on a team whose only eligible
+        rollTeam(entry, pick, respin, seed(entryId, pickIndex, TEAM, respin));
+        if (respin) {
+            entry.teamRespins(entry.teamRespins() - 1);
+        }
+
+        spins.save(new SpinRecord(entryId, pickIndex, TEAM, pick.team(), respin, Instant.now()));
+        return entries.save(entry);
+    }
+
+    @Transactional
+    /**
+     * Lands the wheel on a team and drops whatever belonged to the previous one.
+     *
+     * <p>Budget and audit accounting stay with the caller, because a quarterback respin rolls
+     * the team as part of a single player respin rather than charging for both.
+     */
+    private void rollTeam(EntryRecord entry, EntryRecord.PickRecord pick,
+                          boolean avoidCurrent, long seed) {
+        // With several picks per position the wheel will land on a team whose only eligible
         // quarterback you already own: fifteen of thirty-two teams have exactly one. Exhausted
         // teams are filtered out before the spin rather than erroring after it.
         Set<String> rostered = rosteredPlayerIds(entry, pick.pickIndex());
@@ -105,24 +126,16 @@ public class EntryService {
             throw new IllegalStateException("no team has an eligible " + pick.slot() + " left");
         }
         // A respin that could hand back the same team is not a respin.
-        if (respin && options.size() > 1) {
+        if (avoidCurrent && options.size() > 1) {
             String current = pick.team();
             options = options.stream().filter(t -> !t.equals(current)).toList();
         }
-
-        pick.team(random(options, seed(entryId, pickIndex, TEAM, respin)));
+        pick.team(random(options, seed));
         // The old player belonged to the old team, so it goes with it.
         pick.playerId(null);
         pick.option(null);
-        if (respin) {
-            entry.teamRespins(entry.teamRespins() - 1);
-        }
-
-        spins.save(new SpinRecord(entryId, pickIndex, TEAM, pick.team(), respin, Instant.now()));
-        return entries.save(entry);
     }
 
-    @Transactional
     public EntryRecord spinPlayer(String entryId, int pickIndex, boolean respin) {
         EntryRecord entry = require(entryId);
         EntryRecord.PickRecord pick = entry.pick(pickIndex);
@@ -140,6 +153,15 @@ public class EntryService {
             if (entry.playerRespins() <= 0) {
                 throw new IllegalStateException("no player respins left");
             }
+        }
+
+        // A quarterback respin that keeps the team is not a respin at all: most clubs have one
+        // eligible starter, so the filter below finds a single option, declines to exclude the
+        // current player because excluding him would leave nothing, and hands back the same man
+        // with a respin deducted. Rolling the team first is what makes the spin mean something.
+        if (respin && pick.slot().playerRespinTakesTeam()) {
+            rollTeam(entry, pick, true, seed(entryId, pickIndex, TEAM_WITH_PLAYER, true));
+            spins.save(new SpinRecord(entryId, pickIndex, TEAM, pick.team(), true, Instant.now()));
         }
 
         Set<String> taken = rosteredPlayerIds(entry, pickIndex);

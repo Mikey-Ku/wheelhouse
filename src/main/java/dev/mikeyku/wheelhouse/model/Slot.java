@@ -156,6 +156,19 @@ public enum Slot {
         return penalty;
     }
 
+    /**
+     * Whether re-rolling the player should re-roll the team with it.
+     *
+     * <p>At quarterback the team is not a real second choice. Most clubs carry exactly one
+     * eligible starter, so respinning the player inside a fixed team hands the same man
+     * straight back and charges you for the privilege. Running back and flex have several
+     * candidates per club, and holding the team while you change the player is the entire
+     * reason the two respins are separate.
+     */
+    public boolean playerRespinTakesTeam() {
+        return this == QB;
+    }
+
     public boolean accepts(Player player) {
         return player.position() != null && positions.contains(player.position());
     }

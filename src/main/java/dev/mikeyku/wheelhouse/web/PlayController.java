@@ -10,6 +10,7 @@ import dev.mikeyku.wheelhouse.ingest.IngestService;
 import dev.mikeyku.wheelhouse.model.Player;
 import dev.mikeyku.wheelhouse.model.Roster;
 import dev.mikeyku.wheelhouse.model.Slot;
+import dev.mikeyku.wheelhouse.projection.PositionalField;
 import dev.mikeyku.wheelhouse.projection.ProjectionService;
 import dev.mikeyku.wheelhouse.scoring.ScoringService;
 import dev.mikeyku.wheelhouse.sleeper.AthleteResolver;
@@ -51,11 +52,12 @@ public class PlayController {
     private final WheelPool pool;
     private final FormService form;
     private final IngestService ingest;
+    private final PositionalField field;
 
     public PlayController(EntryService entries, ContestService contests, ArchiveService archive,
                           PlayerCatalog catalog, AthleteResolver resolver, ScoringService scoring,
                           ProjectionService projections, WheelPool pool, FormService form,
-                          IngestService ingest) {
+                          IngestService ingest, PositionalField field) {
         this.entries = entries;
         this.contests = contests;
         this.archive = archive;
@@ -66,6 +68,7 @@ public class PlayController {
         this.pool = pool;
         this.form = form;
         this.ingest = ingest;
+        this.field = field;
     }
 
     @GetMapping("/contest")
@@ -312,6 +315,11 @@ public class PlayController {
                         scoring.scoreOne(entry.contestId(), pick.slot(), player, o);
                 om.put("projectedRaw", probe.projectedRaw());
                 om.put("projectedPoints", probe.projectedPoints());
+                // Where this sits against everyone else who could have filled the same part.
+                // The game pays points, not over-unders, so this is what makes a pick good.
+                om.put("rank", field.percentile(entry.contestId(), pick.slot(), o, probe.projectedRaw()));
+                Double mid = field.median(entry.contestId(), pick.slot(), o);
+                om.put("fieldMedian", mid == null ? null : round(mid * probe.multiplier()));
                 if (isActive) {
                     FormService.Form recent =
                             formFor(entry, player, o, probe.projectedRaw());
