@@ -1241,8 +1241,11 @@ async function act(d, index) {
 async function refreshTables() {
   try {
     const lb = await api("GET", "/leaderboard", entry ? { contestId: entry.contest.id } : null);
-    if (lb.length) {
-      document.getElementById("lbSection").style.display = "block";
+    // A leaderboard of one is not a leaderboard, it is your own score written twice. It stays
+    // hidden until somebody else has played the same week, and hides again if that stops being
+    // true, which the old check never did: it could turn the section on but never off.
+    show("lbSection", lb.length > 1);
+    if (lb.length > 1) {
       document.getElementById("lb").innerHTML =
         `<tr><th style="width:44px">#</th><th>Player</th><th style="text-align:right">Score</th></tr>` +
         lb.map((r, i) => `<tr><td style="color:var(--muted)">${i + 1}</td>
@@ -1255,8 +1258,8 @@ async function refreshTables() {
   try {
     const hist = await api("GET", "/history", { owner });
     const past = hist.filter(h => h.contestId !== entry?.contest?.id);
+    show("histSection", past.length > 0);
     if (past.length) {
-      document.getElementById("histSection").style.display = "block";
       document.getElementById("hist").innerHTML =
         `<tr><th>Week</th><th style="text-align:right">Score</th></tr>` +
         past.map(h => `<tr><td>${esc(h.contestId)}</td>
