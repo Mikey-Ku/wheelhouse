@@ -130,7 +130,7 @@ Endpoints, all temporary scaffolding:
 | `POST /api/play/{id}/pick/{i}/player?respin=` | Spin a player |
 | `POST /api/play/{id}/pick/{i}/choose?option=` | Take a body part |
 | `GET /api/play/leaderboard` | This week's standings |
-| `GET /api/play/history?owner=` | Every week you have played |
+| `GET /api/play/mine?ids=` | Summaries for entries you already hold |
 
 ## Design notes
 
@@ -160,6 +160,13 @@ box scores. So `AthleteResolver` learns the mapping from the box scores themselv
 every athlete who plays arrives with an id, a name and a team, which is enough to match
 against the catalog by normalised name. It only has to resolve players who actually play,
 which is precisely the set that can have scored anything.
+
+**An entry id is a bearer token.** Every pick endpoint accepts one on its own and asks nothing
+else, which is fine for a link you send a friend and only fine while the id stays secret. It was
+not secret: the leaderboard published one for every player on it, and a lookup by display name
+handed back the rest. A name printed on a public board was therefore enough to read somebody's
+roster and spend their respins. The board no longer carries ids, the name lookup is gone, and
+`/mine` takes the ids the caller already holds, so there is nothing left to enumerate.
 
 **Actuals are withheld on the server, not hidden by the page.** While a roster is being
 built the API response contains projections and nothing else: no actual values, no actual
@@ -261,10 +268,10 @@ for kickoff.
 
 ## Next
 
-- **Accounts.** Identity is still a display name, and the entry id in localStorage is the only
-  thing that resumes a draft. That is fine for a shared link and not fine for anything else:
-  `/history?owner=` takes any name, so a name is currently enough to read and alter somebody
-  else's in-progress roster. Drop the name as a lookup key first, then add OAuth.
+- **Accounts.** The entry id is now the capability: unguessable, held in localStorage, and the
+  only thing that reaches a draft. That is enough for a shared link and not enough to follow you
+  between devices. OAuth through Supabase is the next step, and it only needs a deployed
+  callback URL to start.
 - **Drop the two invented multipliers.** `rb.motor` (carries) and `flex.eyes` (targets) are
   not scored by real leagues, so their weights are made up. Removing both takes the roster to
   fourteen picks, which is a noticeably shorter game; worth playing seventeen first.

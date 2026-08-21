@@ -43,6 +43,9 @@ public class PlayController {
     /** How many candidates to send for the spin reel. Enough to look full, not the whole pool. */
     private static final int REEL_SIZE = 24;
 
+    /** Ceiling on a single /mine request, so the endpoint cannot be used as a bulk reader. */
+    private static final int MAX_MINE = 200;
+
     private final EntryService entries;
     private final ContestService contests;
     private final ArchiveService archive;
@@ -164,15 +167,37 @@ public class PlayController {
         return view(entries.choose(entryId, index, option));
     }
 
-    @GetMapping("/history")
-    public List<Map<String, Object>> history(@RequestParam String owner) {
-        return entries.forOwner(owner).stream().map(this::summary).toList();
+    /**
+     * Summaries for entries the caller already holds.
+     *
+     * <p>This replaces a lookup by display name, which was the wrong shape from the start. An
+     * entry id is the only thing standing between a stranger and somebody else's draft, because
+     * every pick endpoint accepts one on its own and asks nothing else. The old endpoint took
+     * any name and handed back the ids belonging to it, and names are printed on the
+     * leaderboard, so the name was effectively the password: knowing one was enough to read a
+     * roster and to spend its respins.
+     *
+     * <p>Taking the ids instead means this can only ever return what the caller could already
+     * reach, so there is nothing here to enumerate.
+     */
+    @GetMapping("/mine")
+    public List<Map<String, Object>> mine(@RequestParam(required = false) List<String> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return ids.stream()
+                .distinct()
+                .limit(MAX_MINE)
+                .map(entries::byId)
+                .filter(Objects::nonNull)
+                .map(entry -> summary(entry, true))
+                .toList();
     }
 
     @GetMapping("/leaderboard")
     public List<Map<String, Object>> leaderboard(@RequestParam(required = false) String contestId) {
         return entries.forContest(contestId == null ? contests.current().id() : contestId).stream()
-                .map(this::summary)
+                .map(entry -> summary(entry, false))
                 .sorted(Comparator.comparingDouble(m -> -(double) m.get("total")))
                 .toList();
     }
@@ -192,12 +217,21 @@ public class PlayController {
         return m;
     }
 
-    private Map<String, Object> summary(EntryRecord entry) {
+    /**
+     * @param withId only ever true for entries the caller already named. The entry id is a
+     *               bearer token for the whole draft, so a public board must not carry it: the
+     *               leaderboard was quietly publishing one for every player on it.
+     */
+    private Map<String, Object> summary(EntryRecord entry, boolean withId) {
         ScoringService.ScoredRoster scored = scoring.score(entries.asRoster(entry));
         Map<String, Object> m = new LinkedHashMap<>();
-        m.put("entryId", entry.id());
+        if (withId) {
+            m.put("entryId", entry.id());
+        }
         m.put("owner", entry.owner());
         m.put("contestId", entry.contestId());
+        Contest c = contests.byId(entry.contestId());
+        m.put("label", c == null ? entry.contestId() : c.label());
         m.put("complete", entry.complete());
         m.put("projectedTotal", scored.projectedTotal());
         // A leaderboard is a side channel. Half-built rosters report nothing they have not yet

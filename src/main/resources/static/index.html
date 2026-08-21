@@ -634,6 +634,25 @@ const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;
 const fmt = n => n == null ? "0" : (Math.round(n * 100) / 100).toString();
 const NOPHOTO = "https://a.espncdn.com/i/headshots/nophoto.png";
 
+/* The entry ids this browser has opened.
+ *
+ * There is no server-side way to ask "what are mine" any more, and that is the point: the old
+ * one took a display name, and a display name is printed on the leaderboard. An entry id is a
+ * bearer token for a whole draft, so the only safe answer to "which are yours" is "the ones you
+ * already hold". */
+function myEntries() {
+  try {
+    const raw = JSON.parse(localStorage.getItem("wh.entries") || "[]");
+    return Array.isArray(raw) ? raw.filter(x => typeof x === "string") : [];
+  } catch (e) { return []; }
+}
+
+function rememberEntry(id) {
+  if (!id) return;
+  const all = [id, ...myEntries().filter(x => x !== id)].slice(0, 200);
+  localStorage.setItem("wh.entries", JSON.stringify(all));
+}
+
 let entry = null;
 let owner = localStorage.getItem("wh.owner") || "";
 
@@ -1303,18 +1322,18 @@ async function refreshTables() {
     }
   } catch (e) { /* not worth surfacing */ }
 
-  if (!owner) return;
+  const ids = myEntries().filter(id => id !== entry?.entryId);
+  if (!ids.length) { show("histSection", false); return; }
   try {
-    const hist = await api("GET", "/history", { owner });
-    const past = hist.filter(h => h.contestId !== entry?.contest?.id);
+    const past = await api("GET", "/mine", { ids: ids.join(",") });
     show("histSection", past.length > 0);
     if (past.length) {
       document.getElementById("hist").innerHTML =
         `<tr><th>Week</th><th style="text-align:right">Score</th></tr>` +
-        past.map(h => `<tr><td>${esc(h.contestId)}</td>
+        past.map(h => `<tr><td>${esc(h.label || h.contestId)}</td>
           <td class="n">${h.complete ? fmt(h.total) : "&middot;"}</td></tr>`).join("");
     }
-  } catch (e) { /* no history yet */ }
+  } catch (e) { /* nothing kept yet */ }
 }
 
 /* Anonymous until it is worth not being.
@@ -1337,6 +1356,7 @@ async function start(params) {
     // Remember the entry, not just the name. Resuming by name alone always reopens the live
     // week, which silently throws you out of whatever archive week you were playing.
     localStorage.setItem("wh.entry", entry.entryId);
+    rememberEntry(entry.entryId);
     render();
     refreshTables();
   } catch (e) { showError(e); }
@@ -1409,6 +1429,9 @@ async function rollWeek() {
 
   document.getElementById("owner").value = owner || "";
   const saved = localStorage.getItem("wh.entry");
+  // Anyone who played before this change has one entry under the old key. Fold it into the
+  // list so their history does not vanish along with the name lookup.
+  if (saved) rememberEntry(saved);
   if (saved) {
     try {
       entry = await api("GET", "/" + saved);
