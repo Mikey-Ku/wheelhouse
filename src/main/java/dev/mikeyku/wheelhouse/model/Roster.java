@@ -9,7 +9,7 @@ import java.util.List;
  * another, and rushing yards from a third, which is coherent in a way blending a passer with
  * a receiver never was: every piece of a composite QB comes from someone playing that job.
  *
- * <p>Seventeen players, seventeen picks. The decision each time is not who you got, since the wheel
+ * <p>Fourteen players, fourteen picks. The decision each time is not who you got, since the wheel
  * decides that, but which of the position's remaining parts you spend them on. The last pick
  * in a position takes whatever is left, so an early choice costs you a later one.
  */

@@ -9,13 +9,19 @@ import java.util.stream.Stream;
 /**
  * The three roster positions and the parts each one can harvest.
  *
- * <p>Four parts at quarterback, five at running back, four at flex, so a full roster is
- * seventeen real players across four positions.
+ * <p>Four parts at quarterback and running back, three at flex, so a full roster is fourteen
+ * real players across four positions.
  *
- * <p>Every part is a stat standard PPR actually scores. Completions were a quarterback part
- * until it became obvious that no fantasy league pays for them, which meant its weight was
- * invented rather than inherited, and a made-up number is exactly the thing a player cannot
- * sanity check.
+ * <p>Every part is a stat standard PPR actually scores, and that rule cost three of them.
+ * Completions, carries and targets are all real and all predictive, and no fantasy league pays
+ * for any of them, so their weights had to be invented rather than inherited. A made-up number
+ * is exactly the thing a player cannot check, which makes it the wrong thing to ask them to
+ * bet a pick on.
+ *
+ * <p>Cutting them made the game harder as well as shorter: measured over seventeen thousand
+ * player-weeks, receptions and targets and carries were the only parts that beat their
+ * projection more than half the time. What is left is yardage, which clears about 47%, and
+ * touchdowns, which clear far less.
  *
  * <p>Every part is a stat that exists in <em>both</em> feeds: Sleeper has to project it and
  * ESPN has to report it. That rules out otherwise appealing options like first downs and
@@ -39,16 +45,14 @@ public enum Slot {
                     StatOption.of("legs", "Legs", "rushing", "rushingYards", "rush_yd"),
                     StatOption.of("hands", "Hands", "receiving", "receptions", "rec"),
                     StatOption.of("chest", "Chest", "receiving", "receivingYards", "rec_yd"),
-                    StatOption.totalTouchdowns("nose", "Nose"),
-                    StatOption.of("motor", "Motor", "rushing", "rushingAttempts", "rush_att")),
+                    StatOption.totalTouchdowns("nose", "Nose")),
             StatOption.of("grip", "Grip", "fumbles", "fumblesLost", "fum_lost")),
 
     FLEX(Set.of("WR", "TE"),
             List.of(
                     StatOption.of("hands", "Hands", "receiving", "receptions", "rec"),
                     StatOption.of("chest", "Chest", "receiving", "receivingYards", "rec_yd"),
-                    StatOption.totalTouchdowns("nose", "Nose"),
-                    StatOption.of("eyes", "Eyes", "receiving", "receivingTargets", "rec_tgt")),
+                    StatOption.totalTouchdowns("nose", "Nose")),
             StatOption.of("grip", "Grip", "fumbles", "fumblesLost", "fum_lost"));
 
     /** One ESPN box score field, named as ESPN names it. */

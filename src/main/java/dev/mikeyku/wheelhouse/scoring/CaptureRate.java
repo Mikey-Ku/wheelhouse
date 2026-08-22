@@ -39,15 +39,11 @@ public class CaptureRate {
     }
 
     /**
-     * The single exchange that would have gained the most.
-     *
-     * <p>A whole optimal assignment is hard to argue with and harder to learn from. One swap is
-     * a sentence: you took this off him, and it belonged on the other one.
+     * @param ceiling the best total available from the exact players dealt. The arrangement that
+     *                reaches it is deliberately not reported. Weeks are replayable, and handing
+     *                back the answer turns a second run at a week into transcription.
      */
-    public record Swap(String fromPlayer, String fromPart, double fromScored,
-                       String toPlayer, String toPart, double toScored, double gain) {}
-
-    public record Result(double scored, double ceiling, int capturePercent, Swap worstCall) {}
+    public record Result(double scored, double ceiling, int capturePercent) {}
 
     /** Null until the roster is complete, since a half-built board has no ceiling yet. */
     public Result of(EntryRecord entry) {
@@ -56,7 +52,6 @@ public class CaptureRate {
         }
         double scored = 0;
         double ceiling = 0;
-        Swap worst = null;
 
         for (int position = 0; position < Roster.POSITIONS.size(); position++) {
             List<EntryRecord.PickRecord> picks = entry.picksInPosition(position).stream()
@@ -79,13 +74,11 @@ public class CaptureRate {
                 }
             }
 
-            int[] chosen = new int[picks.size()];
             for (int i = 0; i < picks.size(); i++) {
-                chosen[i] = indexOf(parts, picks.get(i).option());
-                scored += chosen[i] < 0 ? 0 : points[i][chosen[i]];
+                int chosen = indexOf(parts, picks.get(i).option());
+                scored += chosen < 0 ? 0 : points[i][chosen];
             }
             ceiling += best(points, new int[points.length], new boolean[points.length], 0);
-            worst = better(worst, bestSwap(entry, slot, picks, parts, points, chosen));
         }
 
         // A ceiling of zero does not mean a perfect roster. It means the week's stats are not
@@ -95,7 +88,7 @@ public class CaptureRate {
             return null;
         }
         int percent = (int) Math.round(100.0 * scored / ceiling);
-        return new Result(round(scored), round(ceiling), Math.min(percent, 100), worst);
+        return new Result(round(scored), round(ceiling), Math.min(percent, 100));
     }
 
     /** Highest total over every one-to-one assignment of parts to players. */
@@ -118,42 +111,6 @@ public class CaptureRate {
             used[col] = false;
         }
         return top;
-    }
-
-    /** The most valuable exchange of two parts inside one position. */
-    private Swap bestSwap(EntryRecord entry, Slot slot, List<EntryRecord.PickRecord> picks,
-                          List<Slot.StatOption> parts, double[][] points, int[] chosen) {
-        Swap best = null;
-        for (int a = 0; a < picks.size(); a++) {
-            for (int b = a + 1; b < picks.size(); b++) {
-                if (chosen[a] < 0 || chosen[b] < 0) {
-                    continue;
-                }
-                double now = points[a][chosen[a]] + points[b][chosen[b]];
-                double swapped = points[a][chosen[b]] + points[b][chosen[a]];
-                double gain = swapped - now;
-                if (gain <= 0.01 || (best != null && gain <= best.gain())) {
-                    continue;
-                }
-                best = new Swap(
-                        nameOf(picks.get(a)), parts.get(chosen[a]).label(), round(points[a][chosen[a]]),
-                        nameOf(picks.get(b)), parts.get(chosen[b]).label(), round(points[b][chosen[b]]),
-                        round(gain));
-            }
-        }
-        return best;
-    }
-
-    private Swap better(Swap a, Swap b) {
-        if (a == null) {
-            return b;
-        }
-        return b != null && b.gain() > a.gain() ? b : a;
-    }
-
-    private String nameOf(EntryRecord.PickRecord pick) {
-        Player player = catalog.byId(pick.playerId());
-        return player == null || player.name() == null ? "?" : player.name();
     }
 
     private int indexOf(List<Slot.StatOption> parts, String key) {

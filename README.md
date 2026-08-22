@@ -7,7 +7,7 @@ platform underneath it. Working name.
 
 Four positions: one QB, one RB, two flex. Each is assembled from **several different players
 of that position**: your quarterback is passing yards from one, touchdowns from another,
-rushing yards from a third. Seventeen players in all.
+rushing yards from a third. Fourteen players in all.
 
 The wheel decides who you get. You decide which of the position's remaining parts to spend
 them on, and each part goes only once per position, so the last pick takes whatever is left
@@ -21,12 +21,17 @@ rather than one per pick.
 | Slot | Parts |
 |---|---|
 | QB (4) | Arm (passing yards) · Shoulders (passing TDs) · Legs (rushing yards) · Cleats (rushing TDs) |
-| RB (5) | Legs (rushing yards) · Hands (receptions) · Chest (receiving yards) · Nose (total TDs) · Motor (carries) |
-| Flex (4) | Hands (receptions) · Chest (receiving yards) · Nose (total TDs) · Eyes (targets) |
+| RB (4) | Legs (rushing yards) · Hands (receptions) · Chest (receiving yards) · Nose (total TDs) |
+| Flex (3) | Hands (receptions) · Chest (receiving yards) · Nose (total TDs) |
 
-Every weight is standard PPR except `rb.motor` and `flex.eyes`. Carries and targets are not
-scored by any real league, so those two multipliers are invented rather than inherited, and
-they are the next candidates for removal.
+**Every weight is standard PPR.** That rule cost three parts. Completions, carries and targets
+are all real and all predictive, and no fantasy league pays for any of them, so their weights
+had to be invented rather than inherited, and a made-up number is the wrong thing to ask
+somebody to bet a pick on.
+
+Cutting them made the game harder as well as shorter. Measured over 17,552 player-weeks,
+receptions, targets and carries were the only parts that beat their projection more than half
+the time. What is left is yardage at roughly 47% and touchdowns at far less.
 
 ## Status
 
@@ -63,9 +68,12 @@ you were dealt**, and your score as a percentage of it. Luck divides out, becaus
 moves with your draw.
 
 Each position is a small assignment problem: parts and players are equal in number and each part
-goes once, so it is a perfect matching over at most five elements and brute force is cheaper than
-an algorithm. The same pass finds the single swap that would have gained the most, which is the
-part anybody actually learns from.
+goes once, so it is a perfect matching over at most four elements and brute force is cheaper than
+an algorithm.
+
+Only the number comes back, never the arrangement that reaches it. A week can be played again and
+the wheel deals differently every time, so printing the answer on the way out would replace the
+second run with a copying exercise.
 
 ### Reading the form
 
@@ -272,9 +280,6 @@ for kickoff.
   only thing that reaches a draft. That is enough for a shared link and not enough to follow you
   between devices. OAuth through Supabase is the next step, and it only needs a deployed
   callback URL to start.
-- **Drop the two invented multipliers.** `rb.motor` (carries) and `flex.eyes` (targets) are
-  not scored by real leagues, so their weights are made up. Removing both takes the roster to
-  fourteen picks, which is a noticeably shorter game; worth playing seventeen first.
 - **Decide whether the lopsided choice still needs a fix.** Standard scoring means the highest
   expected option is nearly always the same one. The uniqueness rule is now in (each part goes
   once per position), which turns the question into which player gets the good part. Worth

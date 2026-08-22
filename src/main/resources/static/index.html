@@ -1073,25 +1073,22 @@ function renderSlip() {
 /* The score says how the wheel treated you. This says how you played.
  *
  * Holding the exact players you were dealt, the ceiling is the best arrangement of parts that
- * was available to you, so the percentage is your decisions with the luck divided out. The swap
- * underneath is the one exchange that would have gained the most, which is the part somebody
- * actually learns from: a whole optimal assignment is hard to argue with and harder to remember.
+ * was available, so the percentage is your decisions with the luck divided out. The arrangement
+ * itself stays hidden: a week can be replayed, and printing the answer at the end would turn a
+ * second run into transcription.
  */
 function captureCard(entry) {
   const c = entry.capture;
   if (!c) return "";
   const band = c.capturePercent >= 85 ? "hot" : c.capturePercent <= 55 ? "cold" : "";
-  const w = c.worstCall;
   return `<div class="cap ${band}">
     <div class="cap-head">
       <div><b>${c.capturePercent}%</b><span>of your board</span></div>
-      <div class="cap-of">You scored <b>${fmt(c.scored)}</b>. The best use of the exact
+      <div class="cap-of">You scored <b>${fmt(c.scored)}</b>. The best possible use of the exact
         players the wheel dealt you was <b>${fmt(c.ceiling)}</b>.</div>
     </div>
-    ${w ? `<div class="cap-swap"><b>Your worst call.</b>
-      You took <i>${esc(w.fromPart)}</i> off ${esc(w.fromPlayer)} for ${fmt(w.fromScored)}
-      and <i>${esc(w.toPart)}</i> off ${esc(w.toPlayer)} for ${fmt(w.toScored)}.
-      The other way round was worth <b>${fmt(w.gain)}</b> more.</div>` : ""}
+    <div class="cap-swap">Which arrangement got there is not shown. The week is still there to
+      play again, and the wheel deals differently every time.</div>
   </div>`;
 }
 

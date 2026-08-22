@@ -20,7 +20,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * The build flow, seventeen picks long: spin a team, spin a player, then decide which of the
+ * The build flow, fourteen picks long: spin a team, spin a player, then decide which of the
  * position's remaining parts you spend them on.
  *
  * <p>The wheel decides who you get; you decide what they are for. The third pick in any
@@ -72,11 +72,22 @@ public class EntryService {
 
     /** A player has exactly one entry per week. Returning here resumes where they left off. */
     @Transactional
+    /**
+     * Always a new roster, never a resumed one.
+     *
+     * <p>This used to hand back whatever you had already built for the same week, which made a
+     * week a thing you got one attempt at. Replaying is the point: the wheel deals differently
+     * every time, so the same week is a different problem on a second run, and going back to a
+     * week you scored badly on is the reason to keep playing at all.
+     *
+     * <p>Resuming an unfinished draft still works and never came through here. It goes through
+     * the entry id the browser is holding, which is the only thing that ever identified a
+     * specific roster.
+     */
     public EntryRecord openEntry(String owner, Contest contest) {
-        return entries.findByContestIdAndOwnerIgnoreCase(contest.id(), owner)
-                .orElseGet(() -> entries.save(new EntryRecord(
-                        UUID.randomUUID().toString(), contest.id(), owner.trim(), Instant.now(),
-                        teamRespins, playerRespins)));
+        return entries.save(new EntryRecord(
+                UUID.randomUUID().toString(), contest.id(), owner.trim(), Instant.now(),
+                teamRespins, playerRespins));
     }
 
     @Transactional
@@ -253,9 +264,6 @@ public class EntryService {
         return spins.findByEntryIdOrderByAtAsc(entryId);
     }
 
-    public List<EntryRecord> forOwner(String owner) {
-        return entries.findByOwnerIgnoreCaseOrderByCreatedAtDesc(owner);
-    }
 
     public List<EntryRecord> forContest(String contestId) {
         return entries.findByContestId(contestId);

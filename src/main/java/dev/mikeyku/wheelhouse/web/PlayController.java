@@ -35,7 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-/** The build-and-score flow: seventeen picks across four composite positions. */
+/** The build-and-score flow: fourteen picks across four composite positions. */
 @RestController
 @RequestMapping("/api/play")
 public class PlayController {
