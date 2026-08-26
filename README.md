@@ -92,6 +92,50 @@ A finished roster prints as a betting slip: every pick with its raw stat and poi
 subtotals, projected against final. It is the only light surface in the product, which is the
 point — it reads as an object you were handed rather than another panel.
 
+## Tests
+
+```sh
+./mvnw test                          # everything, 27 tests
+./mvnw test -DexcludedGroups=network  # the 25 that need no network
+```
+
+Two of them replay a real archived week and therefore need ESPN and Sleeper to be reachable;
+they are tagged `network` so CI can skip them. The rest run offline in under a second.
+
+What they pin, and why each one exists:
+
+| Suite | Guards |
+|---|---|
+| `SlotTest` | Every part is a stat standard PPR actually pays for. Three have already been cut for failing that rule. |
+| `BoxscoreParserTest` | Reads by key not index, splits compound keys, and parses `-3` yards as a number rather than a two-part key. |
+| `FormWindowTest` | The form guide never returns the week being drafted. A leak here is silent and destroys the game. |
+| `WithholdingTest` | A mid-draft payload carries no actuals, and the leaderboard publishes no entry ids. Both have been broken before. |
+| `CaptureRateTest` | Your score can never exceed the ceiling, and the arrangement that reaches it is never reported. |
+
+## Deploying
+
+Runs anywhere that can run a JVM. It is not serverless-compatible: there is a scheduler and a
+database.
+
+```sh
+docker build -t wheelhouse .
+docker run -p 8080:8080 wheelhouse
+```
+
+Everything is environment-driven with local defaults, so a fresh clone needs no configuration
+and a host needs no code change:
+
+| Variable | Default | Notes |
+|---|---|---|
+| `PORT` | `8080` | Most hosts assign this. Without binding it every request 502s. |
+| `SPRING_DATASOURCE_URL` | local H2 file | Point at Postgres in production; container disks are ephemeral. |
+| `SPRING_DATASOURCE_USERNAME` | `sa` | |
+| `SPRING_DATASOURCE_PASSWORD` | empty | Set it in the host's dashboard, never in the repo. |
+
+`/actuator/health` is already exposed for health checks. The app boots in under two seconds, so
+a slow first request on a free tier is the platform waking a container, not the application
+starting.
+
 ## Running it
 
 Requires JDK 21. It is installed at the Homebrew path below but is keg-only, so `JAVA_HOME`

@@ -1,10 +1,8 @@
 package dev.mikeyku.wheelhouse.model;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Stream;
 
 /**
  * The three roster positions and the parts each one can harvest.
@@ -27,8 +25,7 @@ import java.util.stream.Stream;
  * ESPN has to report it. That rules out otherwise appealing options like first downs and
  * forty-yard receptions, which Sleeper forecasts but ESPN's box score never reports, and which
  * would therefore have projected beautifully and scored zero forever.
- *
- * <p>Hard mode swaps the last part of each position for one that can only cost you points.
+
  */
 public enum Slot {
 
@@ -37,23 +34,20 @@ public enum Slot {
                     StatOption.of("arm", "Arm", "passing", "passingYards", "pass_yd"),
                     StatOption.of("shoulders", "Shoulders", "passing", "passingTouchdowns", "pass_td"),
                     StatOption.of("legs", "Legs", "rushing", "rushingYards", "rush_yd"),
-                    StatOption.of("cleats", "Cleats", "rushing", "rushingTouchdowns", "rush_td")),
-            StatOption.of("head", "Head", "passing", "interceptions", "pass_int")),
+                    StatOption.of("cleats", "Cleats", "rushing", "rushingTouchdowns", "rush_td"))),
 
     RB(Set.of("RB"),
             List.of(
                     StatOption.of("legs", "Legs", "rushing", "rushingYards", "rush_yd"),
                     StatOption.of("hands", "Hands", "receiving", "receptions", "rec"),
                     StatOption.of("chest", "Chest", "receiving", "receivingYards", "rec_yd"),
-                    StatOption.totalTouchdowns("nose", "Nose")),
-            StatOption.of("grip", "Grip", "fumbles", "fumblesLost", "fum_lost")),
+                    StatOption.totalTouchdowns("nose", "Nose"))),
 
     FLEX(Set.of("WR", "TE"),
             List.of(
                     StatOption.of("hands", "Hands", "receiving", "receptions", "rec"),
                     StatOption.of("chest", "Chest", "receiving", "receivingYards", "rec_yd"),
-                    StatOption.totalTouchdowns("nose", "Nose")),
-            StatOption.of("grip", "Grip", "fumbles", "fumblesLost", "fum_lost"));
+                    StatOption.totalTouchdowns("nose", "Nose")));
 
     /** One ESPN box score field, named as ESPN names it. */
     public record StatRef(String category, String stat) {
@@ -127,12 +121,10 @@ public enum Slot {
 
     private final Set<String> positions;
     private final List<StatOption> options;
-    private final StatOption penalty;
 
-    Slot(Set<String> positions, List<StatOption> options, StatOption penalty) {
+    Slot(Set<String> positions, List<StatOption> options) {
         this.positions = positions;
         this.options = options;
-        this.penalty = penalty;
     }
 
     public Set<String> positions() {
@@ -143,22 +135,6 @@ public enum Slot {
         return options;
     }
 
-    /**
-     * The parts in play. Hard mode trades the last one for something that can only cost you, so
-     * the roster is the same size either way.
-     */
-    public List<StatOption> options(boolean hard) {
-        if (!hard) {
-            return options;
-        }
-        List<StatOption> swapped = new ArrayList<>(options.subList(0, options.size() - 1));
-        swapped.add(penalty);
-        return List.copyOf(swapped);
-    }
-
-    public StatOption penalty() {
-        return penalty;
-    }
 
     /**
      * Whether re-rolling the player should re-roll the team with it.
@@ -177,10 +153,7 @@ public enum Slot {
         return player.position() != null && positions.contains(player.position());
     }
 
-    /** Looks across both modes, so an entry drafted in hard mode still resolves its picks. */
     public Optional<StatOption> option(String key) {
-        return Stream.concat(options.stream(), Stream.of(penalty))
-                .filter(o -> o.key().equalsIgnoreCase(key))
-                .findFirst();
+        return options.stream().filter(o -> o.key().equalsIgnoreCase(key)).findFirst();
     }
 }
