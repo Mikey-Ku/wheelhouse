@@ -1,6 +1,5 @@
 package dev.mikeyku.wheelhouse.projection;
 
-import dev.mikeyku.wheelhouse.model.Player;
 import dev.mikeyku.wheelhouse.model.Slot;
 import dev.mikeyku.wheelhouse.wheel.WheelPool;
 import org.springframework.stereotype.Service;

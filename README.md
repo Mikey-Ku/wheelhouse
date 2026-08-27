@@ -111,6 +111,46 @@ What they pin, and why each one exists:
 | `FormWindowTest` | The form guide never returns the week being drafted. A leak here is silent and destroys the game. |
 | `WithholdingTest` | A mid-draft payload carries no actuals, and the leaderboard publishes no entry ids. Both have been broken before. |
 | `CaptureRateTest` | Your score can never exceed the ceiling, and the arrangement that reaches it is never reported. |
+| `LiveWeekDryRunTest` | The live path, driven a poll at a time. See below. |
+
+### The live-week dry run
+
+The archive path reads a final box score once. The live path reads the same game repeatedly
+while it changes, and those are different problems: the differ only earns its keep on the second
+reading, a missed poll has to be caught up by the next one, and a stat correction arrives as a
+number going *down*. None of that is exercised by replaying a week that is already over, which is
+why the live path had never executed at all.
+
+`ReplayService` takes a finished box score and emits it as a sequence of partial ones, so the
+live path can be driven on a Tuesday in August instead of discovered on the first Sunday of the
+season.
+
+```sh
+./mvnw test -Dtest=DryRunReportTest    # prints a replay rather than only asserting one
+```
+
+```
+  624 stats across 79 players
+
+  stage  state   magnitude     deltas
+  ------------------------------------
+  1      in            282        624
+  2      in            651        132
+  ...
+  8      post         3040        296
+
+  final reading matches the real box score: true
+```
+
+What the assertions pin: deltas on every poll, a duplicate poll costing nothing, a skipped poll
+caught up by the next one, a correction moving a number down rather than being ignored, and the
+last reading equalling the authoritative box score exactly.
+
+Building it found a modelling error worth recording. The first version dropped stats that floored
+to zero, on the theory that a receiver with no catches is not in the box score yet. He is: ESPN
+lists everyone who has taken the field, zeroes included. Dropping them made the final poll
+announce a flood of changes that never happened, and made the last reading differ from the
+reading it is supposed to equal.
 
 ## Deploying
 
