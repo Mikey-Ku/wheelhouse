@@ -493,6 +493,83 @@
   .slip-verdict{text-align:center;font-size:11px;letter-spacing:.2em;text-transform:uppercase;
     margin-top:14px;padding-top:13px;border-top:1px dashed #b4afa2;color:#5b5f68}
   .slip-verdict b{font-weight:600;color:var(--ink)}
+
+  /* ---- phones ----
+     Everything above assumes a laptop. These are the places that assumption breaks on a 375px
+     screen, which is where most people will open a link somebody texted them. */
+  @media (max-width:640px){
+    .wrap{padding:0 16px}
+
+    /* The week label was stacking to three lines and shoving the nav links around. The
+       "The vault" caption is the first thing to go: the badge beside the roster title already
+       says the week is historic. */
+    .nav-inner{gap:12px;height:56px}
+    .logo{font-size:20px}
+    .nav-week{padding-left:12px;white-space:nowrap}
+    .nav-week b{display:none}
+    .nav-week span{font-size:12px}
+    .nav-links{gap:16px}
+
+    /* A generated handle plus a badge plus a link does not fit on one line. */
+    h2{font-size:22px}
+    #headline{font-size:20px;line-height:1.25}
+    .badge{margin-left:8px}
+    .backlink{margin-left:10px}
+
+    /* Two reels side by side leave 157px each, which truncated every name longer than
+       "Lamar Jac...". The player reel is the one that carries words, so it gets the room. */
+    .reels{grid-template-columns:minmax(0,74px) minmax(0,1fr);gap:8px}
+    .reelbox{padding:10px}
+    .reel,.reel-item{height:48px}
+    .reel-item{font-size:30px}
+    .reel-item.name{font-size:17px;line-height:48px}
+    @keyframes reelspin{from{transform:translateY(0)}to{transform:translateY(-960px)}}
+    .crest.lg{width:38px;height:38px}
+    .reel-team{gap:8px}
+    /* Once the team has landed the crest says which team it is, and the abbreviation beside it
+       was being clipped to a two-pixel sliver. The reel still animates its text on the way
+       there, because the crest only appears after it stops. */
+    .reel-team:has(img) #teamReel{display:none}
+    .reel-team:has(img){justify-content:center}
+
+    /* The opponent crest was pushed to its own line by margin-left:auto and stranded there. */
+    .reveal{gap:12px}
+    .face{width:56px;height:56px}
+    .whobox .nm{font-size:24px}
+    .oppbox{margin-left:0;width:100%;justify-content:flex-start;
+      padding-top:4px;border-top:1px solid var(--line)}
+
+    .respins-row{gap:8px}
+    button.respin{flex:1;justify-content:center;padding:11px 10px}
+
+    .stage{padding:18px 16px;border-radius:12px}
+    .opt-take{padding:13px 14px 11px}
+    .opt-log{padding:10px 14px 12px}
+
+    /* Fourteen rows of a printed slip at 12.5px on a phone is unreadable; the columns are the
+       part that has to give, not the type. */
+    .slip{padding:28px 18px 26px;font-size:11.5px}
+    /* SHOULDERS is the longest part name and it collides with the player at 64px. */
+    .slip-line{grid-template-columns:72px 1fr 36px 44px;gap:5px}
+    .sl-part{font-size:9.5px;letter-spacing:.08em}
+    .slip-brand{font-size:20px;letter-spacing:.24em}
+    .slip-tot .big{font-size:30px}
+
+    .cap{padding:18px}
+    .cap-head b{font-size:32px}
+
+    .total{flex-wrap:wrap}
+    .tblhead{margin-top:18px}
+  }
+
+  /* Genuinely small phones only. 375px is an iPhone SE and 390 is an iPhone 15, so the week
+     context has to survive both; it is the only thing on screen naming which week you are in.
+     Below 340px there is no room for it and it goes. */
+  @media (max-width:340px){
+    .reel-item.name{font-size:15px}
+    .nav-week{display:none}
+    .logo{font-size:18px}
+  }
 </style>
 </head>
 <body>
