@@ -4,8 +4,10 @@ import dev.mikeyku.wheelhouse.espn.BoxscoreParser;
 import dev.mikeyku.wheelhouse.espn.EspnClient;
 import dev.mikeyku.wheelhouse.ingest.IngestService;
 import dev.mikeyku.wheelhouse.model.GameSnapshot;
+import dev.mikeyku.wheelhouse.projection.PositionalField;
 import dev.mikeyku.wheelhouse.projection.ProjectionService;
 import dev.mikeyku.wheelhouse.sleeper.AthleteResolver;
+import dev.mikeyku.wheelhouse.sleeper.PlayerCatalog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,8 +15,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Loads a finished week from ESPN so it can be played long after the fact.
@@ -23,8 +23,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * this is just the live ingestion path pointed at a date, and every stat, every score and
  * every body part works unchanged.
  *
- * <p>Loading is once-only per week. Historical results do not change, so once a week is in
- * memory there is nothing left to learn from ESPN about it.
+ * <p>Loading is once-only per week while the week stays in memory. Historical results do not
+ * change, so there is nothing left to learn from ESPN about a loaded week; but memory is finite,
+ * so only the most recently used weeks stay loaded and the rest are released and re-read on
+ * demand.
  */
 @Service
 public class ArchiveService {
@@ -38,14 +40,18 @@ public class ArchiveService {
     private final ContestService contests;
     private final ProjectionService projections;
     private final ArchiveRoster roster;
+    private final PlayerCatalog catalog;
+    private final PositionalField field;
     private final int seasonsBack;
 
-    private final Set<String> loaded = ConcurrentHashMap.newKeySet();
+    private final LoadedContests loaded;
 
     public ArchiveService(EspnClient espn, BoxscoreParser parser, IngestService ingest,
                           AthleteResolver resolver, ContestService contests,
                           ProjectionService projections, ArchiveRoster roster,
-                          @Value("${wheelhouse.archive.seasons:5}") int seasonsBack) {
+                          PlayerCatalog catalog, PositionalField field,
+                          @Value("${wheelhouse.archive.seasons:5}") int seasonsBack,
+                          @Value("${wheelhouse.archive.max-loaded:8}") int maxLoaded) {
         this.espn = espn;
         this.parser = parser;
         this.ingest = ingest;
@@ -53,7 +59,24 @@ public class ArchiveService {
         this.contests = contests;
         this.projections = projections;
         this.roster = roster;
+        this.catalog = catalog;
+        this.field = field;
         this.seasonsBack = seasonsBack;
+        this.loaded = new LoadedContests(maxLoaded, this::release);
+    }
+
+    /**
+     * Lets go of everything a week put in memory, in every service that holds a piece of it.
+     * Each piece is keyed by contest, so this is the same prefix removal five times over, and
+     * the next load of the week starts from nothing rather than from a half-present state.
+     */
+    void release(String contestId) {
+        ingest.evict(contestId);
+        roster.evict(contestId);
+        catalog.evictArchived(contestId);
+        projections.evict(contestId);
+        field.evict(contestId);
+        log.info("archive released {}", contestId);
     }
 
     /** The most recent completed season. The current one is still being played. */
@@ -81,9 +104,13 @@ public class ArchiveService {
         if (loaded.contains(contest.id())
                 && ingest.hasContest(contest.id())
                 && projections.available(contest.id())) {
+            loaded.touch(contest.id());
             roster.players(contest.id());
             return contest;
         }
+        // Claim the slot before fetching, so the stalest week is released before this one
+        // allocates rather than after. On a small heap that order is the whole point.
+        loaded.touch(contest.id());
         projections.load(contest);
 
         try {
@@ -104,12 +131,14 @@ public class ArchiveService {
             // pool is also what registers archived players in the catalog, and an entry resumed
             // from disk needs them back before it can name anyone or score anything.
             roster.players(contest.id());
-            loaded.add(contest.id());
-            log.info("archive loaded {} : {} games, {} stats", contest.label(), games.size(), stats);
+            log.info("archive loaded {} : {} games, {} stats ({} weeks in memory)",
+                    contest.label(), games.size(), stats, loaded.size());
             return contest;
         } catch (IllegalArgumentException e) {
+            loaded.evict(contest.id());
             throw e;
         } catch (Exception e) {
+            loaded.evict(contest.id());
             throw new IllegalStateException("could not load " + season + " week " + week + ": "
                     + e.getMessage());
         }
@@ -117,5 +146,10 @@ public class ArchiveService {
 
     public boolean isLoaded(String contestId) {
         return loaded.contains(contestId);
+    }
+
+    /** The archived weeks currently in memory, stalest first. */
+    public List<String> loadedContests() {
+        return loaded.ids();
     }
 }

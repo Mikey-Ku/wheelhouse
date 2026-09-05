@@ -88,6 +88,12 @@ public class IngestService {
         return latestByEvent.values().stream().anyMatch(s -> s.contestId().equals(contestId));
     }
 
+    /** Forgets every snapshot of one contest. The recent-delta ring is bounded on its own and stays. */
+    public void evict(String contestId) {
+        String prefix = contestId + "|";
+        latestByEvent.keySet().removeIf(key -> key.startsWith(prefix));
+    }
+
     /**
      * Who a team played that week, read off the box score rather than a schedule table.
      *

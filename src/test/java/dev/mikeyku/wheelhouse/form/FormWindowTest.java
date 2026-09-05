@@ -51,7 +51,7 @@ class FormWindowTest {
             public tools.jackson.databind.JsonNode gamelog(String athleteId, int season) {
                 return new ObjectMapper().readTree(json);
             }
-        });
+        }, 400);
     }
 
     @Test
@@ -99,7 +99,7 @@ class FormWindowTest {
             public tools.jackson.databind.JsonNode gamelog(String athleteId, int season) {
                 throw new IllegalStateException("ESPN is down");
             }
-        });
+        }, 400);
         assertThat(failing.before("1", 2024, 8)).isEmpty();
     }
 

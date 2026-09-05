@@ -122,6 +122,12 @@ public class PlayerCatalog {
         archived.putIfAbsent(player.id(), player);
     }
 
+    /** Drops one archived week's synthetic players. Their ids carry the week, so this is a prefix. */
+    public void evictArchived(String contestId) {
+        String prefix = "espn:" + contestId + ":";
+        archived.keySet().removeIf(id -> id.startsWith(prefix));
+    }
+
     /** ESPN id for any Sleeper player, retired or not. Null when Sleeper carries none. */
     public String espnIdForSleeperId(String sleeperId) {
         return espnIdBySleeperId.get(sleeperId);

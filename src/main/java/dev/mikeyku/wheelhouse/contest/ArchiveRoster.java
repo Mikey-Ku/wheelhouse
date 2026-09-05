@@ -44,37 +44,55 @@ public class ArchiveRoster {
 
     /** Derives the week's player universe once and registers it so scoring can resolve ids. */
     public List<Player> players(String contestId) {
-        return byContest.computeIfAbsent(contestId, contest -> {
-            List<Player> players = new ArrayList<>();
-            for (GameSnapshot snapshot : ingest.snapshots(contest)) {
-                for (Map.Entry<String, String> athlete : snapshot.athleteNames().entrySet()) {
-                    String espnId = athlete.getKey();
-                    String position = infer(snapshot, espnId);
-                    if (position == null) {
-                        continue;
-                    }
-                    // The id carries the week, because an archived player record is only true
-                    // inside the week it was read from. Keyed on the athlete alone, the first
-                    // week to register a player would own him forever, and every later week
-                    // would inherit the wrong team: Justin Fields registered from a 2023 box
-                    // score stays a Bear through his 2025 Jets games. That in turn breaks the
-                    // projection join, which matches on name plus team, so every player who
-                    // ever changed clubs would quietly project zero.
-                    Player player = new Player(
-                            "espn:" + contest + ":" + espnId,
-                            espnId,
-                            athlete.getValue(),
-                            Player.normalize(athlete.getValue()),
-                            snapshot.athleteTeams().getOrDefault(espnId, "?"),
-                            position,
-                            0,
-                            null);
-                    catalog.registerArchived(player);
-                    players.add(player);
+        List<Player> known = byContest.get(contestId);
+        if (known != null) {
+            return known;
+        }
+        List<Player> players = derive(contestId);
+        // An empty pool is never remembered. It means the week's box scores are not in yet, and
+        // a request that looks a moment before they land must not pin that answer for the week.
+        if (players.isEmpty()) {
+            return players;
+        }
+        List<Player> raced = byContest.putIfAbsent(contestId, players);
+        return raced != null ? raced : players;
+    }
+
+    /** Lets go of one week's pool. The catalog releases the players themselves. */
+    public void evict(String contestId) {
+        byContest.remove(contestId);
+    }
+
+    private List<Player> derive(String contestId) {
+        List<Player> players = new ArrayList<>();
+        for (GameSnapshot snapshot : ingest.snapshots(contestId)) {
+            for (Map.Entry<String, String> athlete : snapshot.athleteNames().entrySet()) {
+                String espnId = athlete.getKey();
+                String position = infer(snapshot, espnId);
+                if (position == null) {
+                    continue;
                 }
+                // The id carries the week, because an archived player record is only true
+                // inside the week it was read from. Keyed on the athlete alone, the first
+                // week to register a player would own him forever, and every later week
+                // would inherit the wrong team: Justin Fields registered from a 2023 box
+                // score stays a Bear through his 2025 Jets games. That in turn breaks the
+                // projection join, which matches on name plus team, so every player who
+                // ever changed clubs would quietly project zero.
+                Player player = new Player(
+                        "espn:" + contestId + ":" + espnId,
+                        espnId,
+                        athlete.getValue(),
+                        Player.normalize(athlete.getValue()),
+                        snapshot.athleteTeams().getOrDefault(espnId, "?"),
+                        position,
+                        0,
+                        null);
+                catalog.registerArchived(player);
+                players.add(player);
             }
-            return List.copyOf(players);
-        });
+        }
+        return List.copyOf(players);
     }
 
     public List<Player> candidates(String contestId, Slot slot) {

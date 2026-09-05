@@ -4,15 +4,16 @@ import dev.mikeyku.wheelhouse.espn.EspnClient;
 import dev.mikeyku.wheelhouse.model.Slot;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.JsonNode;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * What a player has actually been doing, for the weeks before the one being drafted.
@@ -39,14 +40,23 @@ public class FormService {
     private final EspnClient espn;
 
     /**
-     * Keyed by player and season. Failures cache as an empty season deliberately: the roster
-     * view is polled every fifteen seconds while a week is live, and an uncached miss would turn
-     * one unlucky request into a permanent retry loop against ESPN. A restart clears it.
+     * Keyed by player and season, least recently read first, capped. Failures cache as an empty
+     * season deliberately: the roster view is polled every fifteen seconds while a week is live,
+     * and an uncached miss would turn one unlucky request into a permanent retry loop against
+     * ESPN. A restart clears it. The cap exists because this is keyed by player rather than by
+     * week, so releasing a week cannot release its game logs; the bound does that instead.
      */
-    private final Map<String, List<Game>> bySeason = new ConcurrentHashMap<>();
+    private final Map<String, List<Game>> bySeason;
 
-    public FormService(EspnClient espn) {
+    public FormService(EspnClient espn,
+                       @Value("${wheelhouse.form.max-players:400}") int maxPlayers) {
         this.espn = espn;
+        this.bySeason = Collections.synchronizedMap(new LinkedHashMap<>(64, 0.75f, true) {
+            @Override
+            protected boolean removeEldestEntry(Map.Entry<String, List<Game>> stalest) {
+                return size() > maxPlayers;
+            }
+        });
     }
 
     /** One completed game: who they played, and every stat ESPN recorded for them in it. */
@@ -120,14 +130,21 @@ public class FormService {
     }
 
     private List<Game> season(String espnId, int season) {
-        return bySeason.computeIfAbsent(espnId + "|" + season, key -> {
-            try {
-                return parse(espn.gamelog(espnId, season));
-            } catch (Exception e) {
-                log.debug("no game log for {} in {}: {}", espnId, season, e.toString());
-                return List.of();
-            }
-        });
+        String key = espnId + "|" + season;
+        List<Game> games = bySeason.get(key);
+        if (games != null) {
+            return games;
+        }
+        // Fetched outside the map's lock: computeIfAbsent on a synchronized map would hold every
+        // other lookup behind one ESPN call. Two threads racing the same player just fetch twice.
+        try {
+            games = parse(espn.gamelog(espnId, season));
+        } catch (Exception e) {
+            log.debug("no game log for {} in {}: {}", espnId, season, e.toString());
+            games = List.of();
+        }
+        List<Game> raced = bySeason.putIfAbsent(key, games);
+        return raced != null ? raced : games;
     }
 
     /**

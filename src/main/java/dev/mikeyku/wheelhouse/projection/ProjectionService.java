@@ -62,6 +62,10 @@ public class ProjectionService {
         byContest.computeIfAbsent(contest.id(), id -> fetch(contest));
     }
 
+    public void evict(String contestId) {
+        byContest.remove(contestId);
+    }
+
     /**
      * Whether this week has projections at all. Preseason and postseason do not, so a contest
      * played in those windows cannot be scored against a forecast and the UI has to say so

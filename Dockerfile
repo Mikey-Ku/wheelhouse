@@ -28,10 +28,32 @@ USER wheelhouse
 
 COPY --from=build --chown=wheelhouse:wheelhouse /src/target/*.jar app.jar
 
+# Memory on a 512MB instance, every number below measured rather than guessed.
+#
 # Java 21 reads cgroup limits, so the heap sizes itself to whatever the host actually granted
-# rather than to the machine's total memory. MaxRAMPercentage keeps headroom for the JVM's
-# own off-heap use on a small container.
-ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=70 -XX:+UseSerialGC"
+# rather than to the machine's total memory. The customary 70% is far too much here: with the
+# heap allowed 282MB the process idled at 457MB before serving a request and was killed by the
+# fourteenth archive week. The live heap after a full GC is about 100MB with eight archive
+# weeks resident, so 45% (230MB) is generous and leaves the rest of the container to the JVM's
+# own overhead, which native memory tracking put at roughly 190MB: 78MB metaspace, 31MB symbol
+# table, 27MB JIT code cache, and 17MB of compiler arenas that only C2 needs.
+#
+#   TieredStopAtLevel=1    C1 only. Halves the code cache and drops the compiler arenas; on a
+#                          tenth of a CPU the JIT's own time was costing more than C2 returned.
+#   ReservedCodeCacheSize  ceiling on what C1 can still grow to.
+#   MaxMetaspaceSize       ceiling, not a saving. Turns runaway class loading into a clean error
+#                          instead of a container kill.
+#   Min/MaxHeapFreeRatio   let the serial collector hand memory back after a full GC, so RSS
+#                          follows live data down as well as up.
+#   MALLOC_ARENA_MAX=2     glibc gives every thread its own malloc arena and never compacts
+#                          them; 124 anonymous mappings and 23MB of untracked growth over ten
+#                          archive loads was that. Two arenas is the standard fix for a JVM in
+#                          a small container.
+#
+# Result on the same 20-week test that killed the untuned image: 337MB idle, 370MB after
+# twenty archive weeks, and flat once the eight-week cap engages.
+ENV MALLOC_ARENA_MAX=2
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=45 -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -XX:ReservedCodeCacheSize=48m -XX:MaxMetaspaceSize=128m -XX:MinHeapFreeRatio=10 -XX:MaxHeapFreeRatio=30"
 
 EXPOSE 8080
 ENTRYPOINT ["java","-jar","/app/app.jar"]

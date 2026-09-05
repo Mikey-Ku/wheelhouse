@@ -70,6 +70,12 @@ public class PositionalField {
         return field.length < MIN_FIELD ? null : field[field.length / 2];
     }
 
+    /** Drops every memoized field for a contest, so its next visit recomputes from live projections. */
+    public void evict(String contestId) {
+        String prefix = contestId + "|";
+        fields.keySet().removeIf(key -> key.startsWith(prefix));
+    }
+
     private double[] field(String contestId, Slot slot, Slot.StatOption option) {
         return fields.computeIfAbsent(contestId + "|" + slot.name() + "|" + option.key(), key ->
                 pool.candidates(contestId, slot).stream()
