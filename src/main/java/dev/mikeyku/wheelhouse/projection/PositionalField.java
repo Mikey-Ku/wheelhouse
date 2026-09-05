@@ -77,13 +77,23 @@ public class PositionalField {
     }
 
     private double[] field(String contestId, Slot slot, Slot.StatOption option) {
-        return fields.computeIfAbsent(contestId + "|" + slot.name() + "|" + option.key(), key ->
-                pool.candidates(contestId, slot).stream()
-                        .map(p -> projections.projected(contestId, p, option))
-                        .filter(Objects::nonNull)
-                        .mapToDouble(Double::doubleValue)
-                        .filter(v -> v > 0)
-                        .sorted()
-                        .toArray());
+        String key = contestId + "|" + slot.name() + "|" + option.key();
+        double[] known = fields.get(key);
+        if (known != null) {
+            return known;
+        }
+        double[] field = pool.candidates(contestId, slot).stream()
+                .map(p -> projections.projected(contestId, p, option))
+                .filter(Objects::nonNull)
+                .mapToDouble(Double::doubleValue)
+                .filter(v -> v > 0)
+                .sorted()
+                .toArray();
+        // An empty field is never remembered. It usually means the projections have not landed
+        // yet, and a percentile computed a moment too early must not pin itself for the week.
+        if (field.length > 0) {
+            fields.putIfAbsent(key, field);
+        }
+        return field;
     }
 }

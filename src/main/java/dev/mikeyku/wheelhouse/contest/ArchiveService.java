@@ -101,9 +101,11 @@ public class ArchiveService {
         Contest contest = Contest.archived(season, week);
         // Projections are part of being loaded. Without them in the latch, the second visit to
         // a week short-circuits before they are ever fetched and the whole wheel reads zero.
+        // "Known" rather than "available": a week Sleeper genuinely has no forecasts for is
+        // still fully loaded, and must not be re-read from ESPN on every visit.
         if (loaded.contains(contest.id())
                 && ingest.hasContest(contest.id())
-                && projections.available(contest.id())) {
+                && projections.known(contest.id())) {
             loaded.touch(contest.id());
             roster.players(contest.id());
             return contest;

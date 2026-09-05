@@ -69,6 +69,11 @@ public class ContestService {
         return current;
     }
 
+    /** The current contest if it has been read yet, without going to ESPN to find out. */
+    public Contest known() {
+        return current;
+    }
+
     /**
      * Rebuilds a contest from its id, so an entry saved weeks ago still knows what it belongs
      * to. Archive ids carry a leading "a".

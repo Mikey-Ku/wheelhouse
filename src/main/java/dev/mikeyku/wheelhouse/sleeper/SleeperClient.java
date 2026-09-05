@@ -98,7 +98,20 @@ public class SleeperClient {
                 .GET()
                 .build();
 
-        HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response;
+        try {
+            response = http.send(request, HttpResponse.BodyHandlers.ofString());
+        } catch (IOException e) {
+            // Unreachable is the other way an upstream has a bad day, and from a container the
+            // more common one: no route, a reset, a connect timeout. It throws before there is
+            // a status to inspect, so the fallback below never saw it and a seeded cache sat
+            // unused while the wheel stayed empty. Same answer as a bad status.
+            if (Files.exists(file)) {
+                log.warn("sleeper unreachable ({}), falling back to stale cache", e.toString());
+                return mapper.readTree(Files.readString(file));
+            }
+            throw e;
+        }
         if (response.statusCode() != 200) {
             // A stale cache beats no data at all when the upstream is having a bad day.
             if (Files.exists(file)) {

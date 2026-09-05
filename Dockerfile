@@ -24,6 +24,16 @@ WORKDIR /app
 RUN useradd --create-home --shell /usr/sbin/nologin wheelhouse \
  && mkdir -p /app/.cache \
  && chown -R wheelhouse:wheelhouse /app
+
+# Seed the Sleeper cache at build time. Without it every cold start begins with a 14MB
+# download parsed on a tenth of a CPU, and the stale-copy fallback in SleeperClient has
+# nothing to fall back to when Sleeper is unreachable. Docker fetches this once per build;
+# the running app refreshes it in place once it ages past the cache TTL.
+ADD --chown=wheelhouse:wheelhouse https://api.sleeper.app/v1/players/nfl /app/.cache/players-nfl.json
+# ADD from a URL stamps the file with 1970 when the origin sends no Last-Modified, and the
+# client judges freshness by mtime, so without this the seed counts as stale on every boot and
+# is only ever the fallback. Dated at build time it is served outright for the first day.
+RUN touch /app/.cache/players-nfl.json
 USER wheelhouse
 
 COPY --from=build --chown=wheelhouse:wheelhouse /src/target/*.jar app.jar

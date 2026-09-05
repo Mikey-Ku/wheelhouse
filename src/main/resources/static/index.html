@@ -815,10 +815,16 @@ async function loadContest() {
 function showNotice(c) {
   const host = document.getElementById("notice");
   const live = document.getElementById("liveBtn");
-  const playable = !!c && c.hasProjections !== false && !c.locked;
+  const playable = !!c && c.ready !== false && c.hasProjections !== false && !c.locked;
   if (live) live.hidden = !playable;
 
-  if (c && c.hasProjections === false) {
+  if (c && c.ready === false) {
+    /* The first minute after the server has been asleep: the player list is still being
+       fetched. Say so and ask again shortly, rather than blaming the preseason. */
+    host.innerHTML = `<div class="notice"><b>Warming up.</b> The player list is loading, which
+      takes about a minute after the server has been idle. This page will update by itself.</div>`;
+    setTimeout(loadContest, 5000);
+  } else if (c && c.hasProjections === false) {
     host.innerHTML = `<div class="notice"><b>The live week is ${esc(c.label)}.</b>
       Nobody forecasts the preseason, and the game is played against forecasts, so there is
       nothing to draft against until the season starts.</div>`;

@@ -57,9 +57,27 @@ public class ProjectionService {
         }
     }
 
-    /** Idempotent. Historic projections never change, and a live week is cached on disk. */
+    /**
+     * Idempotent for anything a successful answer taught us. A week that came back usable is
+     * remembered, and so is one that came back genuinely empty: preseason and postseason have
+     * no forecasts, and that answer is worth keeping. A fetch that failed taught nothing and is
+     * not remembered, so the five-minute contest refresh simply tries again. Before this
+     * distinction a single bad response at cold start was stored as an empty week, and the live
+     * game stayed hidden until the next restart.
+     */
     public void load(Contest contest) {
-        byContest.computeIfAbsent(contest.id(), id -> fetch(contest));
+        if (byContest.containsKey(contest.id())) {
+            return;
+        }
+        Week week = fetch(contest);
+        if (week != null) {
+            byContest.putIfAbsent(contest.id(), week);
+        }
+    }
+
+    /** Whether a successful answer exists for this week at all, usable or confirmed empty. */
+    public boolean known(String contestId) {
+        return byContest.containsKey(contestId);
     }
 
     public void evict(String contestId) {
@@ -146,8 +164,9 @@ public class ProjectionService {
             log.info("projections for {}: {} players with a forecast", contest.label(), week.players());
             return week;
         } catch (Exception e) {
+            // Null, not an empty week: the caller must not remember a failure as an answer.
             log.warn("projection load failed for {}: {}", contest.label(), e.toString());
-            return new Week(Map.of(), Map.of(), 0);
+            return null;
         }
     }
 

@@ -28,7 +28,7 @@ class ArchiveReleaseTest {
     @Test
     void releaseReachesEveryHolderAndSparesTheNeighbour() {
         IngestService ingest = new IngestService();
-        PlayerCatalog catalog = new PlayerCatalog(null);
+        PlayerCatalog catalog = new PlayerCatalog(null, 0);
         ArchiveRoster roster = new ArchiveRoster(ingest, catalog);
         ProjectionService projections = new ProjectionService(null);
         PositionalField field = new PositionalField(new WheelPool(catalog, roster, 400), projections);
@@ -56,7 +56,7 @@ class ArchiveReleaseTest {
     @Test
     void anEmptyPoolIsNeverRemembered() {
         IngestService ingest = new IngestService();
-        ArchiveRoster roster = new ArchiveRoster(ingest, new PlayerCatalog(null));
+        ArchiveRoster roster = new ArchiveRoster(ingest, new PlayerCatalog(null, 0));
 
         // A look before the box scores land must not pin "nobody" for the week.
         assertThat(roster.players(KEPT)).isEmpty();

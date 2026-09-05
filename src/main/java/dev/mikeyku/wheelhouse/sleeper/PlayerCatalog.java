@@ -3,10 +3,13 @@ package dev.mikeyku.wheelhouse.sleeper;
 import dev.mikeyku.wheelhouse.model.Player;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.JsonNode;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,11 +43,33 @@ public class PlayerCatalog {
      */
     private volatile Map<String, String> espnIdBySleeperId = Map.of();
 
-    public PlayerCatalog(SleeperClient sleeper) {
+    /** A failed load retries from here and doubles each time, up to the ceiling. */
+    private static final Duration RETRY_FLOOR = Duration.ofSeconds(15);
+    private static final Duration RETRY_CEILING = Duration.ofMinutes(10);
+
+    private final Duration refreshEvery;
+    private volatile Instant nextAttempt = Instant.EPOCH;
+    private volatile int failures;
+
+    public PlayerCatalog(SleeperClient sleeper,
+                         @Value("${wheelhouse.sleeper.refresh-ms:43200000}") long refreshMs) {
         this.sleeper = sleeper;
+        this.refreshEvery = Duration.ofMillis(refreshMs);
     }
 
-    @Scheduled(initialDelay = 0, fixedDelayString = "${wheelhouse.sleeper.refresh-ms:43200000}")
+    /**
+     * Runs often and does nothing most of the time. The interval that matters is set inside
+     * refresh(): twelve hours after a success, seconds after a failure. A fixed twelve-hour
+     * schedule meant one bad response at boot left the wheel empty until the afternoon.
+     */
+    @Scheduled(initialDelay = 0, fixedDelay = 15000)
+    public void tick() {
+        if (Instant.now().isBefore(nextAttempt)) {
+            return;
+        }
+        refresh();
+    }
+
     public void refresh() {
         try {
             JsonNode root = sleeper.players();
@@ -94,9 +119,28 @@ public class PlayerCatalog {
                             + "{} espn ids across all players, {} teams",
                     byId.size(), byEspnId.size(), 100 * byEspnId.size() / Math.max(1, byId.size()),
                     this.byNameTeam.size(), this.espnIdBySleeperId.size(), teams().size());
+            failures = 0;
+            nextAttempt = Instant.now().plus(refreshEvery);
         } catch (Exception e) {
-            log.warn("player catalog refresh failed: {}", e.toString());
+            failures++;
+            Duration wait = backoff(failures);
+            nextAttempt = Instant.now().plus(wait);
+            log.warn("player catalog refresh failed (attempt {}), retrying in {}s: {}",
+                    failures, wait.toSeconds(), e.toString());
         }
+    }
+
+    static Duration backoff(int failures) {
+        long seconds = RETRY_FLOOR.toSeconds() << Math.min(failures - 1, 20);
+        return seconds >= RETRY_CEILING.toSeconds() ? RETRY_CEILING : Duration.ofSeconds(seconds);
+    }
+
+    Instant nextAttempt() {
+        return nextAttempt;
+    }
+
+    int failures() {
+        return failures;
     }
 
     /**

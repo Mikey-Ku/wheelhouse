@@ -214,6 +214,9 @@ public class PlayController {
         // Preseason and postseason carry no forecasts at all. The UI has to say so rather than
         // present a wall of zeroes as though every player were expected to do nothing.
         m.put("hasProjections", projections.available(c.id()));
+        // False for the first minute after a cold start, while the player list is still being
+        // fetched. The page shows "warming up" instead of an empty wheel or the wrong excuse.
+        m.put("ready", catalog.size() > 0);
         return m;
     }
 
