@@ -15,10 +15,18 @@ FROM eclipse-temurin:21-jre
 WORKDIR /app
 
 # The scheduler and the ESPN client both make outbound calls; running as root buys nothing.
-RUN useradd --create-home --shell /usr/sbin/nologin wheelhouse
+#
+# The working directory has to be writable by that user, not merely readable. WORKDIR creates
+# /app owned by root, and the Sleeper client calls createDirectories on .cache before every
+# player-list and projection fetch, so an unwritable /app throws on the first one. The failure
+# is quiet in the worst way: Postgres is fine, so the container boots and the health check
+# reports UP, and the only symptom is a wheel with no players on it.
+RUN useradd --create-home --shell /usr/sbin/nologin wheelhouse \
+ && mkdir -p /app/.cache \
+ && chown -R wheelhouse:wheelhouse /app
 USER wheelhouse
 
-COPY --from=build /src/target/*.jar app.jar
+COPY --from=build --chown=wheelhouse:wheelhouse /src/target/*.jar app.jar
 
 # Java 21 reads cgroup limits, so the heap sizes itself to whatever the host actually granted
 # rather than to the machine's total memory. MaxRAMPercentage keeps headroom for the JVM's

@@ -40,3 +40,6 @@ build/
 # the pricing workbench is analysis, not the game
 src/main/java/dev/mikeyku/wheelhouse/quant/
 src/main/java/dev/mikeyku/wheelhouse/web/QuantController.java
+
+# database credentials, local only, never committed
+.env.local
