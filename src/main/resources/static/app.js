@@ -71,11 +71,23 @@ const WH = (() => {
   /* Pages call this once they know what they are showing. Until then nothing paints. */
   function ready() { document.documentElement.classList.remove("loading"); }
 
-  /* ---- slate badges: our own marks, not the broadcasters' ---- */
+  /* ---- slate badges ----
+     Thursday and Monday nights wear their broadcasts' own logos; Sunday wears RedZone's, since
+     the Sunday slate is every afternoon game at once. Served from Wikimedia at thumbnail size.
+     If an image cannot load, the badge falls back to its name in text. */
+  const LOGOS = {
+    thu: "https://upload.wikimedia.org/wikipedia/en/thumb/1/10/Thursday_Night_Football_logo_2022.svg/250px-Thursday_Night_Football_logo_2022.svg.png",
+    mon: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/ESPN_Monday_Night_Football_logo.png/250px-ESPN_Monday_Night_Football_logo.png",
+    sun: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/NFL_RedZone_Logo_%282012%29.png/250px-NFL_RedZone_Logo_%282012%29.png",
+  };
   const MOON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.6A8.6 8.6 0 0 1 9.4 4 8.6 8.6 0 1 0 20 14.6z"/></svg>';
   const BALL = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 20.5C2.8 13 7.6 4.2 20.5 3.5 21.2 11 16.4 19.8 3.5 20.5z"/></svg>';
   const BACK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.5 5.5v13L3 12zM21 5.5v13L12.5 12z"/></svg>';
   function badge(key, label, size = "") {
+    if (LOGOS[key]) {
+      return `<span class="sb-logo ${key === "sun" ? "keep" : ""} ${size}" title="${esc(label)}">`
+        + `<img src="${LOGOS[key]}" alt="${esc(label)}" onerror="this.remove()"><span class="sb-txt">${esc(label)}</span></span>`;
+    }
     const k = ["thu", "mon", "sun", "sat", "fri"].includes(key) ? key : "past";
     const glyph = k === "thu" || k === "mon" ? MOON : k === "past" ? BACK : BALL;
     return `<span class="sb ${k} ${size}">${glyph}<span>${esc(label)}</span></span>`;
@@ -163,8 +175,19 @@ const WH = (() => {
     draw();
   }
 
-  /* Resolves with the signed-in profile, asking for one first if there isn't one. */
-  async function requireAuth() {
+  /* Somebody who can play: a profile if there is one, otherwise a guest made on the spot.
+     Nobody is asked for anything before their first spin. */
+  async function ensurePlayer() {
+    const who = await me();
+    if (who.signedIn || who.guest) return who;
+    meCache = await api("/api/account/guest", { method: "POST" });
+    nav(document.body.dataset.page);
+    return meCache;
+  }
+
+  /* Resolves with a real profile, asking for one first. A guest who makes one keeps what they
+     played; a guest who signs in brings it with them. */
+  async function requireAuth(copy = {}) {
     const who = await me();
     if (who.signedIn) return who;
     return new Promise((resolve, reject) => {
@@ -172,8 +195,8 @@ const WH = (() => {
       back.className = "modal-back";
       back.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
         <button class="close" aria-label="Close">&times;</button>
-        <h2 id="authTitle">Your profile</h2>
-        <p>Your rosters and your name on the leaderboard are saved to it.</p>
+        <h2 id="authTitle">${esc(copy.title || "Your profile")}</h2>
+        <p>${esc(copy.text || "Save your rosters and get your name on the leaderboards.")}</p>
         <div id="authHost"></div></div>`;
       document.body.appendChild(back);
       const close = () => { back.remove(); reject(Object.assign(new Error("cancelled"), { cancelled: true })); };
@@ -191,5 +214,5 @@ const WH = (() => {
   }
 
   return { esc, fmt1, ordinal, kickoffText, crest, NOPHOTO, api, me, nav, ready, badge, part,
-           icon, toast, requireAuth, authForm };
+           icon, toast, requireAuth, ensurePlayer, authForm };
 })();

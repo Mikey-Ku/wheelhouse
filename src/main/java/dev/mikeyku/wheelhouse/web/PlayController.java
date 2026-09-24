@@ -385,6 +385,7 @@ public class PlayController {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("entryId", entry.id());
         out.put("owner", entry.owner());
+        out.put("guest", entry.guest());
         out.put("contest", describe(contests.byId(entry.contestId())));
         out.put("slate", entry.slate());
         out.put("slateLabel", standings.slateLabel(entry));

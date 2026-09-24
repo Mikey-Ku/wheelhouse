@@ -6,4 +6,8 @@ public class SignInRequired extends RuntimeException {
     public SignInRequired() {
         super("Sign in to play.");
     }
+
+    public SignInRequired(String message) {
+        super(message);
+    }
 }

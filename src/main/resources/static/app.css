@@ -139,6 +139,15 @@ table.list tr.me td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
 .sb.lg{height:34px;font-size:20px;padding:0 14px 0 12px}
 .sb.lg svg{width:19px;height:19px}
 
+/* The broadcast logos, on a light chip so each keeps its own colours on the dark page. */
+.sb-logo{display:inline-flex;align-items:center;gap:8px;height:40px;padding:3px 8px;border-radius:7px;
+  background:#f4f1e8;color:#16181d;font-family:var(--display);font-weight:700;font-style:italic;
+  font-size:15px;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;vertical-align:middle}
+.sb-logo img{height:100%;width:auto;display:block}
+.sb-logo img + .sb-txt{display:none}
+.sb-logo.keep img + .sb-txt{display:inline}
+.sb-logo.lg{height:76px;padding:5px 12px;font-size:26px;border-radius:10px}
+
 /* ---- stat part icons ---- */
 .pi{width:30px;height:30px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:1.7;
   stroke-linecap:round;stroke-linejoin:round}

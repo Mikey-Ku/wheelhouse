@@ -45,9 +45,11 @@ Playable at `http://localhost:8080`. Five pages share one nav:
 | Profile (`/profile.html`) | Sign up or sign in, change your name, and every roster you have played. |
 | Ops (`/ops.html`) | The ingestion view. Not linked. |
 
-Playing needs a profile: a name and a password, made in one step the first time you press Play.
-Rosters belong to the profile, so an id in the address bar reads or changes nothing for anyone
-else. Everything is stored in a file-backed database and survives a restart; an archived week
+Anyone can play straight away as a guest: pressing Play makes a guest session, with no form.
+Guest rosters are kept and shown on the slip, but stay off the leaderboards. Making a profile (a
+name and a password) turns the guest into it and brings every roster along; signing in to an
+existing profile from a guest session does the same. Rosters belong to whoever played them, so
+an id in the address bar reads or changes nothing for anyone else. Everything is stored in a file-backed database and survives a restart; an archived week
 rehydrates itself from ESPN when an old roster is opened.
 
 Weeks come from ESPN, so preseason, regular season and playoffs all work without a calendar
@@ -138,11 +140,11 @@ the slip shares through a read-only link that never carries the roster's id.
 ## Tests
 
 ```sh
-./mvnw test                          # everything, 69 tests
+./mvnw test                          # everything, 73 tests
 ./mvnw test -DexcludedGroups=network  # the 61 not tagged network
 ```
 
-Eight of them replay a real week and therefore need ESPN and Sleeper to be reachable;
+Twelve of them replay a real week and therefore need ESPN and Sleeper to be reachable;
 they are tagged `network` so CI can skip them. The rest run offline in under a second.
 
 What they pin, and why each one exists:
@@ -157,6 +159,7 @@ What they pin, and why each one exists:
 | `LiveWeekDryRunTest` | The live path, driven a poll at a time. See below. |
 | `SlateTest` | A week splits into Thursday, Sunday and Monday against the real week 3 scoreboard, each locks at its own kickoff, and Sunday never offers a team that played Thursday. |
 | `SlateDraftTest` | Every slate in the current week drafts to completion inside its own games, including a showdown filled from one game. |
+| `GuestTest` | A guest plays and stays off the board; making a profile or signing in to one brings the guest's rosters along; a guest cannot claim a name. |
 | `AccountTest` | Sign up signs you in; names are unique whatever their case; a wrong password and an unknown name get the same answer; playing needs a profile. |
 | `OwnershipTest` | Nobody else can read or spin your roster by its id, a made pick cannot be re-rolled or reassigned, and a rename reaches your rosters. |
 | `SharedSlipTest` | A share link is a separate token: the shared view carries no entry id, and the token opens nothing for writing. |
@@ -274,7 +277,8 @@ Endpoints, all temporary scaffolding:
 | `GET /api/play/leaderboard?slate=` | One slate's standings (the whole week if omitted) |
 | `POST /api/play/{id}/share` | Mint a read-only link token for a finished slip |
 | `GET /api/play/shared/{shareId}` | A shared slip, without its entry id or respins |
-| `POST /api/account/signup` · `signin` · `signout` | JSON `{name, password}`; sets an HttpOnly session cookie |
+| `POST /api/account/guest` | Start a guest session (no-op if there is already one) |
+| `POST /api/account/signup` · `signin` · `signout` | JSON `{name, password}`; sets an HttpOnly session cookie. From a guest session, keeps the guest's rosters |
 | `GET /api/account/me` | Who is signed in |
 | `POST /api/account/name` | Change your name, on every roster too |
 | `GET /api/account/rosters` | Every roster on your profile, with status, score and rank |

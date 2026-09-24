@@ -112,7 +112,7 @@ function render() {
 async function renderMine() {
   const host = document.getElementById("mineSec");
   const who = await WH.me();
-  if (!who.signedIn) { host.innerHTML = ""; return; }
+  if (!who.signedIn && !who.guest) { host.innerHTML = ""; return; }
   try {
     const rs = (await api("/api/account/rosters")).rosters.filter(r => r.current && r.complete);
     if (!rs.length) { host.innerHTML = ""; return; }

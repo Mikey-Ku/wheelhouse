@@ -63,18 +63,18 @@ public final class Api {
     }
 
     private JsonNode auth(String path, String name, String password) throws Exception {
-        MockHttpServletResponse response = mvc.perform(MockMvcRequestBuilders.post(path)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsString(
-                                java.util.Map.of("name", name, "password", password))))
-                .andReturn().getResponse();
-        lastStatus = response.getStatus();
+        return send(MockMvcRequestBuilders.post(path)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(java.util.Map.of("name", name, "password", password))));
+    }
+
+    /** Like a browser: whatever session cookie the server sets is sent from then on. */
+    private void keepCookie(MockHttpServletResponse response) {
         String header = response.getHeader("Set-Cookie");
         if (header != null && header.startsWith(AccountService.COOKIE + "=")) {
             String value = header.substring(AccountService.COOKIE.length() + 1, header.indexOf(';'));
             session = new Cookie(AccountService.COOKIE, value);
         }
-        return mapper.readTree(response.getContentAsString());
     }
 
     private JsonNode send(MockHttpServletRequestBuilder request) throws Exception {
@@ -83,6 +83,7 @@ public final class Api {
         }
         MockHttpServletResponse response = mvc.perform(request).andReturn().getResponse();
         lastStatus = response.getStatus();
+        keepCookie(response);
         String body = response.getContentAsString();
         return mapper.readTree(body.isEmpty() ? "{}" : body);
     }

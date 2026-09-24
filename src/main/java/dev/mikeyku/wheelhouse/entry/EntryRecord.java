@@ -53,6 +53,9 @@ public class EntryRecord {
      */
     private String userId;
 
+    /** Played as a guest. Kept, shown on the slip, and left off the leaderboards. */
+    private Boolean guest;
+
     /**
      * What a shared link carries, never the entry id. The entry id opens the draft for writing,
      * so a slip posted to a group chat must not contain it. Minted on the first share.
@@ -119,6 +122,8 @@ public class EntryRecord {
     public String shareId() { return shareId; }
     public String userId() { return userId; }
     public void userId(String userId) { this.userId = userId; }
+    public boolean guest() { return Boolean.TRUE.equals(guest); }
+    public void guest(boolean guest) { this.guest = guest; }
     public void shareId(String shareId) { this.shareId = shareId; }
     public Instant createdAt() { return createdAt; }
     public Instant submittedAt() { return submittedAt; }

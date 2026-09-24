@@ -121,6 +121,7 @@ public class EntryService {
                 showdown ? showdownRespins : teamRespins,
                 showdown ? showdownRespins : playerRespins);
         entry.userId(user.id());
+        entry.guest(user.guest());
         return entries.save(entry);
     }
 

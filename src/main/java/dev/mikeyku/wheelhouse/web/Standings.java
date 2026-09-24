@@ -58,7 +58,7 @@ public class Standings {
         Map<String, EntryRecord> best = new LinkedHashMap<>();
         Map<String, Double> totals = new HashMap<>();
         for (EntryRecord e : entries.forContest(contestId)) {
-            if (!e.complete() || !Objects.equals(e.slate(), slate)) {
+            if (!e.complete() || e.guest() || !Objects.equals(e.slate(), slate)) {
                 continue;
             }
             double total = scoring.score(entries.asRoster(e)).total();
@@ -99,13 +99,14 @@ public class Standings {
 
     /** Where one finished roster would sit on its board, counting each profile's best. */
     public Map<String, Object> standing(EntryRecord entry) {
-        if (!entry.complete()) {
+        // A guest is not on the board, so a rank would describe a place they do not hold.
+        if (!entry.complete() || entry.guest()) {
             return null;
         }
         double mine = scoring.score(entries.asRoster(entry)).total();
         Map<String, Double> bestOthers = new HashMap<>();
         for (EntryRecord e : entries.forContest(entry.contestId())) {
-            if (!e.complete() || !Objects.equals(e.slate(), entry.slate())) {
+            if (!e.complete() || e.guest() || !Objects.equals(e.slate(), entry.slate())) {
                 continue;
             }
             String who = e.userId() != null ? e.userId() : "entry:" + e.id();
@@ -258,7 +259,7 @@ public class Standings {
         }
         Map<String, java.util.Set<String>> players = new HashMap<>();
         for (EntryRecord e : repository.findAll()) {
-            if (!e.complete()) {
+            if (!e.complete() || e.guest()) {
                 continue;
             }
             String key = e.contestId() + "|" + e.slate();

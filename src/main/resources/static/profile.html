@@ -42,16 +42,26 @@
 <script>
 const { esc, fmt1, api } = WH;
 
-function signedOut() {
+async function signedOut(who) {
   const main = document.getElementById("main");
-  main.innerHTML = `<div class="auth"><h1>Your profile</h1>
-    <p>Pick a name and a password. Your rosters, scores and spot on the leaderboards are saved to it.</p>
-    <div class="card" id="authHost"></div></div>`;
+  const guest = who && who.guest;
+  main.innerHTML = `<div class="auth"><h1>${guest ? "Save your results" : "Your profile"}</h1>
+    <p>${guest
+      ? "You're playing as a guest. Make a profile to keep your rosters and get on the leaderboards. Everything you've played comes with you."
+      : "Pick a name and a password. Your rosters, scores and spot on the leaderboards are saved to it."}</p>
+    <div class="card" id="authHost"></div></div><div id="guestRosters"></div>`;
   // Back to where sign-in was asked for, if that was a page on this site.
   const next = new URLSearchParams(location.search).get("next");
   const done = () => { location.href = next && /^\/(?![\/\\])/.test(next) ? next : "/profile.html"; };
   WH.authForm(document.getElementById("authHost"), done,
     new URLSearchParams(location.search).get("mode") === "signin" ? "signin" : "signup");
+  if (guest) {
+    try {
+      const rs = (await api("/api/account/rosters")).rosters;
+      document.getElementById("guestRosters").innerHTML =
+        section("Played as a guest", rs, "Not on the leaderboards until you save them.");
+    } catch (e) { /* none */ }
+  }
 }
 
 const STATUS = {
@@ -97,7 +107,7 @@ async function signedIn(who) {
     <div class="stats">
       <div class="stat"><span>Rosters played</span><b>${data.played}</b></div>
       <div class="stat"><span>Best finish</span><b>${data.bestRank ? WH.ordinal(data.bestRank) : "&ndash;"}</b></div>
-      <div class="stat"><span>% of best</span><b>${data.avgCapture == null ? "&ndash;" : data.avgCapture + "%"}</b>
+      <div class="stat"><span>% of max points</span><b>${data.avgCapture == null ? "&ndash;" : data.avgCapture + "%"}</b>
         <small>Your points against the best you could have scored with the same players.</small></div>
     </div>
     ${section("Finish these", open, "Unfinished rosters for slates that haven't locked yet.")}
@@ -138,7 +148,7 @@ async function signedIn(who) {
 (async function init() {
   await WH.nav("profile");
   const who = await WH.me();
-  if (who.signedIn) await signedIn(who); else signedOut();
+  if (who.signedIn) await signedIn(who); else await signedOut(who);
   WH.ready();
 })();
 </script>

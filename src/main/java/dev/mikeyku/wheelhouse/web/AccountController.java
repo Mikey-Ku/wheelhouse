@@ -52,10 +52,25 @@ public class AccountController {
         return describe(accounts.current(request));
     }
 
+    /**
+     * Play without a profile. Idempotent: a browser that already has a session, guest or not,
+     * keeps it.
+     */
+    @PostMapping("/guest")
+    public Map<String, Object> guest(HttpServletRequest request, HttpServletResponse response) {
+        UserRecord current = accounts.current(request);
+        if (current != null) {
+            return describe(current);
+        }
+        String token = accounts.guest();
+        setCookie(request, response, token, AccountService.GUEST_LENGTH);
+        return describe(accounts.current(withToken(request, token)));
+    }
+
     @PostMapping("/signup")
     public Map<String, Object> signUp(@RequestBody Credentials body, HttpServletRequest request,
                                       HttpServletResponse response) {
-        String token = accounts.signUp(body.name(), body.password());
+        String token = accounts.signUp(body.name(), body.password(), accounts.current(request));
         setCookie(request, response, token, AccountService.SESSION_LENGTH);
         return describe(accounts.current(withToken(request, token)));
     }
@@ -63,7 +78,7 @@ public class AccountController {
     @PostMapping("/signin")
     public Map<String, Object> signIn(@RequestBody Credentials body, HttpServletRequest request,
                                       HttpServletResponse response) {
-        String token = accounts.signIn(body.name(), body.password());
+        String token = accounts.signIn(body.name(), body.password(), accounts.current(request));
         setCookie(request, response, token, AccountService.SESSION_LENGTH);
         return describe(accounts.current(withToken(request, token)));
     }
@@ -77,13 +92,13 @@ public class AccountController {
 
     @PostMapping("/name")
     public Map<String, Object> rename(@RequestBody Name body, HttpServletRequest request) {
-        return describe(accounts.rename(accounts.require(request), body.name()));
+        return describe(accounts.rename(accounts.requireProfile(request), body.name()));
     }
 
     /** Hands over rosters this browser played before it had a profile. */
     @PostMapping("/claim")
     public Map<String, Object> claim(@RequestBody Ids body, HttpServletRequest request) {
-        UserRecord user = accounts.require(request);
+        UserRecord user = accounts.requireProfile(request);
         int n = body.ids() == null ? 0 : accounts.claim(user, body.ids());
         return Map.of("claimed", n);
     }
@@ -112,6 +127,7 @@ public class AccountController {
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("name", user.name());
+        out.put("guest", user.guest());
         out.put("played", rows.stream().filter(r -> Boolean.TRUE.equals(r.get("complete"))).count());
         out.put("bestRank", best);
         out.put("avgCapture", Double.isNaN(avgCapture) ? null : (int) Math.round(avgCapture));
@@ -121,7 +137,9 @@ public class AccountController {
 
     private Map<String, Object> describe(UserRecord user) {
         Map<String, Object> m = new LinkedHashMap<>();
-        m.put("signedIn", user != null);
+        // A guest has a session but no profile. The page treats "signedIn" as "has a profile".
+        m.put("signedIn", user != null && !user.guest());
+        m.put("guest", user != null && user.guest());
         if (user != null) {
             m.put("name", user.name());
         }

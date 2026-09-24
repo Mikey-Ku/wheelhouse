@@ -28,6 +28,8 @@ public class AccountService {
 
     public static final String COOKIE = "wh_session";
     public static final Duration SESSION_LENGTH = Duration.ofDays(180);
+    /** How long a guest browser stays itself. After that its rosters are orphaned in the database. */
+    public static final Duration GUEST_LENGTH = Duration.ofDays(30);
 
     /** Letters, numbers, spaces and a little punctuation. It is printed on public boards. */
     private static final Pattern NAME = Pattern.compile("[\\p{L}\\p{N} _.'-]{2,20}");
@@ -50,9 +52,23 @@ public class AccountService {
         this.entries = entries;
     }
 
-    /** A new profile, already signed in. Returns the session token for the cookie. */
+    /**
+     * Somebody who wants to play without making a profile first. They get a session and a
+     * throwaway name; their rosters are kept and stay off the leaderboards until they make one.
+     */
     @Transactional
-    public String signUp(String name, String password) {
+    public String guest() {
+        String tag = UUID.randomUUID().toString().replace("-", "").substring(0, 4).toUpperCase();
+        UserRecord user = users.save(UserRecord.guest(UUID.randomUUID().toString(), "Guest " + tag, Instant.now()));
+        return openSession(user, GUEST_LENGTH);
+    }
+
+    /**
+     * A new profile, already signed in. A guest making one keeps everything they played: the
+     * guest record becomes the profile rather than being replaced by it.
+     */
+    @Transactional
+    public String signUp(String name, String password, UserRecord current) {
         String clean = cleanName(name);
         if (password == null || password.length() < MIN_PASSWORD) {
             throw new IllegalArgumentException("Password needs at least " + MIN_PASSWORD + " characters.");
@@ -60,13 +76,20 @@ public class AccountService {
         if (users.findByNameKey(UserRecord.key(clean)).isPresent()) {
             throw new IllegalArgumentException("That name is taken.");
         }
-        UserRecord user = users.save(new UserRecord(
-                UUID.randomUUID().toString(), clean, Passwords.hash(password), Instant.now()));
+        UserRecord user;
+        if (current != null && current.guest()) {
+            current.becomeProfile(clean, Passwords.hash(password));
+            user = users.save(current);
+            adopt(user, user);
+        } else {
+            user = users.save(new UserRecord(
+                    UUID.randomUUID().toString(), clean, Passwords.hash(password), Instant.now()));
+        }
         return openSession(user);
     }
 
     @Transactional
-    public String signIn(String name, String password) {
+    public String signIn(String name, String password, UserRecord current) {
         String key = UserRecord.key(name == null ? "" : name);
         Failures f = failures.get(key);
         if (f != null && f.count() >= MAX_FAILURES
@@ -82,6 +105,11 @@ public class AccountService {
             throw new IllegalArgumentException("Wrong name or password.");
         }
         failures.remove(key);
+        // Signing in from a guest session brings what the guest played along.
+        if (current != null && current.guest() && !current.id().equals(user.id())) {
+            adopt(current, user);
+            users.delete(current);
+        }
         return openSession(user);
     }
 
@@ -105,11 +133,30 @@ public class AccountService {
         return users.findById(session.userId()).orElse(null);
     }
 
+    /** Every roster the guest played, moved onto the profile and onto the leaderboards. */
+    private void adopt(UserRecord from, UserRecord to) {
+        for (EntryRecord entry : entries.findByUserId(from.id())) {
+            entry.userId(to.id());
+            entry.owner(to.name());
+            entry.guest(false);
+            entries.save(entry);
+        }
+    }
+
     /** Like {@link #current} but refuses to continue without somebody. */
     public UserRecord require(HttpServletRequest request) {
         UserRecord user = current(request);
         if (user == null) {
             throw new SignInRequired();
+        }
+        return user;
+    }
+
+    /** A real profile, not a guest: for the things only a profile can do, like a name. */
+    public UserRecord requireProfile(HttpServletRequest request) {
+        UserRecord user = require(request);
+        if (user.guest()) {
+            throw new SignInRequired("Make a profile first.");
         }
         return user;
     }
@@ -147,6 +194,7 @@ public class AccountService {
             if (entry != null && entry.userId() == null) {
                 entry.userId(user.id());
                 entry.owner(user.name());
+                entry.guest(user.guest());
                 entries.save(entry);
                 claimed++;
             }
@@ -169,9 +217,13 @@ public class AccountService {
     }
 
     private String openSession(UserRecord user) {
+        return openSession(user, SESSION_LENGTH);
+    }
+
+    private String openSession(UserRecord user, Duration length) {
         String token = Passwords.token();
         Instant now = Instant.now();
-        sessions.save(new SessionRecord(token, user.id(), now, now.plus(SESSION_LENGTH)));
+        sessions.save(new SessionRecord(token, user.id(), now, now.plus(length)));
         return token;
     }
 

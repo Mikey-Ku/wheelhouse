@@ -89,7 +89,7 @@ async function renderBoard() {
   host.innerHTML = `<div class="board-head">${badgeFor(current)}<h2>${esc(current.label)}</h2></div>
     <p class="board-note">${note}</p>
     ${rows.length ? `<table class="list">
-      <tr><th>#</th><th>Player</th><th class="r hide-sm">Proj</th><th class="r hide-sm" title="Your points against the best you could have scored with the same players">% of best</th><th class="r">Pts</th></tr>
+      <tr><th>#</th><th>Player</th><th class="r hide-sm">Proj</th><th class="r hide-sm" title="Your points against the best you could have scored with the same players">% of max points</th><th class="r">Pts</th></tr>
       ${rows.map(r => `<tr class="${r.mine ? "me" : ""}">
         <td class="rank">${r.rank}</td>
         <td>${esc(r.name)}${r.mine && r.entryId ? `<a class="open" href="/?r=${esc(r.entryId)}">View</a>` : ""}</td>

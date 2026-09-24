@@ -222,6 +222,10 @@
   .sp-acts .btn{flex:1;min-width:120px;background:transparent;border:1.5px solid var(--ink);color:var(--ink);height:46px}
   .sp-acts .btn:hover{background:var(--ink);color:var(--paper)}
   .sp-acts .btn.go{background:var(--ink);color:var(--paper)}
+  .save{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-top:14px}
+  .save b{display:block;font-family:var(--display);font-size:20px;text-transform:uppercase}
+  .save span{color:var(--secondary);font-size:14px}
+  @media (max-width:600px){.save .btn{width:100%}}
   @media (max-width:600px){.sp{padding:18px 15px}.sp-title{font-size:22px}
     .sp-row{grid-template-columns:46px minmax(0,1fr) 56px;gap:8px}.sp-nm{font-size:16px}.sp-part{display:none}}
 </style>
@@ -469,7 +473,7 @@ async function showHome() {
 
 async function startSlate(key, btn) {
   try {
-    await WH.requireAuth();
+    await WH.ensurePlayer();
     if (btn) btn.disabled = true;
     const e = await api("/api/play/open", { method: "POST", params: { slate: key } });
     location.href = "/?r=" + encodeURIComponent(e.entryId);
@@ -485,7 +489,7 @@ const LOAD_STEPS = ["Finding the games", "Pulling every box score", "Matching pl
 async function startPast(season, week) {
   const err = document.getElementById("pastErr");
   err.textContent = "";
-  try { await WH.requireAuth(); } catch (e) { return; }
+  try { await WH.ensurePlayer(); } catch (e) { err.textContent = e.message; return; }
   show("home", false); show("loader", true);
   document.getElementById("loaderTitle").textContent = `${season} · Week ${week}`;
   let i = 0;
@@ -504,7 +508,7 @@ async function startPast(season, week) {
 
 /* The random week is dealt by the same reels as the draft. */
 async function rollWeek() {
-  try { await WH.requireAuth(); } catch (e) { return; }
+  try { await WH.ensurePlayer(); } catch (e) { return; }
   const seasons = [], weeks = [];
   for (let y = archiveRange.earliest; y <= archiveRange.latest; y++) seasons.push(String(y));
   for (let w = 2; w <= archiveRange.weeks; w++) weeks.push(String(w));
@@ -820,7 +824,7 @@ function renderSlip() {
   else if (info) meta = `Kicks off ${esc(WH.kickoffText(info.lockAt))}`;
   else meta = "Before kickoff";
 
-  const cap = final && entry.capture ? ` &middot; ${entry.capture.capturePercent}% of best` : "";
+  const cap = final && entry.capture ? ` &middot; ${entry.capture.capturePercent}% of max points` : "";
   const footLabel = !started ? "Projected" : `${final ? "Final" : "Live"} &middot; proj ${fmt1(entry.projectedTotal)}${cap}`;
   const big = started ? fmt1(entry.total) : fmt1(entry.projectedTotal);
 
@@ -842,6 +846,7 @@ function renderSlip() {
     <div class="sp-foot"><span class="sp-meta" style="text-align:left">${footLabel}</span><span class="sp-big">${big}</span></div>
     <div class="sp-acts">${acts}</div>`;
   host.querySelectorAll("[data-slip]").forEach(b => b.addEventListener("click", () => slipAction(b)));
+  renderSave();
 
   if (slipState === "none") {
     slipState = "playing";
@@ -853,6 +858,28 @@ function renderSlip() {
       slipState = "done";
     })();
   }
+}
+
+/* A guest's roster is kept but is not on the leaderboard. One card says so and fixes it. */
+function renderSave() {
+  let host = document.getElementById("save");
+  if (!host) {
+    host = document.createElement("div");
+    host.id = "save";
+    document.getElementById("done").appendChild(host);
+  }
+  if (viewing || !entry.guest) { host.innerHTML = ""; return; }
+  host.innerHTML = `<div class="card save">
+      <div><b>You're playing as a guest</b>
+        <span>Make a profile to save this roster and put it on the leaderboard.</span></div>
+      <button class="btn primary" id="saveBtn">Save my results</button></div>`;
+  document.getElementById("saveBtn").addEventListener("click", async () => {
+    try {
+      await WH.requireAuth({ title: "Save your results",
+        text: "Pick a name and a password. Everything you played as a guest comes with you." });
+      location.reload();
+    } catch (e) { /* closed */ }
+  });
 }
 
 function playAgain() {
@@ -909,7 +936,7 @@ function gone(title, text, cta) {
   const navDone = WH.nav("play");
   try { board = await api("/api/play/slates"); } catch (e) { board = null; }
   const who = await WH.me();
-  if (who.signedIn) {
+  if (who.signedIn || who.guest) {
     try { mine = (await api("/api/account/rosters")).rosters; } catch (e) { mine = []; }
   }
   await navDone;
