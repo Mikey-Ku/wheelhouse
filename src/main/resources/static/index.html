@@ -106,7 +106,7 @@
   #weekReels[hidden]{display:none}
 
   .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
-  .step{background:rgba(19,27,56,.85);border:1px solid var(--line);border-radius:14px;padding:18px}
+  .step{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px}
   .step .pi{color:var(--accent);width:34px;height:34px}
   .step b{display:block;font-family:var(--display);font-size:22px;text-transform:uppercase;margin:10px 0 4px}
   .step span{color:var(--secondary);font-size:14.5px}
@@ -490,13 +490,14 @@ function renderSlates() {
   }).join("");
 }
 
-/* Each step drawn as what it describes: the wheel, a stat card taken, a filled checklist, a
-   scoreboard. The stat parts' own icons belong to the draft, not to these. */
+/* Each step drawn as what it describes: the wheel spinning, a stat sheet, a rack of jerseys to
+   fill, and a referee signalling a touchdown. The stat parts' own icons belong to the draft. */
 const STEP_ICONS = {
-  spin: '<circle cx="16" cy="17.5" r="11"/><circle cx="16" cy="17.5" r="2.6"/><path d="M18.6 17.5H27M17.8 19.3l6 6M16 20.1v8.4M14.2 19.3l-6 6M13.4 17.5H5M14.2 15.7l-6-6M17.8 15.7l6-6"/><path d="M12.6 2.8h6.8L16 8.2z"/>',
-  stat: '<path d="M16.2 25.5H6.5A2.5 2.5 0 0 1 4 23V6.5A2.5 2.5 0 0 1 6.5 4h12A2.5 2.5 0 0 1 21 6.5v9.3"/><path d="M8 10h9M8 14h5.5M8 18h4"/><circle cx="23" cy="23" r="6.2"/><path d="M20.2 23.1l1.9 1.9 3.7-3.9"/>',
-  fill: '<rect x="6.5" y="6" width="19" height="22.5" rx="2.5"/><path d="M12 6V4.2h8V6"/><path d="M10 12.2l1.5 1.5 2.6-2.9M10 18.2l1.5 1.5 2.6-2.9M10 24.2l1.5 1.5 2.6-2.9"/><path d="M17 12.5h5M17 18.5h5M17 24.5h5"/>',
-  score: '<rect x="3.5" y="7" width="25" height="15.5" rx="2.5"/><path d="M16 7v15.5"/><rect x="7.5" y="10.5" width="5" height="8.5" rx="1.2"/><path d="M19.5 10.5h5v4h-5v4.5h5"/><path d="M9 22.5v5.5M23 22.5v5.5M7 28h4M21 28h4"/>',
+  spin: '<circle cx="16" cy="17" r="8.5"/><circle cx="16" cy="17" r="2"/><path d="M18 17h6.5M17 18.7l3.3 5.7M15 18.7l-3.3 5.7M14 17H7.5M15 15.3l-3.3-5.7M17 15.3l3.3-5.7"/><path d="M14 5.8h4L16 9z"/><path d="M24 7.4A12.5 12.5 0 0 1 28.3 19.2M28.3 19.2l-2.7-1.3M28.3 19.2l1.2-2.8"/><path d="M8 26.6A12.5 12.5 0 0 1 3.7 14.8M3.7 14.8l2.7 1.3M3.7 14.8l-1.2 2.8"/>',
+  stat: '<rect x="5" y="4" width="22" height="24" rx="2.5"/><path d="M5 10.5h22M13 10.5V28M5 16.5h22M5 22.5h22"/><path d="M8.5 7.3h15"/><path d="M7.8 13.5h2.4M7.8 19.5h2.4M7.8 25.5h2.4M16 13.5h7M16 19.5h5M16 25.5h6"/>',
+  // The front jersey is filled with the card's colour so it hides the two behind it.
+  fill: '<path d="M6.12 2.80L1.80 5.20L3.36 8.92L5.52 8.02L5.52 17.20L12.48 17.20L12.48 8.02L14.64 8.92L16.20 5.20L11.88 2.80C11.40 4 10.26 4.84 9 4.84C7.74 4.84 6.60 4 6.12 2.80Z"/><path d="M20.12 2.80L15.80 5.20L17.36 8.92L19.52 8.02L19.52 17.20L26.48 17.20L26.48 8.02L28.64 8.92L30.20 5.20L25.88 2.80C25.40 4 24.26 4.84 23 4.84C21.74 4.84 20.60 4 20.12 2.80Z"/><path style="fill:var(--surface)" d="M12.45 10.74L7.12 13.70L9.04 18.29L11.71 17.18L11.71 28.50L20.29 28.50L20.29 17.18L22.96 18.29L24.88 13.70L19.55 10.74C18.96 12.22 17.55 13.26 16.00 13.26C14.45 13.26 13.04 12.22 12.45 10.74Z"/><path d="M14.4 17.6h3.4l-2 5.4"/>',
+  score: '<circle cx="16" cy="7.6" r="2.4"/><path d="M12.6 12.8 11.4 3.2M19.4 12.8l1.2-9.6"/><path d="M12.6 12.2h6.8a1 1 0 0 1 1 1V20H11.6v-6.8a1 1 0 0 1 1-1z"/><path d="M14.5 12.2V20M17.5 12.2V20"/><path d="M11.8 20h8.4l-.7 8.5h-2.4L16 23.5l-1.1 5h-2.4z"/>',
 };
 
 function renderSteps() {
