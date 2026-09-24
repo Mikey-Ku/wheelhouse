@@ -59,7 +59,7 @@ const WH = (() => {
       `<a href="${href}" class="${active === key ? "on" : ""}">${icon(ic)}<span class="${key === "profile" ? "me" : ""}">${esc(label)}</span></a>`;
     host.className = "top";
     host.innerHTML = `<div class="wrap">
-      <a class="logo" href="/">Wheel<span>house</span></a>
+      <a class="logo" href="/"><img src="/img/logo-mark.png" alt="" width="38" height="38"><span class="wm">Wheel<span>house</span></span></a>
       <div class="navlinks">
         ${link("/", "play", "Play", "play")}
         ${link("/live.html", "live", "Live", "live")}

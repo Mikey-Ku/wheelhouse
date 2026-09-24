@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Profile · Wheelhouse</title>
 <meta name="theme-color" content="#05091d">
+<link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32.png">
+<link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;1,700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -12,6 +14,9 @@
 <style>
   .auth{max-width:440px;margin:30px auto 0}
   .auth h1{font-size:44px;margin-bottom:8px}
+  .auth .brand{display:block;width:180px;height:180px;border-radius:24px;margin:0 auto 18px}
+  .auth{text-align:center}
+  .auth .card{text-align:left}
   .auth p{color:var(--secondary);margin-bottom:20px}
   .me-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:34px 0 20px}
   .me-head h1{font-size:clamp(36px,5vw,54px);word-break:break-word}
@@ -45,7 +50,8 @@ const { esc, fmt1, api } = WH;
 async function signedOut(who) {
   const main = document.getElementById("main");
   const guest = who && who.guest;
-  main.innerHTML = `<div class="auth"><h1>${guest ? "Save your results" : "Your profile"}</h1>
+  main.innerHTML = `<div class="auth"><img class="brand" src="/img/logo-full.jpg" alt="Wheelhouse" width="180" height="180">
+    <h1>${guest ? "Save your results" : "Your profile"}</h1>
     <p>${guest
       ? "You're playing as a guest. Make a profile to keep your rosters and get on the leaderboards. Everything you've played comes with you."
       : "Pick a name and a password. Your rosters, scores and spot on the leaderboards are saved to it."}</p>
