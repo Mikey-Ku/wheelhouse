@@ -35,10 +35,20 @@ the time. What is left is yardage at roughly 47% and touchdowns at far less.
 
 ## Status
 
-Playable, and playable without signing up for anything. Open `http://localhost:8080`, press
-play, and build a roster one pick at a time: spin a team, spin a player, choose what you take
-from them. Both wheels animate. Entries are stored in a file-backed database and survive a
-restart; an archived week rehydrates itself from ESPN when an old entry is resumed.
+Playable at `http://localhost:8080`. Five pages share one nav:
+
+| Page | What it is |
+|---|---|
+| Play (`/`) | This week's slates with a countdown to the next lock, past weeks, and the draft itself. A roster lives at `/?r=<id>`; a shared slip at `/?s=<token>`. |
+| Live (`/live.html`) | Every game this week: score, clock, network, and each started game's passing, rushing and receiving leaders. Your own rosters for the week sit on top. |
+| Leaderboards (`/leaderboards.html`) | One board per slate and one per past week. Each profile's best roster counts. |
+| Profile (`/profile.html`) | Sign up or sign in, change your name, and every roster you have played. |
+| Ops (`/ops.html`) | The ingestion view. Not linked. |
+
+Playing needs a profile: a name and a password, made in one step the first time you press Play.
+Rosters belong to the profile, so an id in the address bar reads or changes nothing for anyone
+else. Everything is stored in a file-backed database and survives a restart; an archived week
+rehydrates itself from ESPN when an old roster is opened.
 
 Weeks come from ESPN, so preseason, regular season and playoffs all work without a calendar
 to maintain.
@@ -120,18 +130,19 @@ in one place.
 
 ### The slip
 
-A finished roster prints as a betting slip: every pick with its raw stat and points, position
-subtotals, projected against final. It is the only light surface in the product, which is the
-point — it reads as an object you were handed rather than another panel.
+A finished roster prints as a slip: one line per pick and one number per line. Before
+kickoff that number is the projection; once a game starts it is the score, with the projection
+under it in green or red. The corner shows your rank on the board once there is a field, and
+the slip shares through a read-only link that never carries the roster's id.
 
 ## Tests
 
 ```sh
-./mvnw test                          # everything, 60 tests
-./mvnw test -DexcludedGroups=network  # the 54 not tagged network
+./mvnw test                          # everything, 69 tests
+./mvnw test -DexcludedGroups=network  # the 61 not tagged network
 ```
 
-Five of them replay a real week and therefore need ESPN and Sleeper to be reachable;
+Eight of them replay a real week and therefore need ESPN and Sleeper to be reachable;
 they are tagged `network` so CI can skip them. The rest run offline in under a second.
 
 What they pin, and why each one exists:
@@ -146,6 +157,8 @@ What they pin, and why each one exists:
 | `LiveWeekDryRunTest` | The live path, driven a poll at a time. See below. |
 | `SlateTest` | A week splits into Thursday, Sunday and Monday against the real week 3 scoreboard, each locks at its own kickoff, and Sunday never offers a team that played Thursday. |
 | `SlateDraftTest` | Every slate in the current week drafts to completion inside its own games, including a showdown filled from one game. |
+| `AccountTest` | Sign up signs you in; names are unique whatever their case; a wrong password and an unknown name get the same answer; playing needs a profile. |
+| `OwnershipTest` | Nobody else can read or spin your roster by its id, a made pick cannot be re-rolled or reassigned, and a rename reaches your rosters. |
 | `SharedSlipTest` | A share link is a separate token: the shared view carries no entry id, and the token opens nothing for writing. |
 | `ReleasedWeekTest` | A draft keeps working after its archived week is released from memory. A load run found spins failing with "no team has an eligible QB left" once more weeks were in play than the cap holds. |
 
@@ -252,17 +265,23 @@ Endpoints, all temporary scaffolding:
 | `GET /api/wheel/players?slot=FLEX&team=SF` | Who a team spin resolves to |
 | `GET /api/play/contest` | Current week and lock time |
 | `GET /api/play/slates` | This week's slates, their games and lock times |
-| `POST /api/play/open?owner=&slate=` | Open an entry for a slate (the next open one if omitted) |
-| `POST /api/play/open?owner=&season=&week=` | Open an archived week |
+| `POST /api/play/open?slate=` | Open a roster for a slate (the next open one if omitted). Needs a profile. |
+| `POST /api/play/open?season=&week=` | Open a roster for a past week. Needs a profile. |
 | `GET /api/play/archive` | Which seasons the archive can reach |
 | `POST /api/play/{id}/pick/{i}/team?respin=` | Spin a team |
 | `POST /api/play/{id}/pick/{i}/player?respin=` | Spin a player |
 | `POST /api/play/{id}/pick/{i}/choose?option=` | Take a body part |
 | `GET /api/play/leaderboard?slate=` | One slate's standings (the whole week if omitted) |
-| `GET /api/play/mine?ids=` | Summaries for entries you already hold |
-| `POST /api/play/{id}/name?owner=` | Rename a roster (1 to 24 characters) |
 | `POST /api/play/{id}/share` | Mint a read-only link token for a finished slip |
 | `GET /api/play/shared/{shareId}` | A shared slip, without its entry id or respins |
+| `POST /api/account/signup` · `signin` · `signout` | JSON `{name, password}`; sets an HttpOnly session cookie |
+| `GET /api/account/me` | Who is signed in |
+| `POST /api/account/name` | Change your name, on every roster too |
+| `GET /api/account/rosters` | Every roster on your profile, with status, score and rank |
+| `GET /api/boards` | Every leaderboard worth listing |
+| `GET /api/boards/one?contestId=&slate=` | One board, best roster per profile |
+| `GET /api/scores` | This week's games with scores and clocks (cached 15s) |
+| `GET /api/scores/{eventId}` | One game's passing, rushing and receiving leaders |
 
 ## Design notes
 
@@ -293,12 +312,16 @@ every athlete who plays arrives with an id, a name and a team, which is enough t
 against the catalog by normalised name. It only has to resolve players who actually play,
 which is precisely the set that can have scored anything.
 
-**An entry id is a bearer token.** Every pick endpoint accepts one on its own and asks nothing
-else, which is fine for a link you send a friend and only fine while the id stays secret. It was
-not secret: the leaderboard published one for every player on it, and a lookup by display name
-handed back the rest. A name printed on a public board was therefore enough to read somebody's
-roster and spend their respins. The board no longer carries ids, the name lookup is gone, and
-`/mine` takes the ids the caller already holds, so there is nothing left to enumerate.
+**A roster belongs to a profile, not to whoever holds its id.** The id used to be the whole
+credential: every pick endpoint accepted it alone, and at one point the leaderboard published one
+per player. Rosters now carry the profile that made them, and every read or write checks it, so
+an id in the address bar or a screenshot opens nothing for anyone else. Rosters played before
+profiles have no owner and are handed to the first signed-in browser that holds their id.
+Shared slips use a separate read-only token.
+
+**A made pick is final.** Only the pick being played can be spun or chosen. Without that, a
+past week's roster could be completed, its results read, and a bad pick respun or reassigned
+to climb the board.
 
 **Actuals are withheld on the server, not hidden by the page.** While a roster is being
 built the API response contains projections and nothing else: no actual values, no actual
@@ -400,18 +423,16 @@ for kickoff.
 
 ## Next
 
-- **Accounts.** The entry id is now the capability: unguessable, held in localStorage, and the
-  only thing that reaches a draft. That is enough for a shared link and not enough to follow you
-  between devices. OAuth through Supabase is the next step, and it only needs a deployed
-  callback URL to start.
+- **Accounts on a host.** Profiles are a name and a PBKDF2 password with a session cookie,
+  which is right for running locally and for friends. On a public host this is the piece to
+  swap for a real identity provider; nothing outside the `account` package knows how a user
+  was established.
 - **Decide whether the lopsided choice still needs a fix.** Standard scoring means the highest
   expected option is nearly always the same one. The uniqueness rule is now in (each part goes
   once per position), which turns the question into which player gets the good part. Worth
   playing a few weeks before deciding whether anything further is needed.
 - **The replayer**: stream a finished game through the pipeline at speed, so scoring can be
   developed out of season and the determinism claim can actually be tested.
-- Accounts, so a name is not the only identity. Deliberately deferred: the game has to be
-  playable in under a minute from a shared link.
 
 Open design question: the QB slot's team spin is mostly theatre. Fifteen of thirty-two teams
 have exactly one eligible quarterback, so the spin resolves to a forced pick. Probably the

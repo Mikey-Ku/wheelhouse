@@ -36,12 +36,13 @@ class ReleasedWeekTest {
     @Autowired
     private WebApplicationContext context;
 
-    private final ObjectMapper mapper = new ObjectMapper();
+    private Api api;
 
     private JsonNode post(String path) throws Exception {
-        MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).build();
-        return mapper.readTree(mvc.perform(MockMvcRequestBuilders.post(path))
-                .andReturn().getResponse().getContentAsString());
+        if (api == null) {
+            api = Api.signedUp(context);
+        }
+        return api.post(path);
     }
 
     @Test

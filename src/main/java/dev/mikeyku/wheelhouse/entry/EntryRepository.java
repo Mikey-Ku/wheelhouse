@@ -10,4 +10,6 @@ public interface EntryRepository extends JpaRepository<EntryRecord, String> {
     List<EntryRecord> findByContestId(String contestId);
 
     Optional<EntryRecord> findByShareId(String shareId);
+
+    List<EntryRecord> findByUserId(String userId);
 }

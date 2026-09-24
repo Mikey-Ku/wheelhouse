@@ -1,5 +1,6 @@
 package dev.mikeyku.wheelhouse.entry;
 
+import dev.mikeyku.wheelhouse.account.UserRecord;
 import dev.mikeyku.wheelhouse.contest.Contest;
 import dev.mikeyku.wheelhouse.contest.ContestService;
 import dev.mikeyku.wheelhouse.contest.Slate;
@@ -63,6 +64,12 @@ public class EntryService {
     private final int playerRespins;
 
     /**
+     * A showdown is one game. Three respins of each on a pool that small is a free pick of the
+     * whole field, so it gets one of each.
+     */
+    private final int showdownRespins;
+
+    /**
      * Defaults on, and must stay on in production: an unlocked week means someone can build a
      * roster after seeing the results. Turn it off only to exercise the flow out of season,
      * when every game on the current scoreboard has already finished.
@@ -74,7 +81,8 @@ public class EntryService {
                         @Value("${wheelhouse.contest.enforce-lock:true}") boolean enforceLock,
                         @Value("${wheelhouse.wheel.showdown-floor:3.0}") double showdownFloor,
                         @Value("${wheelhouse.respins.team:3}") int teamRespins,
-                        @Value("${wheelhouse.respins.player:3}") int playerRespins) {
+                        @Value("${wheelhouse.respins.player:3}") int playerRespins,
+                        @Value("${wheelhouse.respins.showdown:1}") int showdownRespins) {
         this.entries = entries;
         this.spins = spins;
         this.contests = contests;
@@ -85,6 +93,7 @@ public class EntryService {
         this.showdownFloor = showdownFloor;
         this.teamRespins = teamRespins;
         this.playerRespins = playerRespins;
+        this.showdownRespins = showdownRespins;
     }
 
     @Transactional
@@ -100,14 +109,19 @@ public class EntryService {
      * the entry id the browser is holding, which is the only thing that ever identified a
      * specific roster.
      */
-    public EntryRecord openEntry(String owner, Contest contest, Slate slate) {
+    public EntryRecord openEntry(UserRecord user, Contest contest, Slate slate) {
         if (enforceLock && slate != null && slate.locked(Instant.now())) {
-            throw new IllegalStateException(slate.label() + " has kicked off");
+            throw new IllegalStateException(slate.label() + " has kicked off.");
         }
         Format format = slate == null ? Format.CLASSIC : slate.format();
-        return entries.save(new EntryRecord(
+        boolean showdown = format == Format.SHOWDOWN;
+        EntryRecord entry = new EntryRecord(
                 UUID.randomUUID().toString(), contest.id(), slate == null ? null : slate.key(),
-                format, owner.trim(), Instant.now(), teamRespins, playerRespins));
+                format, user.name(), Instant.now(),
+                showdown ? showdownRespins : teamRespins,
+                showdown ? showdownRespins : playerRespins);
+        entry.userId(user.id());
+        return entries.save(entry);
     }
 
     @Transactional
@@ -118,12 +132,13 @@ public class EntryService {
         if (pick.team() != null && !respin) {
             return entry;
         }
+        mustBeActive(entry, pick);
         if (respin) {
             if (pick.team() == null) {
-                throw new IllegalStateException("nothing to respin yet");
+                throw new IllegalStateException("Spin first.");
             }
             if (entry.teamRespins() <= 0) {
-                throw new IllegalStateException("no team respins left");
+                throw new IllegalStateException("No team respins left.");
             }
         }
 
@@ -154,7 +169,8 @@ public class EntryService {
                         .anyMatch(c -> !rostered.contains(c.id())))
                 .toList();
         if (options.isEmpty()) {
-            throw new IllegalStateException("no team has an eligible " + pick.slot() + " left");
+            throw new IllegalStateException(pick.slot() == Slot.FLEX
+                    ? "No receivers left to spin." : "No " + pick.slot() + "s left to spin.");
         }
         // A respin that could hand back the same team is not a respin.
         if (avoidCurrent && options.size() > 1) {
@@ -172,17 +188,18 @@ public class EntryService {
         EntryRecord.PickRecord pick = entry.pick(pickIndex);
 
         if (pick.team() == null) {
-            throw new IllegalStateException("spin a team first");
+            throw new IllegalStateException("Spin first.");
         }
         if (pick.playerId() != null && !respin) {
             return entry;
         }
+        mustBeActive(entry, pick);
         if (respin) {
             if (pick.playerId() == null) {
-                throw new IllegalStateException("nothing to respin yet");
+                throw new IllegalStateException("Spin first.");
             }
             if (entry.playerRespins() <= 0) {
-                throw new IllegalStateException("no player respins left");
+                throw new IllegalStateException("No player respins left.");
             }
         }
 
@@ -206,7 +223,7 @@ public class EntryService {
         }
         if (options.isEmpty()) {
             throw new IllegalStateException(
-                    "everyone eligible on " + pick.team() + " is already on your roster");
+                    "Everyone left on " + pick.team() + " is already on your roster. Respin the team.");
         }
 
         Player player = random(options, seed(entryId, pickIndex, PLAYER, respin));
@@ -228,19 +245,20 @@ public class EntryService {
     public EntryRecord choose(String entryId, int pickIndex, String option) {
         EntryRecord entry = require(entryId);
         EntryRecord.PickRecord pick = entry.pick(pickIndex);
+        mustBeActive(entry, pick);
 
         if (pick.playerId() == null) {
-            throw new IllegalStateException("spin a player first");
+            throw new IllegalStateException("Spin first.");
         }
         pick.slot().option(option)
                 .orElseThrow(() -> new IllegalArgumentException(
-                        option + " is not an option for " + pick.slot()));
+                        "That stat isn't an option here."));
 
         // Each part is covered once per position, which is what forces the allocation to matter.
         boolean alreadyUsed = entry.picksInPosition(pick.position()).stream()
                 .anyMatch(p -> p.pickIndex() != pickIndex && option.equalsIgnoreCase(p.option()));
         if (alreadyUsed) {
-            throw new IllegalStateException(option + " is already covered in this position");
+            throw new IllegalStateException("You already used that stat for this position.");
         }
 
         pick.option(option);
@@ -318,6 +336,21 @@ public class EntryService {
         return slate != null ? slate.locked(Instant.now()) : now.locked(Instant.now());
     }
 
+    /**
+     * Only the pick being made can change. A made pick is final: on an archived week the whole
+     * roster's results are shown the moment it is complete, and re-rolling or re-assigning a
+     * pick after that would let anyone read the answer and then change their question.
+     */
+    private void mustBeActive(EntryRecord entry, EntryRecord.PickRecord pick) {
+        if (pick.filled()) {
+            throw new IllegalStateException("That pick is already made.");
+        }
+        EntryRecord.PickRecord active = entry.activePick();
+        if (active == null || active.pickIndex() != pick.pickIndex()) {
+            throw new IllegalStateException("Finish your current pick first.");
+        }
+    }
+
     /** Nobody appears twice on the same roster, in any position. */
     private Set<String> rosteredPlayerIds(EntryRecord entry, int excludingPick) {
         return entry.picks().stream()
@@ -361,9 +394,9 @@ public class EntryService {
     @Transactional
     public String share(String entryId) {
         EntryRecord entry = entries.findById(entryId)
-                .orElseThrow(() -> new IllegalArgumentException("no such entry"));
+                .orElseThrow(() -> new IllegalArgumentException("That roster doesn't exist."));
         if (!entry.complete()) {
-            throw new IllegalStateException("finish the roster first");
+            throw new IllegalStateException("Finish the roster first.");
         }
         if (entry.shareId() == null) {
             entry.shareId(UUID.randomUUID().toString().replace("-", "").substring(0, 12));
@@ -376,38 +409,22 @@ public class EntryService {
         return shareId == null ? null : entries.findByShareId(shareId).orElse(null);
     }
 
-    /**
-     * Renames the roster. The name is what the leaderboard shows, so it is allowed after the
-     * lock as well; nothing about the picks changes.
-     */
-    @Transactional
-    public EntryRecord rename(String entryId, String owner) {
-        EntryRecord entry = entries.findById(entryId)
-                .orElseThrow(() -> new IllegalArgumentException("no such entry"));
-        String name = owner == null ? "" : owner.strip().replaceAll("\\s+", " ");
-        if (name.isEmpty() || name.length() > 24) {
-            throw new IllegalArgumentException("names are 1 to 24 characters");
-        }
-        entry.owner(name);
-        return entries.save(entry);
-    }
-
     public EntryRecord byId(String entryId) {
         return entries.findById(entryId).orElse(null);
     }
 
     private EntryRecord require(String entryId) {
         EntryRecord entry = entries.findById(entryId)
-                .orElseThrow(() -> new IllegalArgumentException("no such entry"));
+                .orElseThrow(() -> new IllegalArgumentException("That roster doesn't exist."));
         if (enforceLock && locked(entry)) {
-            throw new IllegalStateException("locked, kickoff has passed");
+            throw new IllegalStateException("This slate has kicked off.");
         }
         return entry;
     }
 
     private <T> T random(List<T> options, long seed) {
         if (options.isEmpty()) {
-            throw new IllegalStateException("wheel has nothing to land on");
+            throw new IllegalStateException("Nothing left to spin.");
         }
         return options.get(new Random(seed).nextInt(options.size()));
     }

@@ -96,7 +96,7 @@ public class ArchiveService {
     public Contest load(int season, int week) {
         if (season < earliestSeason() || season > latestSeason()) {
             throw new IllegalArgumentException(
-                    "archive covers " + earliestSeason() + " to " + latestSeason());
+                    "Past weeks go from " + earliestSeason() + " to " + latestSeason() + ".");
         }
         Contest contest = Contest.archived(season, week);
         // Projections are part of being loaded. Without them in the latch, the second visit to
@@ -119,7 +119,7 @@ public class ArchiveService {
             List<EspnClient.GameRef> games = espn.scoreboard(season, 2, week);
             if (games.isEmpty()) {
                 throw new IllegalArgumentException(
-                        "no games found for " + season + " week " + week);
+                        "No games in " + season + " week " + week + ".");
             }
             int stats = 0;
             for (EspnClient.GameRef game : games) {
@@ -141,8 +141,10 @@ public class ArchiveService {
             throw e;
         } catch (Exception e) {
             loaded.evict(contest.id());
-            throw new IllegalStateException("could not load " + season + " week " + week + ": "
-                    + e.getMessage());
+            // The cause goes to the log, not the page: it is an ESPN URL and a status code.
+            log.warn("could not load {} week {}: {}", season, week, e.toString());
+            throw new IllegalStateException("Couldn't load " + season + " week " + week
+                    + ". Try again in a minute.");
         }
     }
 

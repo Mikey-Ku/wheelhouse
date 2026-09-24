@@ -48,6 +48,12 @@ public class EntryRecord {
     private String owner;
 
     /**
+     * The profile this roster belongs to. Null only for rosters played before profiles
+     * existed, which are handed over when their browser signs in.
+     */
+    private String userId;
+
+    /**
      * What a shared link carries, never the entry id. The entry id opens the draft for writing,
      * so a slip posted to a group chat must not contain it. Minted on the first share.
      */
@@ -111,6 +117,8 @@ public class EntryRecord {
     public String owner() { return owner; }
     public void owner(String owner) { this.owner = owner; }
     public String shareId() { return shareId; }
+    public String userId() { return userId; }
+    public void userId(String userId) { this.userId = userId; }
     public void shareId(String shareId) { this.shareId = shareId; }
     public Instant createdAt() { return createdAt; }
     public Instant submittedAt() { return submittedAt; }
@@ -123,7 +131,7 @@ public class EntryRecord {
 
     public PickRecord pick(int index) {
         return picks.stream().filter(p -> p.pickIndex() == index).findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("no pick " + index));
+                .orElseThrow(() -> new IllegalArgumentException("That pick doesn't exist."));
     }
 
     /** One of the fourteen: a player, and which part of their position they cover. */

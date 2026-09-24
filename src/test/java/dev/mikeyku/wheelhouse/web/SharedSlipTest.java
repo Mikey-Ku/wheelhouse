@@ -5,12 +5,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -29,15 +25,13 @@ class SharedSlipTest {
     @Autowired
     private WebApplicationContext context;
 
-    private final ObjectMapper mapper = new ObjectMapper();
+    private Api api;
 
-    /** Paths are URL templates here: a literal space is encoded by MockMvc, so tests write one. */
     private JsonNode call(String method, String path) throws Exception {
-        MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).build();
-        return mapper.readTree((method.equals("POST")
-                ? mvc.perform(MockMvcRequestBuilders.post(path))
-                : mvc.perform(MockMvcRequestBuilders.get(path)))
-                .andReturn().getResponse().getContentAsString());
+        if (api == null) {
+            api = Api.signedUp(context);
+        }
+        return method.equals("POST") ? api.post(path) : api.get(path);
     }
 
     @Test
@@ -76,19 +70,6 @@ class SharedSlipTest {
         // The token is not an entry id anywhere else.
         assertThat(call("POST", "/api/play/" + share + "/pick/0/choose?option=arm").has("error"))
                 .isTrue();
-        assertThat(call("POST", "/api/play/" + share + "/name?owner=someone").has("error"))
-                .isTrue();
-    }
-
-    @Test
-    void aRenameIsBoundedAndTidied() throws Exception {
-        JsonNode view = call("POST", "/api/play/open?owner=Player AB12&season=2023&week=9");
-        String id = view.path("entryId").asText();
-
-        assertThat(call("POST", "/api/play/" + id + "/name?owner=  ").has("error")).isTrue();
-        assertThat(call("POST", "/api/play/" + id + "/name?owner=" + "x".repeat(25)).has("error"))
-                .isTrue();
-        assertThat(call("POST", "/api/play/" + id + "/name?owner= Mikey  Ku ")
-                .path("owner").asText()).isEqualTo("Mikey Ku");
+        assertThat(call("POST", "/api/play/" + share + "/share").has("error")).isTrue();
     }
 }

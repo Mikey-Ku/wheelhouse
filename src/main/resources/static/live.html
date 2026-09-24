@@ -1,248 +1,168 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="loading">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Wheelhouse — live</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Live · Wheelhouse</title>
 <meta name="theme-color" content="#05091d">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;1,700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css">
 <style>
-  :root{
-    --bg:#05091d; --surface:#131b38; --surface-deep:#0b1028; --line:#25345d; --line-hi:#344677;
-    --text:#ffffff; --secondary:#98b3d6; --muted:#5f7ba9; --dim:#4c5e93;
-    --accent:#00fff9; --accent-ink:#05091d; --live:#ff4d6d; --loss:#ff4d6d;
-    --display:"Barlow Condensed","Helvetica Neue",sans-serif;
-    --sans:"Inter",-apple-system,sans-serif;
-    --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace}
-  *{box-sizing:border-box;margin:0;padding:0}
-  html{background:var(--bg)}
-  body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.5;
-    -webkit-font-smoothing:antialiased;padding-bottom:80px}
-  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
-  @media (max-width:600px){.wrap{padding:0 16px}}
-
-  nav{border-bottom:1px solid var(--line);background:rgba(5,9,29,.9);backdrop-filter:blur(12px);
-    position:sticky;top:0;z-index:10}
-  .nav-inner{display:flex;align-items:center;gap:24px;height:62px}
-  .logo{font-family:var(--display);font-weight:700;font-size:24px;letter-spacing:.04em;text-transform:uppercase}
-  .logo span{color:var(--accent)}
-  .nav-links{display:flex;gap:28px;margin-left:auto}
-  .nav-links a{font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
-    color:var(--secondary);text-decoration:none;padding:6px 0;border-bottom:2px solid transparent}
-  .nav-links a.on{color:var(--text);border-bottom-color:var(--accent)}
-
-  h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,5vw,52px);line-height:.96;
-    text-transform:uppercase;letter-spacing:.01em;margin:30px 0 22px}
-  h1 em{font-style:normal;color:var(--accent)}
-  h2{font-family:var(--display);font-weight:700;font-size:26px;text-transform:uppercase;
-    letter-spacing:.02em;margin-bottom:12px}
-  section{margin-top:40px}
-
-  .btn{display:inline-block;background:var(--accent);color:var(--accent-ink);border-radius:8px;
-    padding:13px 26px;font-weight:600;font-size:14px;letter-spacing:.06em;text-transform:uppercase;
-    text-decoration:none;border:none;cursor:pointer;font-family:var(--sans)}
-  .btn.ghost{background:none;color:var(--accent);border:1px solid var(--line-hi)}
-
-  .empty{border:1px dashed var(--line-hi);border-radius:14px;padding:44px 20px;text-align:center}
-  .empty .big{font-family:var(--display);font-weight:700;font-size:24px;text-transform:uppercase;
-    color:var(--secondary);margin-bottom:18px}
-
-  /* ---- a live slip ---- */
-  .slips{display:grid;gap:16px}
-  .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
-  .card-head{display:flex;align-items:center;gap:14px;padding:16px 18px;background:var(--surface-deep);
-    border-bottom:1px solid var(--line);flex-wrap:wrap}
-  .ch-name{font-family:var(--display);font-weight:700;font-size:24px;text-transform:uppercase;line-height:1}
-  .ch-owner{color:var(--secondary);font-size:13px}
-  .pill{font-size:10.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;border-radius:999px;
-    padding:4px 10px;border:1px solid var(--line-hi);color:var(--secondary);display:inline-flex;gap:7px;align-items:center}
-  .pill.live{border-color:var(--live);color:var(--live)}
-  .pill.final{border-color:var(--accent);color:var(--accent)}
-  .dot{width:6px;height:6px;border-radius:50%;background:var(--live);animation:pulse 1.8s infinite}
-  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,77,109,.7)}70%{box-shadow:0 0 0 7px rgba(255,77,109,0)}100%{box-shadow:0 0 0 0 rgba(255,77,109,0)}}
-  .ch-total{margin-left:auto;text-align:right}
-  .ch-total .n{font-family:var(--display);font-weight:700;font-size:34px;line-height:1}
-  .ch-total small{display:block;font-family:var(--mono);font-size:11px;color:var(--muted)}
-
-  .row{display:grid;grid-template-columns:88px minmax(0,1fr) 120px 92px 64px;gap:12px;align-items:center;
-    padding:10px 18px;border-bottom:1px solid rgba(37,52,93,.55)}
-  .row:last-child{border-bottom:none}
-  .row.sec{background:rgba(11,16,40,.6);padding:7px 18px;font-size:10.5px;font-weight:600;
-    letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
-  .part{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--secondary)}
-  .who{display:flex;align-items:center;gap:10px;min-width:0}
-  .who img.face{width:36px;height:26px;object-fit:cover;border-radius:4px;background:var(--surface-deep)}
-  .who .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
-  .who .tm{font-family:var(--mono);font-size:11px;color:var(--muted)}
-  .state{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
-  .state.in{color:var(--live)}
-  .state.post{color:var(--secondary)}
-  .num{font-family:var(--mono);font-size:13px;text-align:right;color:var(--secondary)}
-  .num small{display:block;font-size:10.5px;color:var(--dim)}
-  .pts{font-family:var(--display);font-weight:700;font-size:22px;text-align:right}
-  .pts.pend{color:var(--dim)}
-  .pts.up{color:var(--accent)}
-  @media (max-width:640px){
-    .row{grid-template-columns:84px minmax(0,1fr) 54px;row-gap:2px;padding:10px 14px}
-    .part{font-size:10px;letter-spacing:.06em}
-    .row .state{grid-column:2;grid-row:2}
-    .row .num{display:none}
-    .row .pts{grid-row:1/3;grid-column:3}
-    .row.sec{grid-template-columns:1fr}
-  }
-  .resume{padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;
-    color:var(--secondary)}
-
-  /* ---- leaderboard ---- */
-  table{width:100%;border-collapse:collapse}
-  td,th{padding:11px 18px;text-align:left;border-bottom:1px solid rgba(37,52,93,.55);font-size:14px}
-  th{font-size:10.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
-  td.n{text-align:right;font-family:var(--mono)}
-  tr.me td{color:var(--accent)}
+  .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+  .filters button{height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line-hi);background:var(--surface);
+    color:var(--secondary);font-family:var(--sans);font-size:12.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+  .filters button.on{background:var(--text);color:var(--bg);border-color:var(--text)}
+  .mine{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px}
+  .mine a{flex:0 0 auto;display:flex;align-items:center;gap:12px;text-decoration:none;background:rgba(19,27,56,.9);
+    border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+  .mine a:hover{border-color:var(--accent)}
+  .mine b{font-family:var(--display);font-size:24px;line-height:1}
+  .mine small{display:block;font-size:11px;color:var(--muted)}
+  .day{margin-top:28px}
+  .day-head{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+  .games{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:12px}
+  .game{background:rgba(19,27,56,.92);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .game.in{border-color:rgba(255,77,109,.6)}
+  .game button.face-btn{all:unset;box-sizing:border-box;display:block;width:100%;padding:14px 16px;cursor:pointer}
+  .game button.face-btn:disabled{cursor:default}
+  .g-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:12.5px;color:var(--secondary)}
+  .g-top .clock{display:flex;align-items:center;gap:7px;font-family:var(--mono)}
+  .game.in .g-top .clock{color:var(--live)}
+  .g-team{display:grid;grid-template-columns:32px minmax(0,1fr) auto;gap:12px;align-items:center;padding:5px 0}
+  .g-team .nm{font-family:var(--display);font-weight:700;font-size:22px;line-height:1}
+  .g-team .rec{font-size:12px;color:var(--muted);margin-left:6px;font-family:var(--sans);font-weight:400}
+  .g-team .sc{font-family:var(--display);font-weight:700;font-size:28px;font-variant-numeric:tabular-nums}
+  .game.post .g-team.lost{opacity:.55}
+  .leaders{border-top:1px solid var(--line);padding:12px 16px 14px;background:rgba(11,16,40,.6)}
+  .ld-team{margin-bottom:10px}
+  .ld-team:last-child{margin-bottom:0}
+  .ld-team h4{font-size:11.5px;font-weight:600;letter-spacing:.12em;color:var(--muted);margin-bottom:4px}
+  .ld{display:grid;grid-template-columns:78px minmax(0,1fr);gap:8px;font-size:13.5px;padding:3px 0}
+  .ld span:first-child{color:var(--muted);font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+  .ld b{font-weight:600}
+  .ld em{font-style:normal;color:var(--secondary);font-family:var(--mono);font-size:12.5px;margin-left:6px}
+  .hint{font-size:12px;color:var(--muted);margin-top:8px}
 </style>
 </head>
-<body>
-
-<nav><div class="wrap nav-inner">
-  <div class="logo">Wheel<span>house</span></div>
-  <div class="nav-links"><a href="/">Play</a><a href="/live.html" class="on">Live</a></div>
-</div></nav>
-
-<div class="wrap">
-  <h1 id="title">Live</h1>
-  <div id="slips" class="slips"></div>
-  <div id="boards"></div>
-</div>
-
+<body data-page="live">
+<nav id="nav" class="top"></nav>
+<main class="wrap">
+  <div class="page-head"><h1 id="title">Live</h1><p>Every game this week. Tap a game that has started for its leaders.</p></div>
+  <div id="mineSec"></div>
+  <div class="filters" id="filters"></div>
+  <div id="days"></div>
+</main>
+<script src="/app.js"></script>
 <script>
-const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const fmt = n => n == null ? "0" : (Math.round(n * 10) / 10).toString();
-const NOPHOTO = "https://a.espncdn.com/i/headshots/nophoto.png";
-const ET = { timeZone: "America/New_York" };
-const kickoffText = iso => new Date(iso).toLocaleString("en-US",
-  Object.assign({ weekday: "short", hour: "numeric", minute: "2-digit" }, ET)).replace(":00", "");
-const posLabel = (slot, i) => slot === "FLEX" ? "Flex" + (i > 2 ? " " + (i - 1) : "") : slot;
+const { esc, fmt1, api } = WH;
+let data = null;
+let slates = [];
+let filter = "all";
+const open = new Set();
+const leaders = new Map();
 
-async function api(path, params) {
-  const r = await fetch("/api/play" + path + (params ? "?" + new URLSearchParams(params) : ""));
-  const body = await r.json();
-  if (!r.ok || body.error) throw new Error(body.error || "request failed");
-  return body;
+const LABEL = key => (slates.find(s => s.key === key) || {}).label || "Other games";
+
+function gameCard(g) {
+  const started = g.state !== "pre";
+  const clock = g.state === "pre"
+    ? `${esc(WH.kickoffText(g.kickoff))}${g.network ? " &middot; " + esc(g.network) : ""}`
+    : g.state === "in" ? `<span class="dot"></span>${esc(g.detail)}` : esc(g.detail || "Final");
+  const team = (t, other) => {
+    const lost = g.state === "post" && Number(t.score) < Number(other.score);
+    return `<div class="g-team ${lost ? "lost" : ""}"><img class="crest" src="${esc(t.logo)}" alt="">
+      <span class="nm">${esc(t.abbr)}<span class="rec">${esc(t.record)}</span></span>
+      <span class="sc">${started ? esc(t.score) : ""}</span></div>`;
+  };
+  const ld = open.has(g.id) ? leadersHtml(g.id) : "";
+  return `<div class="game ${esc(g.state)}">
+    <button class="face-btn" data-id="${esc(g.id)}" ${started ? "" : "disabled"} aria-expanded="${open.has(g.id)}">
+      <div class="g-top"><span class="clock">${clock}</span>${started ? `<span>${open.has(g.id) ? "Hide" : "Leaders"}</span>` : ""}</div>
+      ${team(g.away, g.home)}${team(g.home, g.away)}
+    </button>${ld}</div>`;
 }
 
-// Entry ids this browser holds. The server will not say which rosters are yours; only the ids
-// already in hand can be asked about.
-function myEntries() {
+function leadersHtml(id) {
+  const d = leaders.get(id);
+  if (!d) return `<div class="leaders"><span class="muted small">Loading…</span></div>`;
+  if (!d.teams || !d.teams.length) return `<div class="leaders"><span class="muted small">No stats yet.</span></div>`;
+  return `<div class="leaders">${d.teams.map(t => `<div class="ld-team"><h4>${esc(t.abbr)}</h4>
+    ${t.leaders.map(l => `<div class="ld"><span>${esc(l.stat)}</span><span><b>${esc(l.name)}</b><em>${esc(l.line)}</em></span></div>`).join("")}
+  </div>`).join("")}</div>`;
+}
+
+function render() {
+  const games = data ? data.games : [];
+  const keys = [...new Set(games.map(g => g.slate || "other"))];
+  document.getElementById("filters").innerHTML = keys.length > 1
+    ? [`<button data-f="all" class="${filter === "all" ? "on" : ""}">All</button>`]
+        .concat(keys.map(k => `<button data-f="${esc(k)}" class="${filter === k ? "on" : ""}">${esc(LABEL(k))}</button>`)).join("")
+    : "";
+  const shown = keys.filter(k => filter === "all" || filter === k);
+  document.getElementById("days").innerHTML = shown.map(k => {
+    const list = games.filter(g => (g.slate || "other") === k)
+      .sort((a, b) => (a.state === "in" ? -1 : 0) - (b.state === "in" ? -1 : 0) || new Date(a.kickoff) - new Date(b.kickoff));
+    return `<section class="day"><div class="day-head">${WH.badge(k, LABEL(k), "lg")}</div>
+      <div class="games">${list.map(gameCard).join("")}</div></section>`;
+  }).join("") || `<div class="empty"><b>No games</b>Check back when the week's schedule is out.</div>`;
+}
+
+async function renderMine() {
+  const host = document.getElementById("mineSec");
+  const who = await WH.me();
+  if (!who.signedIn) { host.innerHTML = ""; return; }
   try {
-    const raw = JSON.parse(localStorage.getItem("wh.entries") || "[]");
-    return Array.isArray(raw) ? raw.filter(x => typeof x === "string") : [];
-  } catch (e) { return []; }
+    const rs = (await api("/api/account/rosters")).rosters.filter(r => r.current && r.complete);
+    if (!rs.length) { host.innerHTML = ""; return; }
+    host.innerHTML = `<div class="sec-head" style="margin-top:0"><h2>Your rosters</h2></div>
+      <div class="mine">${rs.map(r => {
+        const pending = r.status === "pending";
+        return `<a href="/?r=${esc(r.entryId)}">${WH.badge(r.slate, r.label.split(" · ")[1] || r.label)}
+          <div><b>${fmt1(pending ? r.projectedTotal : r.total)}</b>
+            <small>${pending ? "projected" : r.status === "live" ? "live" : "final"}${r.standing && r.standing.of > 1 && !pending
+              ? " &middot; " + WH.ordinal(r.standing.rank) + " of " + r.standing.of : ""}</small></div></a>`;
+      }).join("")}</div><div style="height:18px"></div>`;
+  } catch (e) { host.innerHTML = ""; }
 }
 
-const gameOf = p => p.game || { state: "post" };
-
-function status(entry) {
-  const games = entry.positions.flatMap(p => p.picks).map(gameOf);
-  if (games.every(g => g.state === "post")) return "final";
-  if (games.some(g => g.state === "in" || g.state === "post")) return "live";
-  return "pending";
+async function toggle(id) {
+  if (open.has(id)) { open.delete(id); render(); return; }
+  open.add(id);
+  render();
+  try { leaders.set(id, await api(`/api/scores/${encodeURIComponent(id)}`)); }
+  catch (e) { leaders.set(id, { teams: [] }); }
+  render();
 }
 
-function row(p) {
-  const g = gameOf(p);
-  const part = (p.options.find(o => o.key === p.chosen) || {}).part || p.chosen || "";
-  const pl = p.player || {};
-  const state = g.state === "pre" ? (g.kickoff ? kickoffText(g.kickoff) : "Not started")
-    : g.state === "in" ? (g.detail || "Live") : "Final";
-  const pre = g.state === "pre";
-  const beat = !pre && p.points > p.projectedPoints;
-  return `<div class="row">
-    <span class="part">${esc(part)}</span>
-    <span class="who"><img class="face" src="${esc(pl.image || NOPHOTO)}" alt=""
-        onerror="this.onerror=null;this.src='${NOPHOTO}'">
-      <span style="min-width:0"><div class="nm">${esc(pl.name)}</div>
-        <div class="tm">${esc(p.team)}${p.opponent ? " vs " + esc(p.opponent) : ""}</div></span></span>
-    <span class="state ${esc(g.state)}">${esc(state)}</span>
-    <span class="num">${pre ? "&middot;" : fmt(p.raw)}<small>proj ${fmt(p.projectedRaw)}</small></span>
-    <span class="pts ${pre ? "pend" : beat ? "up" : ""}">${pre ? "&middot;" : fmt(p.points)}</span>
-  </div>`;
-}
-
-function slipCard(entry) {
-  if (!entry.complete) {
-    return `<div class="card"><div class="card-head">
-        <span class="ch-name">${esc(entry.slateLabel || entry.contest.label)}</span>
-        <span class="ch-owner">${esc(entry.owner)}</span></div>
-      <div class="resume"><span>${entry.positions.flatMap(p => p.picks).filter(p => p.chosen).length}
-        of ${entry.totalPicks} picked</span>
-        ${entry.locked ? '<span class="pill">Locked</span>'
-          : `<button class="btn ghost" data-resume="${esc(entry.entryId)}">Finish it</button>`}</div></div>`;
+async function load() {
+  try { data = await api("/api/scores"); } catch (e) { data = data || { games: [] }; }
+  if (data.week) document.getElementById("title").innerHTML = `${esc(data.week)} <span style="color:var(--accent)">Live</span>`;
+  // Leaders for open live games move too.
+  for (const id of open) {
+    const g = data.games.find(x => x.id === id);
+    if (g && g.state === "in") {
+      try { leaders.set(id, await api(`/api/scores/${encodeURIComponent(id)}`)); } catch (e) { /* keep */ }
+    }
   }
-  const st = status(entry);
-  const pill = st === "live" ? '<span class="pill live"><span class="dot"></span>Live</span>'
-    : st === "final" ? '<span class="pill final">Final</span>' : '<span class="pill">Pending</span>';
-  const body = entry.positions.map(pos =>
-    `<div class="row sec"><span>${esc(posLabel(pos.slot, pos.index))}</span></div>`
-    + pos.picks.map(row).join("")).join("");
-  return `<div class="card">
-    <div class="card-head">
-      <span class="ch-name">${esc(entry.slateLabel || entry.contest.label)}</span>
-      ${pill}<span class="ch-owner">${esc(entry.owner)}</span>
-      <div class="ch-total"><div class="n">${st === "pending" ? "&middot;" : fmt(entry.total)}</div>
-        <small>proj ${fmt(entry.projectedTotal)}</small></div>
-    </div>${body}</div>`;
+  render();
 }
 
-async function board(contestId, slate, label, mine) {
-  const rows = await api("/leaderboard", { contestId, slate });
-  if (rows.length < 2) return "";
-  return `<section><h2>${esc(label)}</h2><div class="card"><table>
-    <tr><th style="width:44px">#</th><th>Player</th><th style="text-align:right">Pts</th></tr>
-    ${rows.slice(0, 15).map((r, i) => `<tr class="${mine.has(r.owner) ? "me" : ""}">
-      <td>${i + 1}</td><td>${esc(r.owner)}</td>
-      <td class="n">${r.complete ? fmt(r.total) : "&middot;"}</td></tr>`).join("")}
-  </table></div></section>`;
-}
-
-async function refresh() {
-  const slipsHost = document.getElementById("slips");
-  let week = null;
-  try { week = (await api("/slates")).week; } catch (e) {}
-  if (week) document.getElementById("title").innerHTML = `${esc(week.label)} <em>Live</em>`;
-
-  const ids = myEntries();
-  let summaries = [];
-  try { summaries = ids.length ? await api("/mine", { ids: ids.join(",") }) : []; } catch (e) {}
-  // This week's rosters only. The vault has its own slip on the Play page.
-  const live = summaries.filter(s => week && s.contestId === week.id).slice(0, 12);
-
-  if (!live.length) {
-    slipsHost.innerHTML = `<div class="empty"><div class="big">No rosters this week</div>
-      <a class="btn" href="/">Play</a></div>`;
-    document.getElementById("boards").innerHTML = "";
-    return;
-  }
-
-  const entries = (await Promise.all(live.map(s => api("/" + s.entryId).catch(() => null))))
-    .filter(Boolean);
-  slipsHost.innerHTML = entries.map(slipCard).join("");
-  slipsHost.querySelectorAll("[data-resume]").forEach(b => b.addEventListener("click", () => {
-    localStorage.setItem("wh.entry", b.dataset.resume);
-    location.href = "/";
-  }));
-
-  const mine = new Set(entries.map(e => e.owner));
-  const slates = [...new Map(entries.filter(e => e.slate)
-    .map(e => [e.slate, e.slateLabel])).entries()];
-  const html = await Promise.all(slates.map(([key, label]) =>
-    board(week.id, key, label + " leaderboard", mine).catch(() => "")));
-  document.getElementById("boards").innerHTML = html.join("");
-}
-
-refresh();
-setInterval(refresh, 15000);
+(async function init() {
+  const navDone = WH.nav("live");
+  try { slates = (await api("/api/play/slates")).slates; } catch (e) { slates = []; }
+  await Promise.all([navDone, load(), renderMine()]);
+  document.getElementById("filters").addEventListener("click", e => {
+    const b = e.target.closest("[data-f]"); if (!b) return;
+    filter = b.dataset.f; render();
+  });
+  document.getElementById("days").addEventListener("click", e => {
+    const b = e.target.closest("button[data-id]"); if (b && !b.disabled) toggle(b.dataset.id);
+  });
+  WH.ready();
+  setInterval(() => { if (!document.hidden) { load(); renderMine(); } }, 20000);
+})();
 </script>
 </body>
 </html>

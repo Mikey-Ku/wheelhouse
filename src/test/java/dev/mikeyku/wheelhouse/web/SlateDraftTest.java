@@ -5,12 +5,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -39,14 +35,13 @@ class SlateDraftTest {
     @Autowired
     private WebApplicationContext context;
 
-    private final ObjectMapper mapper = new ObjectMapper();
+    private Api api;
 
     private JsonNode call(String method, String path) throws Exception {
-        MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).build();
-        return mapper.readTree((method.equals("POST")
-                ? mvc.perform(MockMvcRequestBuilders.post(path))
-                : mvc.perform(MockMvcRequestBuilders.get(path)))
-                .andReturn().getResponse().getContentAsString());
+        if (api == null) {
+            api = Api.signedUp(context);
+        }
+        return method.equals("POST") ? api.post(path) : api.get(path);
     }
 
     @Test
@@ -79,9 +74,8 @@ class SlateDraftTest {
             }
 
             JsonNode board = call("GET", "/api/play/leaderboard?slate=" + slate.path("key").asText());
-            for (JsonNode row : board) {
-                assertThat(row.path("slate").asText()).isEqualTo(slate.path("key").asText());
-            }
+            assertThat(board.size()).as(label + " board lists the finished roster").isEqualTo(1);
+            assertThat(board.get(0).has("entryId")).isFalse();
         }
     }
 

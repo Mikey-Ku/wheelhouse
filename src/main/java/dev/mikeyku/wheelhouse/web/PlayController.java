@@ -1,5 +1,8 @@
 package dev.mikeyku.wheelhouse.web;
 
+import dev.mikeyku.wheelhouse.account.AccountService;
+import dev.mikeyku.wheelhouse.account.NotYours;
+import dev.mikeyku.wheelhouse.account.UserRecord;
 import dev.mikeyku.wheelhouse.contest.ArchiveService;
 import dev.mikeyku.wheelhouse.contest.Contest;
 import dev.mikeyku.wheelhouse.contest.ContestService;
@@ -21,9 +24,7 @@ import dev.mikeyku.wheelhouse.scoring.ScoringService;
 import dev.mikeyku.wheelhouse.sleeper.AthleteResolver;
 import dev.mikeyku.wheelhouse.sleeper.PlayerCatalog;
 import dev.mikeyku.wheelhouse.wheel.WheelPool;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ExceptionHandler;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -47,9 +48,6 @@ public class PlayController {
     /** How many candidates to send for the spin reel. Enough to look full, not the whole pool. */
     private static final int REEL_SIZE = 24;
 
-    /** Ceiling on a single /mine request, so the endpoint cannot be used as a bulk reader. */
-    private static final int MAX_MINE = 200;
-
     private final EntryService entries;
     private final ContestService contests;
     private final ArchiveService archive;
@@ -62,11 +60,14 @@ public class PlayController {
     private final IngestService ingest;
     private final PositionalField field;
     private final CaptureRate capture;
+    private final AccountService accounts;
+    private final Standings standings;
 
     public PlayController(EntryService entries, ContestService contests, ArchiveService archive,
                           PlayerCatalog catalog, AthleteResolver resolver, ScoringService scoring,
                           ProjectionService projections, WheelPool pool, FormService form,
-                          IngestService ingest, PositionalField field, CaptureRate capture) {
+                          IngestService ingest, PositionalField field, CaptureRate capture,
+                          AccountService accounts, Standings standings) {
         this.entries = entries;
         this.contests = contests;
         this.archive = archive;
@@ -79,6 +80,8 @@ public class PlayController {
         this.ingest = ingest;
         this.field = field;
         this.capture = capture;
+        this.accounts = accounts;
+        this.standings = standings;
     }
 
     @GetMapping("/contest")
@@ -147,27 +150,54 @@ public class PlayController {
                 "totalPicks", Roster.TOTAL_PICKS);
     }
 
+    /** A new roster for a slate of this week, or for an archived week. Needs a profile. */
     @PostMapping("/open")
-    public Map<String, Object> open(@RequestParam String owner,
-                                    @RequestParam(required = false) Integer season,
+    public Map<String, Object> open(@RequestParam(required = false) Integer season,
                                     @RequestParam(required = false) Integer week,
-                                    @RequestParam(required = false) String slate) {
+                                    @RequestParam(required = false) String slate,
+                                    HttpServletRequest request) {
+        UserRecord user = accounts.require(request);
         if (season != null && week != null) {
-            return view(entries.openEntry(owner, archive.load(season, week), null));
+            return view(entries.openEntry(user, archive.load(season, week), null));
         }
         // No slate named means the next one still open, which is what a bare "play" wants.
         Slate chosen = slate == null ? contests.nextOpenSlate() : contests.slate(slate);
         if (chosen == null) {
             throw new IllegalStateException(slate == null
-                    ? "every slate this week has kicked off"
-                    : "no slate called " + slate + " this week");
+                    ? "Every game this week has kicked off. Try a past week."
+                    : "There's no " + slate + " slate this week.");
         }
-        return view(entries.openEntry(owner, contests.current(), chosen));
+        return view(entries.openEntry(user, contests.current(), chosen));
     }
 
     @GetMapping("/{entryId}")
-    public Map<String, Object> get(@PathVariable String entryId) {
-        return view(warm(entryId));
+    public Map<String, Object> get(@PathVariable String entryId, HttpServletRequest request) {
+        return view(own(entryId, request));
+    }
+
+    /**
+     * The entry, if it is the caller's, with its week in memory.
+     *
+     * <p>A roster belongs to a profile, and nobody else can read or change it by id: the id used
+     * to be the whole credential, and it appears in the address bar. A roster from before
+     * profiles has no owner yet and goes to whoever holds its id and is signed in.
+     */
+    private EntryRecord own(String entryId, HttpServletRequest request) {
+        EntryRecord entry = entries.byId(entryId);
+        if (entry == null) {
+            throw new IllegalArgumentException("That roster doesn't exist.");
+        }
+        UserRecord user = accounts.current(request);
+        if (entry.userId() == null) {
+            if (user != null) {
+                accounts.claim(user, List.of(entryId));
+                entry = entries.byId(entryId);
+            }
+        } else if (user == null || !user.id().equals(entry.userId())) {
+            throw new NotYours();
+        }
+        warm(entryId);
+        return entry;
     }
 
     /**
@@ -211,8 +241,9 @@ public class PlayController {
     @PostMapping("/{entryId}/pick/{index}/spin")
     public Map<String, Object> spin(@PathVariable String entryId, @PathVariable int index,
                                     @RequestParam(defaultValue = "false") boolean respinTeam,
-                                    @RequestParam(defaultValue = "false") boolean respinPlayer) {
-        warm(entryId);
+                                    @RequestParam(defaultValue = "false") boolean respinPlayer,
+            HttpServletRequest request) {
+        own(entryId, request);
         if (!respinPlayer) {
             entries.spinTeam(entryId, index, respinTeam);
         }
@@ -221,35 +252,33 @@ public class PlayController {
 
     @PostMapping("/{entryId}/pick/{index}/team")
     public Map<String, Object> spinTeam(@PathVariable String entryId, @PathVariable int index,
-                                        @RequestParam(defaultValue = "false") boolean respin) {
-        warm(entryId);
+                                        @RequestParam(defaultValue = "false") boolean respin,
+            HttpServletRequest request) {
+        own(entryId, request);
         return view(entries.spinTeam(entryId, index, respin));
     }
 
     @PostMapping("/{entryId}/pick/{index}/player")
     public Map<String, Object> spinPlayer(@PathVariable String entryId, @PathVariable int index,
-                                          @RequestParam(defaultValue = "false") boolean respin) {
-        warm(entryId);
+                                          @RequestParam(defaultValue = "false") boolean respin,
+            HttpServletRequest request) {
+        own(entryId, request);
         return view(entries.spinPlayer(entryId, index, respin));
     }
 
     @PostMapping("/{entryId}/pick/{index}/choose")
     public Map<String, Object> choose(@PathVariable String entryId, @PathVariable int index,
-                                      @RequestParam String option) {
-        warm(entryId);
+                                      @RequestParam String option,
+            HttpServletRequest request) {
+        own(entryId, request);
         return view(entries.choose(entryId, index, option));
     }
 
     /** A read-only link for a finished slip. Returns a token, never the entry id. */
     @PostMapping("/{entryId}/share")
-    public Map<String, Object> share(@PathVariable String entryId) {
+    public Map<String, Object> share(@PathVariable String entryId, HttpServletRequest request) {
+        own(entryId, request);
         return Map.of("shareId", entries.share(entryId));
-    }
-
-    @PostMapping("/{entryId}/name")
-    public Map<String, Object> rename(@PathVariable String entryId, @RequestParam String owner) {
-        warm(entryId);
-        return view(entries.rename(entryId, owner));
     }
 
     /**
@@ -260,7 +289,7 @@ public class PlayController {
     public Map<String, Object> shared(@PathVariable String shareId) {
         EntryRecord entry = entries.byShareId(shareId);
         if (entry == null || !entry.complete()) {
-            throw new IllegalArgumentException("no such slip");
+            throw new IllegalArgumentException("That link doesn't work anymore.");
         }
         rehydrate(entry.contestId());
         Map<String, Object> out = new LinkedHashMap<>(view(entry));
@@ -271,63 +300,20 @@ public class PlayController {
         return out;
     }
 
-    /**
-     * Where a finished roster sits on its slate's board, counting only finished rosters. A
-     * ranking of one says nothing, so the page hides it until there is a field.
-     */
-    private Map<String, Object> standing(EntryRecord entry, double total) {
-        List<EntryRecord> field = entries.forContest(entry.contestId()).stream()
-                .filter(EntryRecord::complete)
-                .filter(e -> Objects.equals(e.slate(), entry.slate()))
-                .toList();
-        int ahead = 0;
-        for (EntryRecord other : field) {
-            if (!other.id().equals(entry.id())
-                    && scoring.score(entries.asRoster(other)).total() > total) {
-                ahead++;
-            }
-        }
-        return Map.of("rank", ahead + 1, "of", field.size());
-    }
-
-    /**
-     * Summaries for entries the caller already holds.
-     *
-     * <p>This replaces a lookup by display name, which was the wrong shape from the start. An
-     * entry id is the only thing standing between a stranger and somebody else's draft, because
-     * every pick endpoint accepts one on its own and asks nothing else. The old endpoint took
-     * any name and handed back the ids belonging to it, and names are printed on the
-     * leaderboard, so the name was effectively the password: knowing one was enough to read a
-     * roster and to spend its respins.
-     *
-     * <p>Taking the ids instead means this can only ever return what the caller could already
-     * reach, so there is nothing here to enumerate.
-     */
-    @GetMapping("/mine")
-    public List<Map<String, Object>> mine(@RequestParam(required = false) List<String> ids) {
-        if (ids == null || ids.isEmpty()) {
-            return List.of();
-        }
-        return ids.stream()
-                .distinct()
-                .limit(MAX_MINE)
-                .map(entries::byId)
-                .filter(Objects::nonNull)
-                .map(entry -> summary(entry, true))
-                .toList();
-    }
-
+    /** A board as rows of names and totals. Never carries an entry id. */
     @GetMapping("/leaderboard")
     public List<Map<String, Object>> leaderboard(@RequestParam(required = false) String contestId,
                                                  @RequestParam(required = false) String slate) {
-        // A slate is its own competition. Without a slate named, the board is the whole week,
-        // which is also what an archived week and a pre-slate entry get.
-        return entries.forContest(contestId == null ? contests.current().id() : contestId).stream()
-                .filter(entry -> slate == null || slate.equalsIgnoreCase(entry.slate()))
-                .map(entry -> summary(entry, false))
-                .sorted(Comparator.comparingDouble((Map<String, Object> m) -> -(double) m.get("total"))
-                        .thenComparingDouble(m -> -(double) m.get("projectedTotal")))
-                .toList();
+        String id = contestId == null ? contests.current().id() : contestId;
+        return standings.board(id, slate, null).stream().map(r -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("rank", r.rank());
+            m.put("owner", r.name());
+            m.put("total", r.total());
+            m.put("projectedTotal", r.projectedTotal());
+            m.put("capturePercent", r.capturePercent());
+            return m;
+        }).toList();
     }
 
     private Map<String, Object> describe(Contest c) {
@@ -345,32 +331,6 @@ public class PlayController {
         // False for the first minute after a cold start, while the player list is still being
         // fetched. The page shows "warming up" instead of an empty wheel or the wrong excuse.
         m.put("ready", catalog.size() > 0);
-        return m;
-    }
-
-    /**
-     * @param withId only ever true for entries the caller already named. The entry id is a
-     *               bearer token for the whole draft, so a public board must not carry it: the
-     *               leaderboard was quietly publishing one for every player on it.
-     */
-    private Map<String, Object> summary(EntryRecord entry, boolean withId) {
-        ScoringService.ScoredRoster scored = scoring.score(entries.asRoster(entry));
-        Map<String, Object> m = new LinkedHashMap<>();
-        if (withId) {
-            m.put("entryId", entry.id());
-        }
-        m.put("owner", entry.owner());
-        m.put("contestId", entry.contestId());
-        Contest c = contests.byId(entry.contestId());
-        m.put("label", c == null ? entry.contestId() : c.label());
-        m.put("slate", entry.slate());
-        m.put("slateLabel", slateLabel(entry));
-        m.put("format", entry.format().name());
-        m.put("complete", entry.complete());
-        m.put("projectedTotal", scored.projectedTotal());
-        // A leaderboard is a side channel. Half-built rosters report nothing they have not yet
-        // earned the right to see.
-        m.put("total", entry.complete() ? scored.total() : 0.0);
         return m;
     }
 
@@ -427,7 +387,7 @@ public class PlayController {
         out.put("owner", entry.owner());
         out.put("contest", describe(contests.byId(entry.contestId())));
         out.put("slate", entry.slate());
-        out.put("slateLabel", slateLabel(entry));
+        out.put("slateLabel", standings.slateLabel(entry));
         out.put("format", format.name());
         // The entry's own lock, not the week's: Sunday is still open after Thursday kicks off.
         out.put("locked", entries.locked(entry));
@@ -436,7 +396,7 @@ public class PlayController {
         out.put("projectedTotal", scored.projectedTotal());
         if (revealed) {
             out.put("total", scored.total());
-            out.put("standing", standing(entry, scored.total()));
+            out.put("standing", standings.standing(entry));
             // How much of the board you were dealt you actually took. Only meaningful once
             // every pick is in, which is also the only point at which it can be computed.
             CaptureRate.Result c = capture.of(entry);
@@ -471,7 +431,7 @@ public class PlayController {
         m.put("teamLogo", logo(pick.team()));
         String opponent = opponentOf(entry, pick.team());
         m.put("opponent", opponent);
-        m.put("game", gameState(entry, pick.team()));
+        m.put("game", standings.gameState(entry, pick.team()));
         m.put("opponentLogo", logo(opponent));
         m.put("chosen", pick.option());
 
@@ -633,55 +593,6 @@ public class PlayController {
     }
 
     /**
-     * Where a pick's game is: not started, in progress with its clock, or final. The page uses
-     * it to say "pending" rather than print a zero for a game nobody has played yet.
-     */
-    private Map<String, Object> gameState(EntryRecord entry, String team) {
-        if (team == null) {
-            return null;
-        }
-        for (GameSnapshot snapshot : ingest.snapshots(entry.contestId())) {
-            boolean plays = snapshot.athleteTeams().values().stream()
-                    .anyMatch(t -> team.equals(TeamCodes.fromEspn(t)));
-            if (plays) {
-                Map<String, Object> g = new LinkedHashMap<>();
-                g.put("state", snapshot.state());
-                g.put("detail", snapshot.detail());
-                return g;
-            }
-        }
-        Slate slate = entries.slateOf(entry);
-        if (slate != null) {
-            for (Slate.Game g : slate.games()) {
-                if (g.away().equals(team) || g.home().equals(team)) {
-                    Map<String, Object> out = new LinkedHashMap<>();
-                    out.put("state", "pre");
-                    out.put("kickoff", g.kickoff().toString());
-                    return out;
-                }
-            }
-        }
-        return null;
-    }
-
-    private String slateLabel(EntryRecord entry) {
-        if (entry.slate() == null) {
-            return null;
-        }
-        Slate slate = entries.slateOf(entry);
-        if (slate != null) {
-            return slate.label();
-        }
-        // The week has moved on and its slates with it; the key still names the day.
-        return switch (entry.slate()) {
-            case "sun" -> "Sunday";
-            case "mon" -> "Monday Night";
-            case "thu" -> "Thursday Night";
-            default -> entry.slate();
-        };
-    }
-
-    /**
      * A face for the reveal.
      *
      * <p>ESPN first, through its combiner rather than the raw file: 30KB against 257KB, and a
@@ -728,10 +639,5 @@ public class PlayController {
 
     private double round(double v) {
         return Math.round(v * 100.0) / 100.0;
-    }
-
-    @ExceptionHandler({IllegalStateException.class, IllegalArgumentException.class})
-    public ResponseEntity<Map<String, String>> badRequest(RuntimeException e) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
     }
 }

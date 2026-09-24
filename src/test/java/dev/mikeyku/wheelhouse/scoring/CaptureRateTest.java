@@ -36,15 +36,13 @@ class CaptureRateTest {
     @Autowired
     private WebApplicationContext context;
 
-    private final ObjectMapper mapper = new ObjectMapper();
-    private MockMvc mvc;
+    private dev.mikeyku.wheelhouse.web.Api api;
 
     private JsonNode send(String path) throws Exception {
-        if (mvc == null) {
-            mvc = MockMvcBuilders.webAppContextSetup(context).build();
+        if (api == null) {
+            api = dev.mikeyku.wheelhouse.web.Api.signedUp(context);
         }
-        return mapper.readTree(
-                mvc.perform(post(path)).andReturn().getResponse().getContentAsString());
+        return api.post(path);
     }
 
     /** Drafts a complete roster by always taking the first option offered. */

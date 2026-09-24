@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en" class="loading">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Leaderboards · Wheelhouse</title>
+<meta name="theme-color" content="#05091d">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;1,700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css">
+<style>
+  .lb{display:grid;grid-template-columns:300px minmax(0,1fr);gap:18px;align-items:start}
+  @media (max-width:860px){.lb{grid-template-columns:minmax(0,1fr)}}
+  .boards{display:flex;flex-direction:column;gap:18px}
+  .group h3{font-size:14px;letter-spacing:.14em;color:var(--muted);margin-bottom:8px;font-family:var(--sans);font-weight:600}
+  .bl{display:flex;flex-direction:column;gap:6px}
+  .bl a{display:flex;align-items:center;justify-content:space-between;gap:10px;text-decoration:none;
+    padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:rgba(19,27,56,.85)}
+  .bl a:hover{border-color:var(--line-hi)}
+  .bl a.on{border-color:var(--accent);background:var(--surface-2)}
+  .bl .lbl{font-size:14.5px}
+  .bl .cnt{font-family:var(--mono);font-size:12px;color:var(--muted);white-space:nowrap}
+  #pickBoard{display:none}
+  @media (max-width:860px){.boards{display:none}#pickBoard{display:block;margin-bottom:6px}}
+  .board-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+  .board-head h2{font-size:30px}
+  .board-note{color:var(--secondary);margin-bottom:16px;font-size:14.5px}
+  td.rank{width:44px;color:var(--muted);font-family:var(--mono)}
+  td .open{font-size:12px;margin-left:10px;color:var(--accent);text-decoration:none;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+  @media (max-width:640px){.hide-sm{display:none}}
+</style>
+</head>
+<body data-page="boards">
+<nav id="nav" class="top"></nav>
+<main class="wrap">
+  <div class="page-head"><h1>Leaderboards</h1>
+    <p>One board per slate, and one per past week. Your best roster counts.</p></div>
+  <div class="lb">
+    <aside class="boards" id="boards"></aside>
+    <section>
+      <select id="pickBoard" aria-label="Board"></select>
+      <div class="card" id="board"></div>
+    </section>
+  </div>
+</main>
+<script src="/app.js"></script>
+<script>
+const { esc, fmt1, api } = WH;
+let boards = [];
+let current = null;
+
+const keyOf = b => b.contestId + "|" + (b.slate || "");
+
+function badgeFor(b) {
+  return b.archive ? WH.badge("past", "Past week") : WH.badge(b.slate, (b.label.split(" · ")[1] || b.label));
+}
+
+function renderList() {
+  const groups = [
+    ["This week", boards.filter(b => b.group === 0)],
+    ["Earlier this season", boards.filter(b => b.group === 1)],
+    ["Past weeks", boards.filter(b => b.group === 2)],
+  ].filter(([, list]) => list.length);
+  document.getElementById("boards").innerHTML = groups.map(([name, list]) => `<div class="group"><h3>${name}</h3>
+    <div class="bl">${list.map(b => `<a href="?c=${encodeURIComponent(b.contestId)}${b.slate ? "&s=" + encodeURIComponent(b.slate) : ""}"
+        class="${current && keyOf(current) === keyOf(b) ? "on" : ""}" data-key="${esc(keyOf(b))}">
+        <span class="lbl">${esc(b.label)}</span><span class="cnt">${b.players} ${b.players === 1 ? "player" : "players"}</span></a>`).join("")}
+    </div></div>`).join("") || `<p class="muted">No boards yet.</p>`;
+  document.getElementById("pickBoard").innerHTML = groups.map(([name, list]) =>
+    `<optgroup label="${name}">${list.map(b =>
+      `<option value="${esc(keyOf(b))}" ${current && keyOf(current) === keyOf(b) ? "selected" : ""}>${esc(b.label)} (${b.players})</option>`).join("")}</optgroup>`).join("");
+}
+
+async function renderBoard() {
+  const host = document.getElementById("board");
+  if (!current) {
+    host.innerHTML = `<div class="empty" style="border:none"><b>No boards yet</b>Finish a roster and it shows up here.
+      <br><a class="btn primary" href="/">Play</a></div>`;
+    return;
+  }
+  const data = await api("/api/boards/one", { params: { contestId: current.contestId, slate: current.slate || "" } });
+  const locked = !current.lockAt || new Date(current.lockAt) <= Date.now();
+  const note = current.archive
+    ? "Real results from that week. Play it again and your best roster counts."
+    : !locked ? `Scores start at kickoff, ${esc(WH.kickoffText(current.lockAt))} ET. Totals show projections until then.`
+    : "Totals update as the games are played.";
+  const rows = data.rows;
+  host.innerHTML = `<div class="board-head">${badgeFor(current)}<h2>${esc(current.label)}</h2></div>
+    <p class="board-note">${note}</p>
+    ${rows.length ? `<table class="list">
+      <tr><th>#</th><th>Player</th><th class="r hide-sm">Proj</th><th class="r hide-sm" title="Your points against the best you could have scored with the same players">% of best</th><th class="r">Pts</th></tr>
+      ${rows.map(r => `<tr class="${r.mine ? "me" : ""}">
+        <td class="rank">${r.rank}</td>
+        <td>${esc(r.name)}${r.mine && r.entryId ? `<a class="open" href="/?r=${esc(r.entryId)}">View</a>` : ""}</td>
+        <td class="r hide-sm muted">${fmt1(r.projectedTotal)}</td>
+        <td class="r hide-sm muted">${r.capturePercent == null ? "&ndash;" : r.capturePercent + "%"}</td>
+        <td class="n">${locked || current.archive ? fmt1(r.total) : "&ndash;"}</td></tr>`).join("")}
+    </table>` : `<div class="empty" style="border:none"><b>Nobody yet</b>Be the first on this board.
+      <br><a class="btn primary" href="/">Play</a></div>`}`;
+}
+
+function select(key) {
+  current = boards.find(b => keyOf(b) === key) || null;
+  if (current) {
+    const url = `?c=${encodeURIComponent(current.contestId)}${current.slate ? "&s=" + encodeURIComponent(current.slate) : ""}`;
+    history.replaceState(null, "", url);
+  }
+  renderList();
+  return renderBoard();
+}
+
+(async function init() {
+  await WH.nav("boards");
+  boards = await api("/api/boards");
+  const q = new URLSearchParams(location.search);
+  const wanted = q.get("c") ? q.get("c") + "|" + (q.get("s") || "") : null;
+  const first = boards.find(b => wanted && keyOf(b) === wanted)
+    || boards.find(b => b.players > 0) || boards[0];
+  await select(first ? keyOf(first) : null);
+  document.getElementById("boards").addEventListener("click", e => {
+    const a = e.target.closest("a[data-key]");
+    if (!a) return;
+    e.preventDefault();
+    select(a.dataset.key);
+  });
+  document.getElementById("pickBoard").addEventListener("change", e => select(e.target.value));
+  WH.ready();
+  setInterval(() => { if (!document.hidden && current && !current.archive) renderBoard(); }, 30000);
+})();
+</script>
+</body>
+</html>

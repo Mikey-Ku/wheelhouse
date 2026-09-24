@@ -1,1202 +1,789 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="loading">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Wheelhouse</title>
-<meta name="description" content="A wheel deals you NFL players. You pick one stat off each. Fourteen calls, then the week resolves against what actually happened.">
-
-<!-- Link previews. Without these a texted link renders as a bare grey box, and a bare grey box
-     does not get tapped, which makes this the cheapest conversion work available. -->
+<meta name="description" content="Spin for NFL players, take one stat off each, and score on what really happens. Thursday, Sunday and Monday slates.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Wheelhouse">
-<meta property="og:title" content="Wheelhouse — test your football brain">
-<meta property="og:description" content="A wheel deals you NFL players. You pick one stat off each. Fourteen calls, then the week resolves against what actually happened. No signup.">
+<meta property="og:title" content="Wheelhouse">
+<meta property="og:description" content="Spin for NFL players, take one stat off each, and score on what really happens.">
 <meta property="og:image" content="/img/social.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Wheelhouse — test your football brain">
-<meta name="twitter:description" content="A wheel deals you NFL players. You pick one stat off each. No signup, ninety seconds.">
 <meta name="twitter:image" content="/img/social.jpg">
 <meta name="theme-color" content="#05091d">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;1,700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css">
 <style>
-  /* Sleeper's own tokens, read off their CSS bundle rather than eyeballed. */
-  :root{
-    --bg:#05091d;            /* palette-gray900, page base */
-    --surface:#131b38;       /* palette-gray700, cards and controls */
-    --surface-deep:#0b1028;  /* dls surface, headers and insets */
-    --line:#25345d;          /* palette-gray600, the everyday border */
-    --line-hi:#344677;       /* palette-gray500, emphasised divider */
-    --text:#ffffff;
-    --secondary:#98b3d6;     /* palette-gray200 */
-    --muted:#5f7ba9;         /* palette-gray300 */
-    --dim:#4c5e93;           /* palette-gray400 */
-    --accent:#00fff9;        /* palette-emerald, the brand cyan */
-    --accent-deep:#04abb0;   /* dls primary-600, for fills behind white text */
-    --accent-ink:#05091d;
-    --violet:#8c64ff;        /* dls decoration-yam, control borders */
-    --loss:#ff4d6d;
-    --display:"Barlow Condensed","Helvetica Neue",sans-serif;
-    --sans:"Inter",-apple-system,sans-serif;
-    --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
-    --paper:#f4f1e8;         /* the slip, the one light surface in the whole product */
-    --ink:#16181d}
-  *{box-sizing:border-box;margin:0;padding:0}
-  /* The base colour lives on html so body's own layers can sit above it. Clipped horizontally
-     because the hero's floodlight deliberately hangs past the right edge, and without this it
-     pushes the page 130px wider than the viewport and hands every visitor a sideways scrollbar.
-     Clip rather than hidden: hidden would make html a scroll container and break the fixed
-     background layers underneath. */
-  html{background:var(--bg);overflow-x:clip}
-  /* html's value propagates to the viewport and html itself then behaves as visible, so the
-     clip has to be repeated here to actually form a clipping box. */
-  body{background:transparent;color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;padding-bottom:80px;overflow-x:clip}
-  .wrap{max-width:1080px;margin:0 auto;padding:0 24px;transition:max-width .2s}
-  /* The draft needs room for five option cards beside a roster rail; the landing does not. */
-  body.playing .wrap{max-width:1400px}
-
-  /* ---- the draft: stage on the left, roster pinned on the right ----
-     The roster was underneath, which meant the one thing you are building was off screen
-     exactly when you were deciding what to add to it. Pinned, you can see what a position
-     still has open while you are looking at the part that would fill it. */
-  .pgrid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
-  .pmain{min-width:0}
-  .pside{position:sticky;top:76px;max-height:calc(100vh - 96px);overflow-y:auto;
-    scrollbar-width:thin;scrollbar-color:var(--line-hi) transparent}
-  .pside::-webkit-scrollbar{width:6px}
-  .pside::-webkit-scrollbar-thumb{background:var(--line-hi);border-radius:3px}
-  .pside .sec-head{margin-bottom:14px}
-  .pside .sec-head h2{font-size:19px}
-  /* Below this the rail would squeeze the option cards more than it helps, so it goes back
-     under the stage and stops being sticky. */
-  @media (max-width:1180px){
-    .pgrid{grid-template-columns:minmax(0,1fr)}
-    .pside{position:static;max-height:none;overflow:visible;margin-top:34px}
-  }
-
-  /* ---- ground ----
-     Wet turf under a floodlight, fixed rather than scrolling: a texture that travels with the
-     page reads as wallpaper, one that stays put reads as the surface the page is lying on.
-     Grain over the top, because a perfectly smooth dark field is the thing that makes a page
-     look generated more than any single element does. */
-  body::before,body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none}
-  body::before{background:url("img/turf.jpg") center/cover no-repeat;opacity:.14}
-  body::after{opacity:.05;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
-
-  nav{border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10;background:rgba(5,9,29,.94);backdrop-filter:blur(12px)}
-  .nav-inner{display:flex;align-items:center;gap:20px;height:62px}
-  .logo{font-family:var(--display);font-weight:700;font-size:24px;letter-spacing:.04em;text-transform:uppercase}
-  .logo span{color:var(--accent)}
-  .nav-links{display:flex;gap:26px;margin-left:auto}
-  .nav-links a{font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-decoration:none;padding:6px 0;border-bottom:2px solid transparent}
-  .nav-links a.on{color:var(--text);border-bottom-color:var(--accent)}
-
-  h2{font-family:var(--display);font-weight:700;font-size:30px;letter-spacing:.02em;text-transform:uppercase;margin-bottom:18px}
-  section{margin-top:38px}
-
-  button{font-family:var(--sans);font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:10px 16px;border-radius:8px;border:1px solid var(--line-hi);background:transparent;color:var(--text);cursor:pointer;transition:.12s}
-  button:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
-  button:disabled{opacity:.3;cursor:not-allowed}
-  button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-  button.primary:hover:not(:disabled){opacity:.85;color:var(--accent-ink)}
-  button.ghost{padding:7px 12px;font-size:11px;color:var(--muted);border-color:var(--line)}
-  input{font-family:var(--sans);font-size:15px;padding:11px 14px;border-radius:8px;border:1px solid var(--line-hi);background:var(--surface-deep);color:var(--text);min-width:230px}
-  input:focus{outline:none;border-color:var(--accent)}
-  select{font-family:var(--sans);font-size:14px;padding:10px 12px;border-radius:8px;border:1px solid var(--line-hi);background:var(--surface);color:var(--text)}
-  select:focus{outline:none;border-color:var(--accent)}
-
-  /* ---- landing ----
-     The floodlight is composited with screen rather than masked into place, so the black sky
-     it was shot against drops out entirely and only the light itself lands on the page. */
-  .hero{padding:26px 0 6px;position:relative}
-  .hero::before{content:"";position:absolute;z-index:0;pointer-events:none;
-    top:-96px;right:-130px;width:min(720px,84%);aspect-ratio:3/2;
-    background:url("img/lights.jpg") center/cover no-repeat;
-    mix-blend-mode:screen;opacity:.6;
+  /* ---------- home ---------- */
+  .hero{position:relative;padding:40px 0 8px}
+  .hero::before{content:"";position:absolute;z-index:-1;pointer-events:none;top:-80px;right:-120px;
+    width:min(720px,80%);aspect-ratio:3/2;background:url("img/lights.jpg") center/cover no-repeat;
+    mix-blend-mode:screen;opacity:.5;
     -webkit-mask-image:radial-gradient(ellipse 74% 70% at 74% 32%,#000 14%,transparent 78%);
     mask-image:radial-gradient(ellipse 74% 70% at 74% 32%,#000 14%,transparent 78%)}
-  .hero > *{position:relative;z-index:1}
-  @media (max-width:700px){.hero::before{opacity:.4;right:-60px}}
-  .hero h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,5.2vw,56px);line-height:.96;
-    letter-spacing:.01em;text-transform:uppercase;margin-bottom:13px}
-  .hero h1 em{font-style:normal;color:var(--accent)}
-  .hero .lede{font-size:16px;color:var(--secondary);max-width:540px;line-height:1.55}
+  .kicker{font-size:13px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--secondary);margin-bottom:12px}
+  .hero h1{margin:12px 0 22px}
+  .countdown{display:flex;gap:10px;flex-wrap:wrap}
+  .countdown div{min-width:84px;background:rgba(19,27,56,.85);border:1px solid var(--line-hi);border-radius:12px;
+    padding:10px 12px 8px;text-align:center}
+  .countdown b{display:block;font-family:var(--display);font-size:52px;line-height:1;font-variant-numeric:tabular-nums}
+  .countdown span{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  .cd-note{color:var(--secondary);margin:12px 0 22px}
+  .hero-cta{display:flex;gap:10px;flex-wrap:wrap}
+  @media (max-width:640px){.countdown div{min-width:0;flex:1}.countdown b{font-size:38px}}
 
-  /* ---- the one thing to do ----
-     Name and spin sit on one line and nothing else competes with them. Everything the player
-     might want but almost never needs is behind the disclosure below. */
-  .cta{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:28px}
-  .cta input{min-width:210px;padding:14px 16px}
-  button.big{font-size:14px;padding:15px 30px}
-  .cta-note{font-size:13.5px;color:var(--muted);margin-top:13px;max-width:520px;line-height:1.6}
-
-  /* ---- slates ----
-     The week as it is actually played: one card per lockable group of games, soonest first.
-     The next open one is the call to action; the rest are there to be seen. */
-  .slates{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:26px}
-  .slate{border:1px solid var(--line);border-radius:12px;background:rgba(19,27,56,.72);
-    padding:16px 18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+  .slates{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+  .slate{background:rgba(19,27,56,.9);border:1px solid var(--line);border-radius:14px;padding:18px;
+    display:flex;flex-direction:column;gap:14px;min-width:0}
   .slate.next{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
-  .slate.locked{opacity:.62}
-  .sl-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
-  .sl-name{font-family:var(--display);font-weight:700;font-size:26px;text-transform:uppercase;
-    letter-spacing:.02em;line-height:1}
-  .sl-fmt{font-family:var(--mono);font-size:11.5px;color:var(--secondary);white-space:nowrap}
-  .sl-games{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:34px}
-  .sl-games img{width:26px;height:26px;object-fit:contain}
-  .sl-match{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:700;
-    font-size:20px;letter-spacing:.03em}
-  .sl-match img{width:34px;height:34px}
-  .sl-match .at{color:var(--dim);font-size:14px}
-  .sl-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:auto}
-  .sl-lock{font-family:var(--mono);font-size:12px;color:var(--secondary)}
-  .sl-lock b{color:var(--accent);font-weight:600}
-  .slate .primary{padding:10px 22px}
-  .sl-watch{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);
-    text-decoration:none;font-weight:600}
-  .vault{margin-top:34px;padding-top:22px;border-top:1px solid var(--line)}
-  .vault-head{font-family:var(--display);font-weight:700;font-size:20px;text-transform:uppercase;
-    letter-spacing:.04em;color:var(--secondary)}
-  .vault .cta{margin-top:12px}
-  .pend{color:var(--dim);font-family:var(--mono)}
-  .liveclk{color:var(--accent);font-family:var(--mono);font-size:10.5px;letter-spacing:.06em}
+  .slate.locked{opacity:.7}
+  .slate-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .slate-when{font-family:var(--mono);font-size:12.5px;color:var(--secondary)}
+  .matchup{display:flex;align-items:center;gap:12px;font-family:var(--display);font-weight:700;font-size:26px}
+  .matchup img{width:44px;height:44px}
+  .matchup .at{color:var(--dim);font-size:16px}
+  .crests{display:flex;flex-wrap:wrap;gap:6px}
+  .crests img{width:28px;height:28px}
+  .rules{font-size:13.5px;color:var(--secondary)}
+  .rules b{color:var(--text);font-weight:600}
+  .slate-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:auto;flex-wrap:wrap}
+  .slate-foot .status{font-size:13.5px;color:var(--secondary)}
+  .slate-foot .status b{color:var(--accent);font-family:var(--mono)}
+  .slate-foot .btns{display:flex;gap:8px}
 
-  /* Vertical padding rather than a bigger font: the label should stay quiet, but an 11px
-     line of text is a target you can miss, and a control you miss reads as broken. */
-  .disclose{background:none;border:none;padding:9px 2px;margin-top:14px;color:var(--muted);
-    font-size:11.5px;letter-spacing:.13em;text-transform:uppercase;
-    display:inline-flex;align-items:center;gap:8px}
-  .disclose::after{content:"";width:6px;height:6px;margin-top:-3px;
-    border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;
-    transform:rotate(45deg);transition:transform .16s}
-  .disclose[aria-expanded="true"]::after{transform:rotate(-135deg);margin-top:1px}
-  .disclose:hover{color:var(--accent);border:none}
-  /* Translucent so the ground still shows through and the drawer reads as sitting on the page
-     rather than punched into it. */
-  .more{margin-top:6px;padding:18px 20px;border:1px solid var(--line);border-radius:12px;
-    background:rgba(19,27,56,.72)}
-  /* Labelled controls that sit on one baseline. Two bare dropdowns and a button gave no clue
-     which was the year and which was the week until you opened them. */
-  .pickrow{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
-  .pickrow label{display:flex;flex-direction:column;gap:6px}
-  .pickrow label span{font-size:10px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
-    color:var(--dim)}
-  .pickrow select{min-width:118px}
-  .pickrow button{padding:11px 20px}
-  .more .notice{margin:16px 0 0}
+  .past-row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+  .past-row .or{color:var(--muted);align-self:center}
+  .past-pick{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+  .past-pick .field{margin:0}
+  .past-pick select{width:130px}
+  #weekReels{display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:520px;margin-top:16px}
 
-  /* How it works sits under the action, not in front of it. */
-  .howto{margin-top:52px}
+  .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+  .step{background:rgba(19,27,56,.85);border:1px solid var(--line);border-radius:14px;padding:18px}
+  .step .pi{color:var(--accent);width:34px;height:34px}
+  .step b{display:block;font-family:var(--display);font-size:22px;text-transform:uppercase;margin:10px 0 4px}
+  .step span{color:var(--secondary);font-size:14.5px}
 
-  /* ---- loading a historic week ---- */
-  .loader{background:var(--surface);border:1px solid var(--line-hi);border-radius:16px;padding:44px 34px;text-align:center}
-  .loader .big{font-family:var(--display);font-weight:700;font-size:34px;text-transform:uppercase;letter-spacing:.03em}
-  .loader .sub{color:var(--muted);font-size:14px;margin-top:6px;min-height:21px}
-  .bar{height:3px;background:var(--surface-deep);border-radius:2px;overflow:hidden;margin:22px auto 0;max-width:420px}
-  .bar span{display:block;height:100%;width:34%;background:var(--accent);border-radius:2px;
-    animation:sweep 1.1s cubic-bezier(.5,0,.5,1) infinite}
+  /* ---------- loading a past week ---------- */
+  .loader{max-width:560px;margin:60px auto;text-align:center}
+  .loader h2{font-size:36px}
+  .loader p{color:var(--muted);margin-top:8px;min-height:24px}
+  .bar{height:3px;background:var(--surface-deep);border-radius:2px;overflow:hidden;margin:20px auto 0;max-width:420px}
+  .bar span{display:block;height:100%;width:34%;background:var(--accent);animation:sweep 1.1s cubic-bezier(.5,0,.5,1) infinite}
   @keyframes sweep{0%{transform:translateX(-100%)}100%{transform:translateX(400%)}}
-  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-  .badge{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:3px 10px;margin-left:10px}
-  .backlink{background:none;border:none;color:var(--muted);padding:0;font-size:11px;letter-spacing:.1em;text-decoration:underline;margin-left:12px}
-  .backlink:hover{color:var(--accent)}
-  .notice{background:var(--surface-deep);border:1px solid var(--line);border-radius:10px;
-    padding:14px 18px;margin-bottom:16px;font-size:13.5px;line-height:1.6;color:var(--secondary)}
-  .notice b{color:var(--text);font-weight:600}
 
-  .stage{background:var(--surface);border:1px solid var(--line-hi);border-radius:16px;padding:28px 32px}
-  .stage-head{display:flex;align-items:baseline;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:22px}
-  .step{font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
-  .respins{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
-  .respins b{color:var(--accent);font-weight:600}
-  .reveal{display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:20px}
-  .face{width:74px;height:74px;border-radius:50%;object-fit:cover;object-position:top center;background:var(--surface-deep);border:1px solid var(--line-hi);flex-shrink:0}
-  .whobox .nm{font-family:var(--display);font-weight:700;font-size:32px;letter-spacing:.02em;line-height:1.1}
-  .whobox .sub{font-size:12px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-top:3px}
-  .prompt{color:var(--secondary);font-size:14px}
+  /* ---------- the draft ---------- */
+  .play-head{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;padding:26px 0 14px}
+  .play-head .t{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .play-head h2{font-size:32px}
+  .pickmap{display:flex;gap:18px;flex-wrap:wrap;align-items:center;background:rgba(19,27,56,.85);
+    border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-bottom:16px}
+  .pm-group{display:flex;align-items:center;gap:6px}
+  .pm-group > span{font-size:11.5px;font-weight:600;letter-spacing:.12em;color:var(--secondary);margin-right:2px}
+  .pm-group i{width:22px;height:8px;border-radius:4px;background:var(--line-hi)}
+  .pm-group i.done{background:var(--accent-deep)}
+  .pm-group i.now{background:var(--accent);box-shadow:0 0 0 3px rgba(0,255,249,.18)}
+  .pm-step{margin-left:auto;font-family:var(--mono);font-size:13px;color:var(--secondary)}
+
+  .pgrid{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:18px;align-items:start}
+  @media (max-width:1060px){.pgrid{grid-template-columns:minmax(0,1fr)}}
+  .stage{background:var(--surface);border:1px solid var(--line-hi);border-radius:16px;padding:24px}
+  @media (max-width:640px){.stage{padding:16px}}
+  .say{font-size:16px;color:var(--text);margin-bottom:16px}
+  .say span{color:var(--muted)}
 
   .reels{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.7fr);gap:12px;margin-bottom:18px}
-  /* Chipped enamel under the reels, tiled large enough that one panel never shows the seam,
-     and knocked back hard: it has to read as a surface, not compete with the names on it. */
-  .reelbox{background:
-      linear-gradient(rgba(11,16,40,.8),rgba(11,16,40,.86)),
-      url("img/metal.jpg") 0 0/360px repeat,
-      var(--surface-deep);
+  .reelbox{background:linear-gradient(rgba(11,16,40,.82),rgba(11,16,40,.88)),url("img/metal.jpg") 0 0/360px repeat,var(--surface-deep);
     border:1px solid var(--line);border-radius:12px;padding:12px 14px;overflow:hidden}
   .reelbox.landed{border-color:var(--accent)}
-  .reelcap{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
-  .reel{height:64px;overflow:hidden;position:relative;min-width:0}
+  .reelcap{font-size:10.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+  .reel-team{display:flex;align-items:center;gap:14px}
+  .reel-team img{width:52px;height:52px}
+  .reel{height:64px;overflow:hidden;position:relative;min-width:0;flex:1}
   .reel::after{content:"";position:absolute;inset:0;pointer-events:none;
     background:linear-gradient(var(--surface-deep),transparent 34%,transparent 66%,var(--surface-deep))}
   .reel-strip{position:absolute;top:0;left:0;right:0;will-change:transform}
-  .reel-item{height:64px;display:flex;align-items:center;font-family:var(--display);
-    font-weight:700;font-size:44px;letter-spacing:.03em;line-height:1;white-space:nowrap;color:var(--muted)}
-  .reel-item.name{font-size:26px;overflow:hidden;text-overflow:ellipsis;display:block;line-height:64px}
+  .reel-item{height:64px;display:flex;align-items:center;font-family:var(--display);font-weight:700;
+    font-size:44px;letter-spacing:.03em;line-height:1;white-space:nowrap;color:var(--dim)}
+  .reel-item.name{font-size:28px;overflow:hidden;text-overflow:ellipsis;display:block;line-height:64px}
   .reel-item.hit{color:var(--text)}
   @keyframes reelspin{from{transform:translateY(0)}to{transform:translateY(-1280px)}}
   .reel-strip.spinning{animation:reelspin .55s linear infinite}
+  @media (max-width:640px){
+    .reels{grid-template-columns:minmax(0,84px) minmax(0,1fr);gap:8px}
+    .reel,.reel-item{height:48px}.reel-item{font-size:28px}.reel-item.name{font-size:18px;line-height:48px}
+    @keyframes reelspin{from{transform:translateY(0)}to{transform:translateY(-960px)}}
+    .reel-team img{width:38px;height:38px}
+    .reel-team:has(img) .reel{display:none}
+  }
 
-  /* Five parts of a quarterback have to fit one row. The stage leaves 966px inside its padding
-     and five cards plus four gaps must clear that, so the floor is 181px. At 210 the fifth
-     wrapped alone, which reads as a mistake rather than as a fifth option. */
-  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:9px}
-  .opt{display:flex;flex-direction:column;padding:0;border-radius:10px;border:1px solid var(--line);background:var(--surface-deep);color:var(--text);text-transform:none;letter-spacing:0;font-size:14px;font-weight:400;text-align:left;overflow:hidden}
-  .opt:hover:not(:disabled){border-color:var(--accent)}
-  .opt .part{font-family:var(--display);font-weight:700;font-size:21px;letter-spacing:.02em}
-  .opt .stat{font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
-  .opt .val{font-family:var(--display);font-weight:700;font-size:26px;color:var(--accent);margin-top:8px;line-height:1}
-  .opt .val small{font-family:var(--sans);font-size:10px;font-weight:600;letter-spacing:.14em;color:var(--accent-deep);margin-left:5px}
-  .opt .math{font-size:11px;color:var(--dim);margin-top:3px;font-variant-numeric:tabular-nums}
-  .opt .math b{color:var(--secondary);font-weight:500}
-  .opt .boom{position:absolute;top:11px;right:12px;font-size:8.5px;letter-spacing:.09em;
-    text-transform:uppercase;color:var(--violet);max-width:70px;text-align:right;line-height:1.25}
-  .opt{position:relative}
+  .who{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+  .who .face{width:68px;height:68px}
+  .who .nm{font-family:var(--display);font-weight:700;font-size:32px;line-height:1.05}
+  .who .sub{font-size:13px;color:var(--secondary);letter-spacing:.06em;text-transform:uppercase}
+  .who .injury{color:var(--live)}
+  .who .respins{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+  @media (max-width:640px){.who .respins{margin-left:0;width:100%}.who .respins .btn{flex:1}}
+  .btn .cnt{font-family:var(--display);font-size:15px;background:rgba(0,255,249,.12);color:var(--accent);
+    border-radius:5px;padding:2px 7px;letter-spacing:0}
+  .btn:disabled .cnt{color:var(--dim);background:rgba(255,255,255,.05)}
 
-  .positions{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
-  .pos{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
-  .pos.active{border-color:var(--accent)}
-  .pos-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px}
-  .pos-name{font-family:var(--display);font-weight:700;font-size:20px;letter-spacing:.06em;text-transform:uppercase;color:var(--secondary)}
-  .pos-total{font-family:var(--display);font-weight:700;font-size:24px;color:var(--accent)}
-  .pos-total small{display:block;font-family:var(--sans);font-size:10px;font-weight:400;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);text-align:right}
-  .part-row{display:flex;align-items:center;gap:9px;padding:8px 0;border-top:1px solid var(--line);font-size:13px}
-  .part-row .lbl{color:var(--muted);font-size:11px;letter-spacing:.1em;text-transform:uppercase;min-width:70px}
-  .part-row .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .part-row .pt{font-family:var(--display);font-weight:700;font-size:16px}
-  .part-row .pt.up{color:var(--accent)} .part-row .pt.down{color:var(--loss)}
-  .part-row.empty .nm{color:var(--dim)}
-  .mini{width:26px;height:26px;border-radius:50%;object-fit:cover;object-position:top center;background:var(--surface-deep);flex-shrink:0}
-
-  /* The running total heads the rail rather than closing the page, because in a column it is
-     the summary of everything under it. */
-  .total{background:var(--surface);border:1px solid var(--line-hi);border-radius:12px;
-    padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:12px}
-  .total .tlabel{font-size:10px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
-    color:var(--secondary)}
-  .total .thint{font-size:11.5px;color:var(--dim);line-height:1.45;margin-top:3px}
-  .total .tnum{margin-left:auto;display:flex;align-items:baseline;gap:4px}
-  .total .n{font-family:var(--display);font-weight:700;font-size:34px;color:var(--accent);line-height:1}
-  .total .tnum small{font-size:10px;font-weight:600;letter-spacing:.14em;color:var(--accent-deep)}
-  .total .vs{font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
-  /* One position per row in a 340px rail. */
-  .pside .positions{grid-template-columns:minmax(0,1fr);gap:10px}
-  .pside .pos{padding:13px 15px}
-  .pside .part-row .lbl{min-width:56px;font-size:10px}
-  .pside .part-row{gap:7px;padding:7px 0}
-  table{width:100%;border-collapse:collapse;font-size:14px}
-  th{font-size:11px;font-weight:400;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-align:left;padding-bottom:9px}
-  td{padding:11px 0;border-top:1px solid var(--line)}
-  td.n{text-align:right;font-family:var(--display);font-weight:700;font-size:19px}
-  .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 22px}
-  .err{color:var(--loss);font-size:13px;min-height:18px;margin-top:10px}
-
-  /* ---- week context, in the header rather than standing on its own ---- */
-  .nav-week{padding-left:17px;border-left:1px solid var(--line);line-height:1.25}
-  /* Brand focus ring. The browser default is a bright blue rectangle that reads as a bug. */
-  :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-  .opt-take:focus-visible,.opt-log:focus-visible{outline-offset:-2px}
-  .nav-week b{display:block;font-size:9.5px;font-weight:500;letter-spacing:.16em;
-    text-transform:uppercase;color:var(--dim)}
-  .nav-week span{font-size:13px;color:var(--secondary)}
-  .nav-week em{font-style:normal;color:var(--accent)}
-
-  /* ---- section headers: one rule, one line, no floating micro-label ---- */
-  .sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;
-    border-bottom:1px solid var(--line);padding-bottom:11px;margin-bottom:20px;flex-wrap:wrap}
-  .sec-head h2{margin:0;font-size:23px}
-  .sec-note{font-size:12.5px;color:var(--dim)}
-
-  /* ---- how it works ----
-     Each step gets a drawing of the thing it describes, because "take one part" means nothing
-     until you have seen what a part looks like. The panels are solid so the copy stays legible
-     over the turf, which it was not when these sat directly on the background. */
-  .rail{display:grid;grid-template-columns:repeat(auto-fit,minmax(196px,1fr));gap:14px;
-    margin:22px 0 4px}
-  .rail > div{background:rgba(19,27,56,.78);border:1px solid var(--line);border-radius:12px;
-    padding:18px}
-  .rail div b{font-family:var(--display);font-weight:700;font-size:12px;letter-spacing:.22em;
-    color:var(--dim);display:block;margin-bottom:12px}
-  .rail div span{font-size:13.5px;color:var(--secondary);line-height:1.6;display:block}
-  .rail div span i{font-style:normal;color:var(--text);font-weight:500}
-  .rail svg{display:block;margin-bottom:13px;width:100%;height:52px;overflow:visible}
-  .rail svg .fl{fill:var(--surface-deep);stroke:var(--line-hi);stroke-width:1.4}
-  .rail svg .hi{fill:var(--accent-deep)}
-  .rail svg .hs{stroke:var(--accent);stroke-width:1.6;fill:none}
-  .rail svg .dim{fill:var(--line-hi)}
-  /* Four across, or a square. Three and a stray one reads like the layout ran out of room. */
-  @media (max-width:1000px){.rail{grid-template-columns:1fr 1fr}}
-  @media (max-width:560px){.rail{grid-template-columns:1fr}}
-
-  /* ---- the start panel ---- */
-  button.big{font-size:14px;padding:14px 26px}
-  .reels.even{grid-template-columns:1fr 1fr}
-  #weekReels{margin:20px 0 0}
-
-  /* ---- form guide ---- */
-  .form{display:block;width:100%}
-  .bars{display:flex;align-items:flex-end;gap:3px;height:28px;margin-bottom:6px}
-  .bars i{flex:1;display:block;min-height:2px;border-radius:1px;background:var(--line-hi)}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+  .opt{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:6px;text-align:left;
+    background:var(--surface-deep);border:1px solid var(--line-hi);border-radius:12px;padding:14px 15px}
+  .opt:hover{border-color:var(--accent);background:#0e1636}
+  .opt:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  @media (max-width:640px){
+    .opts{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    .opt{padding:12px}
+    .opt-top{flex-direction:column;align-items:flex-start;gap:6px}
+    .opt-top .pi{width:24px;height:24px;align-self:flex-start}
+    .opt-top span{font-size:10.5px}
+    .opt-pts{font-size:26px}
+    .formtxt{font-size:11px}
+  }
+  .opt-top{display:flex;align-items:center;gap:10px;color:var(--accent)}
+  .opt-top b{display:block;font-family:var(--display);font-weight:700;font-size:22px;color:var(--text);line-height:1}
+  .opt-top span{display:block;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .opt-pts{font-family:var(--display);font-weight:700;font-size:30px;line-height:1;color:var(--accent);margin-top:4px}
+  .opt-pts small{font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:.12em;color:var(--accent-deep);margin-left:5px}
+  .opt-proj{font-size:12.5px;color:var(--secondary)}
+  .bars{display:flex;align-items:flex-end;gap:3px;height:26px;margin-top:6px}
+  .bars i{flex:1;min-height:2px;border-radius:1px;background:var(--line-hi)}
   .bars i.ok{background:var(--accent-deep)}
-  .formtxt{display:block;font-size:10.5px;letter-spacing:.04em;color:var(--dim);
-    font-variant-numeric:tabular-nums}
+  .formtxt{font-size:12px;color:var(--muted)}
   .formtxt b{color:var(--secondary);font-weight:600}
-  /* The form line is secondary now; the rank meter carries the colour. */
-  .formtxt b{color:var(--secondary)}
 
-  /* ---- where this option sits in its field ----
-     One coloured element per card. Everything else is neutral so this is the thing you read. */
-  .rank{display:block;width:100%;margin-top:9px}
-  .rmeter{display:block;height:4px;border-radius:2px;background:var(--surface);overflow:hidden}
-  .rmeter i{display:block;height:100%;border-radius:2px;background:var(--line-hi)}
-  .rank.hot .rmeter i{background:var(--accent)}
-  .rank.cold .rmeter i{background:var(--loss)}
-  .rtxt{display:block;font-size:10.5px;letter-spacing:.03em;color:var(--dim);margin-top:5px}
-  .rtxt b{color:var(--secondary);font-weight:600}
-  .rank.hot .rtxt b{color:var(--accent)}
-  .rank.cold .rtxt b{color:var(--loss)}
-  /* Form is worth reading at a glance across five cards, so it also gets an edge. */
-  .opt.hot{border-color:rgba(4,171,176,.6)}
-  .opt.cold{border-color:rgba(255,77,109,.42)}
-  .injury{color:var(--loss);letter-spacing:.1em}
-
-  /* ---- crests ---- */
-  .crest{width:22px;height:22px;object-fit:contain;flex-shrink:0}
-  .crest.lg{width:54px;height:54px}
-  .crest.sm{width:17px;height:17px}
-  .reel-team{display:flex;align-items:center;gap:14px}
-
-  /* ---- respins ----
-     Two identical ghost buttons said nothing about what they cost. The budget belongs on the
-     control that spends it, not in a separate line above. */
-  .respins-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:2px}
-  button.respin{display:inline-flex;align-items:center;gap:9px;padding:9px 10px 9px 12px;
-    border-color:var(--line-hi);background:var(--surface-deep);color:var(--secondary)}
-  button.respin .ri{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.7;
-    stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
-  button.respin b{font-family:var(--display);font-size:14px;line-height:1;color:var(--accent);
-    background:rgba(0,255,249,.1);border-radius:5px;padding:4px 8px;font-weight:700;
-    min-width:22px;text-align:center}
-  button.respin:disabled b{color:var(--dim);background:rgba(255,255,255,.04)}
-  button.respin:hover:not(:disabled){color:var(--accent);background:rgba(0,255,249,.06)}
-  .respin-note{font-size:11.5px;color:var(--dim)}
-  @media (max-width:620px){.respin-note{display:none}}
-
-  /* ---- the game log ----
-     The bars answer "roughly how often"; this answers "against whom, and when". Opened from
-     the strip on a card and shown full width beneath the row, because six rows of real detail
-     do not fit in a fifth of the stage. */
-  .opt{display:flex;flex-direction:column}
-  .opt-take{all:unset;display:flex;flex-direction:column;align-items:flex-start;gap:2px;
-    cursor:pointer;box-sizing:border-box;width:100%;padding:14px 16px 12px;flex:1}
-  .opt-take:hover{background:rgba(0,255,249,.04)}
-  .opt-log{all:unset;display:block;cursor:pointer;box-sizing:border-box;width:100%;
-    padding:11px 16px 13px;border-top:1px solid var(--line)}
-  .opt-log:hover{background:rgba(0,255,249,.04)}
-  .opt-log:hover .formtxt{color:var(--secondary)}
-  .opt-log:hover .bars i{opacity:.75}
-  .opt.open{border-color:var(--accent)}
-
-  /* ---- the game table ----
-     Scrolls inside its own box rather than widening the page, because a quarterback with five
-     parts open is seven columns and a phone is not. */
-  /* The table is always on screen, so it needs to introduce itself rather than appear as an
-     unexplained grid of numbers under the cards. */
-  .tblhead{margin-top:22px;padding-top:16px;border-top:1px solid var(--line);
-    display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
-  .tblhead b{font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:.03em;
-    text-transform:uppercase}
-  .tblhead span{font-size:12px;color:var(--dim);line-height:1.5}
-  .oppbox{margin-left:auto;display:flex;align-items:center;gap:11px}
-  .oppbox em{font-style:normal;font-size:10px;letter-spacing:.14em;text-transform:uppercase;
-    color:var(--dim)}
-  .tblwrap{margin-top:11px;background:var(--surface-deep);border:1px solid var(--line-hi);
-    border-radius:12px;overflow-x:auto;-webkit-overflow-scrolling:touch}
-  table.gt{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
-  /* Tight enough that a five-part quarterback fits seven columns on a laptop without
-     scrolling. Wider positions still scroll rather than squeeze. */
-  table.gt th,table.gt td{padding:9px 9px;text-align:right;white-space:nowrap;border-top:none}
-  table.gt th:first-child,table.gt td:first-child{padding-left:14px}
-  table.gt th:last-child,table.gt td:last-child{padding-right:14px}
-  table.gt th.wk,table.gt th.opp,table.gt td.wk,table.gt td.opp{text-align:left}
-
-  table.gt thead th{font-size:10px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;
-    color:var(--dim);padding-top:14px;padding-bottom:11px;vertical-align:bottom;
-    border-bottom:1px solid var(--line-hi)}
-  table.gt thead th.sc .p{display:block;font-family:var(--display);font-weight:700;font-size:15px;
-    letter-spacing:.05em;color:var(--secondary)}
-  table.gt thead th.sc em{display:block;font-style:normal;font-size:9.5px;letter-spacing:.08em;
-    color:var(--dim);margin-top:2px}
-  table.gt thead th.sel .p{color:var(--accent)}
-
-  table.gt tbody td{border-top:1px solid rgba(37,52,93,.45);color:var(--muted)}
-  table.gt tbody tr:hover td{background:rgba(255,255,255,.022)}
-  table.gt td.wk{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)}
-  table.gt td.opp{color:var(--secondary)}
-  table.gt td.opp img{vertical-align:-4px;margin-left:6px}
-  table.gt td.v{font-family:var(--display);font-weight:700;font-size:16px;color:var(--muted)}
-  /* Lit means it beat this week's number. A column that is mostly lit is a number he clears. */
+  .gt-head{margin:22px 0 10px;font-family:var(--display);font-weight:700;font-size:19px;text-transform:uppercase}
+  .gt-head span{font-family:var(--sans);font-weight:400;font-size:13px;text-transform:none;color:var(--muted);margin-left:8px}
+  .tblwrap{background:var(--surface-deep);border:1px solid var(--line-hi);border-radius:12px;overflow-x:auto}
+  table.gt{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums}
+  table.gt th,table.gt td{padding:9px 10px;text-align:right;white-space:nowrap}
+  table.gt th:first-child,table.gt td:first-child{padding-left:14px;text-align:left}
+  table.gt td.opp,table.gt th.opp{text-align:left}
+  table.gt thead th{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
+    border-bottom:1px solid var(--line-hi);vertical-align:bottom;padding-top:12px}
+  table.gt thead th b{display:block;font-family:var(--display);font-size:16px;color:var(--secondary);letter-spacing:.04em}
+  table.gt tbody td{border-top:1px solid rgba(37,52,93,.5);color:var(--muted)}
+  table.gt td.v{font-family:var(--display);font-weight:700;font-size:17px;color:var(--secondary)}
   table.gt td.v.ok{color:var(--accent)}
-  table.gt .sel{background:rgba(0,255,249,.05)}
+  table.gt td.opp img{width:17px;height:17px;vertical-align:-3px;margin-left:6px}
+  table.gt tfoot td{border-top:1px solid var(--line-hi);color:var(--secondary);font-size:12.5px}
+  table.gt tfoot td:first-child{color:var(--muted);letter-spacing:.06em;text-transform:uppercase;font-size:11.5px}
+  table.gt tfoot b.hot{color:var(--accent)} table.gt tfoot b.cold{color:var(--live)}
 
-  table.gt tfoot td{font-size:11.5px;color:var(--muted)}
-  table.gt tfoot tr.avg td{border-top:1px solid var(--line-hi);padding-top:11px}
-  table.gt tfoot td.wk{letter-spacing:.09em;text-transform:uppercase;color:var(--dim);font-size:10.5px}
-  table.gt tfoot tr.line td{color:var(--secondary)}
-  table.gt tfoot tr.rate b{font-weight:600;color:var(--secondary)}
-  table.gt tfoot tr.rate b.hot{color:var(--accent)}
-  table.gt tfoot tr.rate b.cold{color:var(--loss)}
-  table.gt tfoot tr.rate td{padding-bottom:15px}
+  .rail{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;position:sticky;top:78px}
+  @media (max-width:1060px){.rail{position:static}}
+  .rail-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+  .rail-head b{font-family:var(--display);font-size:32px;color:var(--accent);line-height:1}
+  .rail-head small{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-left:4px}
+  .rp{border-top:1px solid var(--line);padding:10px 0 4px}
+  .rp-head{display:flex;justify-content:space-between;font-size:12px;font-weight:600;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--secondary);margin-bottom:4px}
+  .rp-row{display:flex;align-items:center;gap:9px;padding:6px 0;font-size:14px}
+  .rp-row .pi{color:var(--accent)}
+  .rp-row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rp-row .pt{font-family:var(--display);font-weight:700;font-size:17px}
+  .rp-row.open{color:var(--dim)}
+  .rp-row.open .nm{border-bottom:1px dashed var(--line-hi);height:1px;align-self:center}
+  .rp-row.now{color:var(--accent)}
+  .rp-left{font-size:12px;color:var(--muted);padding:2px 0 6px}
 
-  /* ---- how you played, as opposed to how the wheel treated you ----
-     Deliberately not on the paper. The slip is the record of what happened; this is the verdict
-     on it, and it reads better as a separate object sitting underneath. */
-  .cap{max-width:530px;margin:16px auto 0;background:var(--surface);border:1px solid var(--line-hi);
-    border-radius:14px;padding:20px 22px}
-  .cap-head{display:flex;align-items:baseline;gap:18px;flex-wrap:wrap}
-  .cap-head > div:first-child{display:flex;align-items:baseline;gap:8px;flex-shrink:0}
-  .cap-head b{font-family:var(--display);font-weight:700;font-size:40px;line-height:1;
-    color:var(--secondary)}
-  .cap.hot .cap-head b{color:var(--accent)}
-  .cap.cold .cap-head b{color:var(--loss)}
-  .cap-head > div:first-child span{font-size:11px;letter-spacing:.14em;text-transform:uppercase;
-    color:var(--dim)}
-  .cap-of{flex:1;min-width:220px;font-size:13px;color:var(--muted);line-height:1.55}
-  .cap-of b{font-family:var(--sans);font-size:13px;font-weight:600;color:var(--text)}
-  .cap-swap{margin-top:15px;padding-top:14px;border-top:1px solid var(--line);
-    font-size:13px;color:var(--muted);line-height:1.6}
-  .cap-swap b{color:var(--text);font-weight:600}
-  .cap-swap i{font-style:normal;color:var(--secondary)}
-
-  /* ---- what is left in a position ---- */
-  .pos-open{margin-top:10px;padding-top:9px;border-top:1px solid var(--line);
-    font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
-  .pos-open b{color:var(--secondary);font-weight:500}
-
-  /* ---- the slip ----
-     A finished roster is a betting slip in everything but the money, so it prints like one.
-     This is the only light surface in the product, which is the point: it reads as an object
-     you were handed rather than another panel in the same interface. */
-  /* ---- the slip ----
-     One line per pick and one number per line: the projection before kickoff, the score after,
-     with the projection kept small underneath so beating it reads at a glance. */
-  .sp{max-width:460px;margin:0 auto;background:var(--paper);color:var(--ink);border-radius:10px;
-    padding:20px 22px 18px;font-family:var(--mono);font-size:12.5px}
+  /* ---------- the slip ---------- */
+  .done-wrap{max-width:480px;margin:30px auto 0}
+  .done-head{text-align:center;margin-bottom:16px}
+  .done-head h2{font-size:30px;margin-top:10px}
+  .sp{background:var(--paper);color:var(--ink);border-radius:12px;padding:20px 22px 18px;font-family:var(--mono);font-size:12.5px}
   .sp-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:12px}
-  .sp-title{font-family:var(--display);font-weight:700;font-size:26px;text-transform:uppercase;
-    letter-spacing:.02em;line-height:1}
+  .sp-title{font-family:var(--display);font-weight:700;font-size:26px;text-transform:uppercase;letter-spacing:.02em;line-height:1}
   .sp-meta{font-size:11.5px;color:#6f7078;text-align:right}
-  .sp-row{display:grid;grid-template-columns:42px minmax(0,1fr) 62px;gap:10px;align-items:center;
-    padding:7px 0;border-top:1px dashed #cbc6b8;opacity:0;transform:translateY(3px);
-    transition:opacity .22s ease,transform .22s ease}
+  .sp-row{display:grid;grid-template-columns:52px minmax(0,1fr) 64px;gap:10px;align-items:center;
+    padding:7px 0;border-top:1px dashed #cbc6b8;opacity:0;transform:translateY(3px);transition:opacity .22s,transform .22s}
   .sp-row.in,.sp.instant .sp-row{opacity:1;transform:none}
-  .sp-pos{font-size:10.5px;letter-spacing:.12em;color:#7d8189}
-  .sp-who{display:flex;align-items:baseline;gap:8px;min-width:0}
-  .sp-nm{font-family:var(--display);font-weight:700;font-size:18px;text-transform:uppercase;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sp-pos{font-size:10.5px;letter-spacing:.08em;color:#7d8189;white-space:nowrap}
+  .sp-who{display:flex;align-items:center;gap:8px;min-width:0}
+  .sp-who .pi{color:#5d6170;width:18px;height:18px}
+  .sp-nm{font-family:var(--display);font-weight:700;font-size:18px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .sp-part{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#8b8f97;white-space:nowrap}
   .sp-v{text-align:right;font-variant-numeric:tabular-nums;font-weight:600;font-size:14px;line-height:1.2}
   .sp-v small{display:block;font-weight:400;font-size:10.5px;color:#8b8f97}
   .sp-v.pre{color:#6f7078;font-weight:500}
-  .sp-v.up{color:#0b7a5c}
-  .sp-v.dn{color:#b3263e}
+  .sp-v.up{color:#0b7a5c}.sp-v.dn{color:#b3263e}
   .sp-v .clk{color:#b3263e;font-size:10px;font-weight:500}
-  .sp-foot{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
-    border-top:2px solid var(--ink);margin-top:6px;padding-top:12px}
-  .sp-big{font-family:var(--display);font-weight:700;font-size:40px;line-height:.9}
-  .sp-acts{display:flex;gap:8px;margin-top:16px}
-  .sp-acts button{flex:1;background:transparent;border:1.5px solid var(--ink);color:var(--ink);
-    border-radius:8px;padding:11px 10px;font-weight:600}
-  .sp-acts button:hover:not(:disabled){background:var(--ink);color:var(--paper);border-color:var(--ink)}
-  .sp-acts button.go{background:var(--ink);color:var(--paper)}
-  .namebtn{background:none;border:none;padding:0;font:inherit;color:inherit;text-transform:inherit;
-    letter-spacing:inherit;cursor:text;text-decoration:underline dashed var(--dim) 1px;
-    text-underline-offset:6px}
-  .namebtn:hover{color:var(--accent);border:none;text-decoration-color:var(--accent)}
-  #err:empty{display:none}
-  #slipSection{margin-top:8px}
-  .nameinput{font-family:var(--display);font-size:inherit;font-weight:700;text-transform:uppercase;
-    width:min(320px,70vw);padding:2px 8px}
-  @media (max-width:480px){.nav-week{display:none}}
-  @media (max-width:600px){.sp{padding:18px 16px}.sp-title{font-size:22px}.sp-row{grid-template-columns:36px minmax(0,1fr) 54px;gap:8px}
-    .sp-nm{font-size:16px}.sp-part{display:none}}
-  .slip{position:relative;max-width:530px;margin:0 auto;background:var(--paper);color:var(--ink);
-    font-family:var(--mono);font-size:12.5px;line-height:1.72;padding:34px 30px 30px;
-    box-shadow:0 26px 70px rgba(0,0,0,.6);
-    /* Real paper fibre underneath, print banding on top. The scan is cropped to its interior
-       upstream, since the sheet came with its own torn edges and this draws its own. */
-    background-image:repeating-linear-gradient(rgba(0,0,0,.022) 0 1px,transparent 1px 3px),
-      url("img/paper.jpg");
-    background-size:auto,cover;
-    background-position:0 0,center top}
-  /* Torn off a roll at both ends. */
-  .slip::before,.slip::after{content:"";position:absolute;left:0;right:0;height:10px;
-    background:radial-gradient(circle at 5px 0,var(--paper) 5px,transparent 5px);
-    background-size:10px 10px}
-  .slip::before{top:-10px;transform:rotate(180deg)}
-  .slip::after{bottom:-10px}
-
-  .slip-brand{font-family:var(--display);font-weight:700;font-size:26px;letter-spacing:.34em;
-    text-align:center;text-transform:uppercase;margin-bottom:2px}
-  .slip-meta{display:flex;justify-content:space-between;font-size:11px;letter-spacing:.06em;
-    text-transform:uppercase;color:#5b5f68}
-  .slip-rule{border-top:1px dashed #b4afa2;margin:13px 0}
-  .slip-sec{font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:#7d8189;
-    margin:14px 0 3px}
-  /* Wide enough for SHOULDERS, which is the longest part name in the game. */
-  .slip-line{display:grid;grid-template-columns:76px 1fr 46px 56px;gap:9px;align-items:baseline;
-    opacity:0;transform:translateY(5px);transition:opacity .2s ease,transform .2s ease}
-  .slip-line.in,.slip.instant .slip-line{opacity:1;transform:none}
-  .sl-part{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:#7d8189}
-  .sl-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .sl-raw,.sl-pts{text-align:right;font-variant-numeric:tabular-nums}
-  .sl-raw{color:#8b8f97}
-  .sl-pts{font-weight:600}
-  .slip-sub{display:flex;justify-content:space-between;font-size:11px;letter-spacing:.06em;
-    text-transform:uppercase;color:#7d8189;margin-top:5px;padding-top:5px;
-    border-top:1px solid #ded9cc}
-  .slip-foot{opacity:0;transition:opacity .3s ease}
-  .slip-foot.in,.slip.instant .slip-foot{opacity:1}
-  .slip-tot{display:flex;justify-content:space-between;align-items:baseline;margin-top:3px}
-  .slip-tot span:first-child{font-size:11px;letter-spacing:.18em;text-transform:uppercase}
-  .slip-tot .big{font-family:var(--display);font-weight:700;font-size:36px;line-height:1;
-    font-variant-numeric:tabular-nums}
-  .slip-verdict{text-align:center;font-size:11px;letter-spacing:.2em;text-transform:uppercase;
-    margin-top:14px;padding-top:13px;border-top:1px dashed #b4afa2;color:#5b5f68}
-  .slip-verdict b{font-weight:600;color:var(--ink)}
-
-  /* ---- phones ----
-     Everything above assumes a laptop. These are the places that assumption breaks on a 375px
-     screen, which is where most people will open a link somebody texted them. */
-  @media (max-width:640px){
-    .wrap{padding:0 16px}
-
-    /* The week label was stacking to three lines and shoving the nav links around. The
-       "The vault" caption is the first thing to go: the badge beside the roster title already
-       says the week is historic. */
-    .nav-inner{gap:12px;height:56px}
-    .logo{font-size:20px}
-    .nav-week{padding-left:12px;white-space:nowrap}
-    .nav-week b{display:none}
-    .nav-week span{font-size:12px}
-    .nav-links{gap:16px}
-
-    /* A generated handle plus a badge plus a link does not fit on one line. */
-    h2{font-size:22px}
-    #headline{font-size:20px;line-height:1.25}
-    .badge{margin-left:8px}
-    .backlink{margin-left:10px}
-
-    /* Two reels side by side leave 157px each, which truncated every name longer than
-       "Lamar Jac...". The player reel is the one that carries words, so it gets the room. */
-    .reels{grid-template-columns:minmax(0,74px) minmax(0,1fr);gap:8px}
-    .reelbox{padding:10px}
-    .reel,.reel-item{height:48px}
-    .reel-item{font-size:30px}
-    .reel-item.name{font-size:17px;line-height:48px}
-    @keyframes reelspin{from{transform:translateY(0)}to{transform:translateY(-960px)}}
-    .crest.lg{width:38px;height:38px}
-    .reel-team{gap:8px}
-    /* Once the team has landed the crest says which team it is, and the abbreviation beside it
-       was being clipped to a two-pixel sliver. The reel still animates its text on the way
-       there, because the crest only appears after it stops. */
-    .reel-team:has(img) #teamReel{display:none}
-    .reel-team:has(img){justify-content:center}
-
-    /* The opponent crest was pushed to its own line by margin-left:auto and stranded there. */
-    .reveal{gap:12px}
-    .face{width:56px;height:56px}
-    .whobox .nm{font-size:24px}
-    .oppbox{margin-left:0;width:100%;justify-content:flex-start;
-      padding-top:4px;border-top:1px solid var(--line)}
-
-    .respins-row{gap:8px}
-    button.respin{flex:1;justify-content:center;padding:11px 10px}
-
-    .stage{padding:18px 16px;border-radius:12px}
-    .opt-take{padding:13px 14px 11px}
-    .opt-log{padding:10px 14px 12px}
-
-    /* Fourteen rows of a printed slip at 12.5px on a phone is unreadable; the columns are the
-       part that has to give, not the type. */
-    .slip{padding:28px 18px 26px;font-size:11.5px}
-    /* SHOULDERS is the longest part name and it collides with the player at 64px. */
-    .slip-line{grid-template-columns:72px 1fr 36px 44px;gap:5px}
-    .sl-part{font-size:9.5px;letter-spacing:.08em}
-    .slip-brand{font-size:20px;letter-spacing:.24em}
-    .slip-tot .big{font-size:30px}
-
-    .cap{padding:18px}
-    .cap-head b{font-size:32px}
-
-    .total{flex-wrap:wrap}
-    .tblhead{margin-top:18px}
-  }
-
-  /* Genuinely small phones only. 375px is an iPhone SE and 390 is an iPhone 15, so the week
-     context has to survive both; it is the only thing on screen naming which week you are in.
-     Below 340px there is no room for it and it goes. */
-  @media (max-width:340px){
-    .reel-item.name{font-size:15px}
-    .nav-week{display:none}
-    .logo{font-size:18px}
-  }
+  .sp-foot{display:flex;justify-content:space-between;align-items:baseline;gap:12px;border-top:2px solid var(--ink);margin-top:6px;padding-top:12px}
+  .sp-big{font-family:var(--display);font-weight:700;font-size:42px;line-height:.9}
+  .sp-acts{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+  .sp-acts .btn{flex:1;min-width:120px;background:transparent;border:1.5px solid var(--ink);color:var(--ink);height:46px}
+  .sp-acts .btn:hover{background:var(--ink);color:var(--paper)}
+  .sp-acts .btn.go{background:var(--ink);color:var(--paper)}
+  @media (max-width:600px){.sp{padding:18px 15px}.sp-title{font-size:22px}
+    .sp-row{grid-template-columns:46px minmax(0,1fr) 56px;gap:8px}.sp-nm{font-size:16px}.sp-part{display:none}}
 </style>
 </head>
-<body>
+<body data-page="play">
+<nav id="nav" class="top"></nav>
 
-<nav><div class="wrap nav-inner">
-  <div class="logo">Wheel<span>house</span></div>
-  <div class="nav-week" id="weekLabel"></div>
-  <div class="nav-links"><a href="/" class="on">Play</a><a href="/live.html">Live</a></div>
-</div></nav>
-
-<div class="wrap">
-  <section>
-    <h2 id="headline" style="display:none">Build your guy</h2>
-
-    <div id="hero" class="hero" style="display:none">
-      <h1 id="heroTitle">This week</h1>
-      <div id="slates" class="slates"></div>
-      <div id="notice"></div>
-
-      <div class="vault">
-        <div class="vault-head">The vault</div>
-        <div class="cta">
-          <button id="rollBtn">Random past week</button>
-          <button class="ghost" id="moreBtn" aria-expanded="false">Pick a week</button>
-        </div>
-        <input type="hidden" id="owner" value="">
-        <div class="reels even" id="weekReels" style="display:none">
-          <div class="reelbox" id="seasonBox"><div class="reelcap">Season</div>
-            <div id="seasonReel"><div class="reel"><div class="reel-strip"><div class="reel-item">&mdash;</div></div></div></div></div>
-          <div class="reelbox" id="wkBox"><div class="reelcap">Week</div>
-            <div id="wkReel"><div class="reel"><div class="reel-strip"><div class="reel-item">&mdash;</div></div></div></div></div>
-        </div>
-        <div id="more" class="more" hidden>
-          <div class="pickrow">
-            <label><span>Season</span><select id="season"></select></label>
-            <label><span>Week</span><select id="week"></select></label>
-            <button id="archiveBtn">Play it</button>
-          </div>
+<main class="wrap">
+  <!-- home -->
+  <div id="home" hidden>
+    <section class="hero" id="hero"></section>
+    <section class="sec">
+      <div class="sec-head"><h2>This week</h2><p>Each slate locks when its first game kicks off.</p></div>
+      <div class="slates" id="slates"></div>
+    </section>
+    <section class="sec" id="past">
+      <div class="sec-head"><h2>Past weeks</h2><p id="pastNote">Real weeks from past seasons. You play against that week's projections.</p></div>
+      <div class="past-row">
+        <button class="btn lg" id="rollBtn">Random week</button>
+        <span class="or">or</span>
+        <div class="past-pick">
+          <label class="field"><span>Season</span><select id="season"></select></label>
+          <label class="field"><span>Week</span><select id="week"></select></label>
+          <button class="btn lg" id="pickBtn">Play this week</button>
         </div>
       </div>
-    </div>
-
-    <div id="loader" class="loader" style="display:none">
-      <div class="big" id="loaderTitle">Pulling that week</div>
-      <div class="sub" id="loaderSub">Finding the games</div>
-      <div class="bar"><span></span></div>
-    </div>
-
-    <div class="pgrid" id="pgrid">
-      <div class="pmain">
-        <div id="stage" class="stage" style="display:none"></div>
-        <div class="err" id="err"></div>
+      <div id="weekReels" hidden>
+        <div class="reelbox" id="seasonBox"><div class="reelcap">Season</div><div id="seasonReel"></div></div>
+        <div class="reelbox" id="wkBox"><div class="reelcap">Week</div><div id="wkReel"></div></div>
       </div>
+      <p class="err" id="pastErr" style="margin-top:12px"></p>
+    </section>
+    <section class="sec">
+      <div class="sec-head"><h2>How to play</h2></div>
+      <div class="steps" id="steps"></div>
+    </section>
+  </div>
 
-      <aside class="pside" id="rosterSection" style="display:none">
-        <div class="sec-head"><h2>Your roster</h2>
-          <span class="sec-note" id="rosterNote"></span></div>
-        <div class="total" id="totalBar">
-          <div><div class="tlabel" id="totalLabel">Projected</div>
-            </div>
-          <div class="tnum"><div class="n" id="totalN">0</div><small>PTS</small></div>
-          <div class="vs" id="totalVs"></div>
-        </div>
-        <div id="positions" class="positions"></div>
-      </aside>
+  <!-- loading a past week -->
+  <div id="loader" class="loader" hidden>
+    <h2 id="loaderTitle"></h2>
+    <p id="loaderSub"></p>
+    <div class="bar"><span></span></div>
+  </div>
+
+  <!-- the draft -->
+  <div id="play" hidden>
+    <div class="play-head"><div class="t" id="playTitle"></div></div>
+    <div class="pickmap" id="pickmap"></div>
+    <div class="pgrid">
+      <div>
+        <div class="stage" id="stage"></div>
+        <p class="err" id="err" style="margin-top:10px"></p>
+      </div>
+      <aside class="rail" id="rail"></aside>
     </div>
-  </section>
+  </div>
 
-  <section id="howto" class="howto" style="display:none">
-    <div class="sec-head"><h2>How it works</h2></div>
-    <div class="rail">
-      <div><b>01</b>
-        <svg viewBox="0 0 120 52" aria-hidden="true">
-          <rect class="fl" x="1" y="8" width="50" height="36" rx="6"/>
-          <rect class="fl" x="59" y="8" width="60" height="36" rx="6"/>
-          <rect class="hi" x="9" y="22" width="34" height="8" rx="2"/>
-          <rect class="dim" x="67" y="16" width="44" height="6" rx="2"/>
-          <rect class="hi" x="67" y="27" width="30" height="7" rx="2"/>
-        </svg>
-        <span><i>The wheel spins twice.</i> First a team, then one of its players.
-          You choose neither.</span></div>
+  <!-- a finished roster -->
+  <div id="done" class="done-wrap" hidden>
+    <div class="done-head" id="doneHead"></div>
+    <div id="slip" class="sp"></div>
+  </div>
 
-      <div><b>02</b>
-        <svg viewBox="0 0 120 52" aria-hidden="true">
-          <rect class="fl" x="1" y="6" width="36" height="40" rx="6"/>
-          <rect class="fl" x="42" y="6" width="36" height="40" rx="6"/>
-          <rect class="fl" x="83" y="6" width="36" height="40" rx="6"/>
-          <rect class="hs" x="42" y="6" width="36" height="40" rx="6"/>
-          <rect class="dim" x="8" y="16" width="22" height="5" rx="2"/>
-          <rect class="hi" x="49" y="16" width="22" height="5" rx="2"/>
-          <rect class="dim" x="90" y="16" width="22" height="5" rx="2"/>
-          <rect class="dim" x="8" y="30" width="14" height="9" rx="2"/>
-          <rect class="hi" x="49" y="30" width="14" height="9" rx="2"/>
-          <rect class="dim" x="90" y="30" width="14" height="9" rx="2"/>
-        </svg>
-        <span><i>You take one stat off him.</i> His arm, his legs, his hands. Each stat goes
-          once per position, so spending it early costs you later.</span></div>
+  <div id="gone" hidden class="empty" style="margin-top:60px"></div>
+</main>
 
-      <div><b>03</b>
-        <svg viewBox="0 0 120 52" aria-hidden="true">
-          <rect class="dim" x="2"  y="30" width="14" height="14" rx="2"/>
-          <rect class="hi"  x="21" y="18" width="14" height="26" rx="2"/>
-          <rect class="dim" x="40" y="34" width="14" height="10" rx="2"/>
-          <rect class="hi"  x="59" y="12" width="14" height="32" rx="2"/>
-          <rect class="dim" x="78" y="28" width="14" height="16" rx="2"/>
-          <rect class="hi"  x="97" y="21" width="14" height="23" rx="2"/>
-          <line class="hs" x1="0" y1="24" x2="120" y2="24" stroke-dasharray="4 3"/>
-        </svg>
-        <span><i>You get his last six weeks.</i> How often he cleared this number before,
-          and against whom. You never get this week's result.</span></div>
-
-      <div><b>04</b>
-        <svg viewBox="0 0 120 52" aria-hidden="true">
-          <rect class="fl" x="30" y="2" width="60" height="48" rx="3"/>
-          <rect class="dim" x="38" y="11" width="30" height="4" rx="2"/>
-          <rect class="dim" x="38" y="20" width="44" height="3" rx="1.5"/>
-          <rect class="dim" x="38" y="27" width="44" height="3" rx="1.5"/>
-          <rect class="dim" x="38" y="34" width="26" height="3" rx="1.5"/>
-          <rect class="hi" x="66" y="40" width="16" height="6" rx="2"/>
-        </svg>
-        <span><i>Every call in, then the truth.</i> Your slip scores against what
-          actually happens.</span></div>
-    </div>
-  </section>
-
-  <section id="slipSection" style="display:none">
-    <div id="slip"></div>
-  </section>
-
-  <section id="lbSection" style="display:none">
-    <div class="sec-head"><h2 id="lbTitle">Leaderboard</h2></div>
-    <div class="card"><table id="lb"></table></div>
-  </section>
-
-  <section id="histSection" style="display:none">
-    <div class="sec-head"><h2>Your rosters</h2></div>
-    <div class="card"><table id="hist"></table></div>
-  </section>
-</div>
-
+<script src="/app.js"></script>
 <script>
-const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const fmt = n => n == null ? "0" : (Math.round(n * 100) / 100).toString();
-const NOPHOTO = "https://a.espncdn.com/i/headshots/nophoto.png";
-
-/* The entry ids this browser has opened.
- *
- * There is no server-side way to ask "what are mine" any more, and that is the point: the old
- * one took a display name, and a display name is printed on the leaderboard. An entry id is a
- * bearer token for a whole draft, so the only safe answer to "which are yours" is "the ones you
- * already hold". */
-function myEntries() {
-  try {
-    const raw = JSON.parse(localStorage.getItem("wh.entries") || "[]");
-    return Array.isArray(raw) ? raw.filter(x => typeof x === "string") : [];
-  } catch (e) { return []; }
-}
-
-function rememberEntry(id) {
-  if (!id) return;
-  const all = [id, ...myEntries().filter(x => x !== id)].slice(0, 200);
-  localStorage.setItem("wh.entries", JSON.stringify(all));
-}
+const { esc, fmt1, api } = WH;
+const params = new URLSearchParams(location.search);
+const rosterId = params.get("r");
+const shareId = params.get("s");
 
 let entry = null;
-let owner = localStorage.getItem("wh.owner") || "";
-/* A shared slip opened from a link: read-only, and not remembered as one of yours. */
-const shareParam = new URLSearchParams(location.search).get("s");
-let viewing = false;
+let board = null;       // this week's slates
+let mine = [];          // your rosters, if signed in
+let viewing = false;    // a shared slip, read-only
+let busy = false;       // a spin is animating; nothing may redraw the stage
+let slipState = "none"; // none -> playing -> done
 
-async function api(method, path, params) {
-  const qs = params ? "?" + new URLSearchParams(params) : "";
-  const r = await fetch("/api/play" + path + qs, { method });
-  const body = await r.json();
-  if (!r.ok || body.error) throw new Error(body.error || "request failed");
-  return body;
+const show = (id, on) => { document.getElementById(id).hidden = !on; };
+const fmt = n => n == null ? "0" : String(Math.round(n * 10) / 10);
+const shortName = n => {
+  const p = String(n || "").trim().split(/\s+/);
+  return p.length > 1 ? p[0][0] + ". " + p.slice(1).join(" ") : (n || "");
+};
+/* Classic has two flex positions, each with its own stats, so they are numbered. */
+const posName = (slot, pos) => {
+  if (slot !== "FLEX") return slot;
+  const flexes = entry ? entry.positions.filter(p => p.slot === "FLEX") : [];
+  return flexes.length > 1 && pos ? "Flex " + (flexes.indexOf(pos) + 1) : "Flex";
+};
+const RULES = {
+  SHOWDOWN: { picks: 7, text: "<b>7 picks</b>: 2 QB, 2 RB, 3 Flex", respins: 1 },
+  CLASSIC: { picks: 14, text: "<b>14 picks</b>: 4 QB, 4 RB, 6 Flex", respins: 3 },
+};
+
+/* ================= home ================= */
+
+function countdownParts(iso) {
+  let s = Math.max(0, Math.floor((new Date(iso) - Date.now()) / 1000));
+  const d = Math.floor(s / 86400); s -= d * 86400;
+  const h = Math.floor(s / 3600); s -= h * 3600;
+  const m = Math.floor(s / 60); s -= m * 60;
+  return { d, h, m, s };
+}
+const pad = n => String(n).padStart(2, "0");
+const shortCount = iso => {
+  const { d, h, m } = countdownParts(iso);
+  return d ? `${d}d ${h}h` : h ? `${h}h ${m}m` : `${m}m`;
+};
+
+function myFor(slateKey) {
+  return mine.filter(r => r.current && r.slate === slateKey);
 }
 
-const showError = e => document.getElementById("err").textContent = e ? e.message : "";
-const show = (id, on) => document.getElementById(id).style.display = on ? "block" : "none";
+function renderHero() {
+  const host = document.getElementById("hero");
+  const week = board && board.week;
+  const next = board && board.slates.find(s => s.key === board.next);
+  if (!week) { host.innerHTML = `<h1>Wheelhouse</h1>`; return; }
+  if (week.ready === false) {
+    host.innerHTML = `<div class="kicker">${esc(week.label)}</div><h1>Warming up</h1>
+      <p class="cd-note">Loading players. This takes about a minute after a restart.</p>`;
+    setTimeout(() => location.reload(), 8000);
+    return;
+  }
+  if (!next) {
+    host.innerHTML = `<div class="kicker">${esc(week.label)}</div>
+      <h1>Games are on</h1>
+      <p class="cd-note">Every slate this week has kicked off. Watch your rosters score, or play a past week.</p>
+      <div class="hero-cta"><a class="btn primary lg" href="/live.html">Watch live</a>
+        <a class="btn lg" href="#past">Play a past week</a></div>`;
+    return;
+  }
+  const inProgress = myFor(next.key).find(r => !r.complete);
+  const g = next.games.length === 1 ? next.games[0] : null;
+  host.innerHTML = `<div class="kicker">${esc(week.label)}</div>
+    ${WH.badge(next.key, next.label, "lg")}
+    <h1>${g ? `${esc(g.away)} @ ${esc(g.home)}` : `${next.games.length} games`}</h1>
+    <div class="countdown" id="cd"></div>
+    <p class="cd-note">Rosters lock at kickoff, ${esc(WH.kickoffText(next.lockAt))} ET.</p>
+    <div class="hero-cta">
+      ${inProgress
+        ? `<a class="btn primary lg" href="/?r=${esc(inProgress.entryId)}">Finish your roster</a>`
+        : `<button class="btn primary lg" data-slate="${esc(next.key)}">Play ${esc(next.label)}</button>`}
+    </div>`;
+  tickCountdown();
+}
 
-/* Pulling a historic week fetches a full slate of box scores plus that week's projections, so
-   it takes a few seconds. Narrating the steps is the difference between "loading" and feeling
-   like something substantial is being assembled for you. */
-const LOAD_STEPS = [
-  "Finding the games",
-  "Pulling every box score",
-  "Matching players across two feeds",
-  "Reading that week's projections",
-  "Locking the results away",
-];
+function tickCountdown() {
+  const el = document.getElementById("cd");
+  const next = board && board.slates.find(s => s.key === board.next);
+  if (!el || !next) return;
+  const { d, h, m, s } = countdownParts(next.lockAt);
+  if (d + h + m + s === 0) { location.reload(); return; }
+  el.innerHTML = (d ? `<div><b>${d}</b><span>${d === 1 ? "day" : "days"}</span></div>` : "")
+    + `<div><b>${pad(h)}</b><span>hrs</span></div><div><b>${pad(m)}</b><span>min</span></div>`
+    + `<div><b>${pad(s)}</b><span>sec</span></div>`;
+}
 
-function runLoader(label) {
-  loading = true;
-  document.getElementById("loaderTitle").textContent = label;
-  render();
+function renderSlates() {
+  const host = document.getElementById("slates");
+  if (!board || !board.slates.length) {
+    host.innerHTML = `<div class="empty"><b>No games this week</b>Play a past week below.</div>`;
+    return;
+  }
+  const playable = board.week.ready !== false && board.week.hasProjections !== false;
+  host.innerHTML = board.slates.map(sl => {
+    const locked = sl.locked || new Date(sl.lockAt) <= Date.now();
+    const rules = RULES[sl.format] || RULES.CLASSIC;
+    const games = sl.games.length === 1
+      ? `<div class="matchup"><img src="${esc(sl.games[0].awayLogo)}" alt="">${esc(sl.games[0].away)}
+          <span class="at">@</span>${esc(sl.games[0].home)}<img src="${esc(sl.games[0].homeLogo)}" alt=""></div>`
+      : `<div class="crests">${sl.games.flatMap(g => [g.awayLogo, g.homeLogo])
+          .map(u => `<img src="${esc(u)}" alt="">`).join("")}</div>`;
+    const mineHere = myFor(sl.key);
+    const building = mineHere.find(r => !r.complete);
+    const done = mineHere.filter(r => r.complete)
+      .sort((a, b) => (b.total ?? b.projectedTotal) - (a.total ?? a.projectedTotal))[0];
+    let foot;
+    if (building && !locked) {
+      foot = `<span class="status">${building.picked} of ${building.totalPicks} picked</span>
+        <span class="btns"><a class="btn primary sm" href="/?r=${esc(building.entryId)}">Finish</a></span>`;
+    } else if (done) {
+      foot = `<span class="status">You're in &middot; ${fmt1(done.status === "pending" ? done.projectedTotal : done.total)}
+          ${done.status === "pending" ? "proj" : "pts"}</span>
+        <span class="btns"><a class="btn sm" href="/?r=${esc(done.entryId)}">View</a>
+          ${locked ? "" : `<button class="btn sm" data-slate="${esc(sl.key)}" ${playable ? "" : "disabled"}>Play again</button>`}</span>`;
+    } else if (locked) {
+      foot = `<span class="status">Kicked off</span>
+        <span class="btns"><a class="btn sm" href="/live.html">Watch live</a></span>`;
+    } else {
+      foot = `<span class="status">Locks in <b>${shortCount(sl.lockAt)}</b></span>
+        <span class="btns"><button class="btn ${sl.key === board.next ? "primary" : ""} sm" data-slate="${esc(sl.key)}"
+          ${playable ? "" : "disabled"}>Play</button></span>`;
+    }
+    return `<div class="slate ${locked ? "locked" : ""} ${sl.key === board.next ? "next" : ""}">
+      <div class="slate-top">${WH.badge(sl.key, sl.label)}<span class="slate-when">${esc(WH.kickoffText(sl.lockAt))}</span></div>
+      ${games}
+      <div class="rules">${rules.text}<br>Respins: ${rules.respins} team, ${rules.respins} player</div>
+      <div class="slate-foot">${foot}</div></div>`;
+  }).join("");
+}
+
+function renderSteps() {
+  document.getElementById("steps").innerHTML = [
+    ["legs", "Spin", "The wheel picks a team, then one of its players."],
+    ["arm", "Take one stat", "Arm, legs, hands and more. Each stat once per position."],
+    ["chest", "Fill every pick", "7 picks on Thursday and Monday nights. 14 on Sunday."],
+    ["cleats", "Score", "Standard PPR points from what really happens."],
+  ].map(([icon, title, text]) => `<div class="step">${WH.part(icon)}<b>${title}</b><span>${text}</span></div>`).join("");
+}
+
+let archiveRange = null;
+async function loadArchive() {
+  archiveRange = await api("/api/play/archive");
+  const years = [];
+  for (let y = archiveRange.latest; y >= archiveRange.earliest; y--) years.push(y);
+  document.getElementById("season").innerHTML = years.map(y => `<option>${y}</option>`).join("");
+  const weeks = [];
+  for (let w = 1; w <= archiveRange.weeks; w++) weeks.push(w);
+  document.getElementById("week").innerHTML = weeks.map(w => `<option value="${w}">Week ${w}</option>`).join("");
+  document.getElementById("pastNote").textContent =
+    `Any week from ${archiveRange.earliest} to ${archiveRange.latest}. You play against that week's projections.`;
+}
+
+async function showHome() {
+  show("home", true);
+  renderHero();
+  renderSlates();
+  renderSteps();
+  await loadArchive();
+  document.getElementById("home").addEventListener("click", e => {
+    const b = e.target.closest("[data-slate]");
+    if (b) startSlate(b.dataset.slate, b);
+  });
+  document.getElementById("rollBtn").addEventListener("click", rollWeek);
+  document.getElementById("pickBtn").addEventListener("click", () =>
+    startPast(document.getElementById("season").value, document.getElementById("week").value));
+  setInterval(() => { tickCountdown(); }, 1000);
+  setInterval(() => { if (!document.hidden) renderSlates(); }, 30000);
+}
+
+async function startSlate(key, btn) {
+  try {
+    await WH.requireAuth();
+    if (btn) btn.disabled = true;
+    const e = await api("/api/play/open", { method: "POST", params: { slate: key } });
+    location.href = "/?r=" + encodeURIComponent(e.entryId);
+  } catch (e) {
+    if (btn) btn.disabled = false;
+    if (!e.cancelled) WH.toast(e.message);
+  }
+}
+
+const LOAD_STEPS = ["Finding the games", "Pulling every box score", "Matching players",
+  "Reading that week's projections", "Hiding the results"];
+
+async function startPast(season, week) {
+  const err = document.getElementById("pastErr");
+  err.textContent = "";
+  try { await WH.requireAuth(); } catch (e) { return; }
+  show("home", false); show("loader", true);
+  document.getElementById("loaderTitle").textContent = `${season} · Week ${week}`;
   let i = 0;
   const sub = document.getElementById("loaderSub");
   sub.textContent = LOAD_STEPS[0];
-  return setInterval(() => {
-    i = Math.min(i + 1, LOAD_STEPS.length - 1);
-    sub.textContent = LOAD_STEPS[i];
-  }, 1400);
-}
-const pickAt = i => entry.positions.flatMap(p => p.picks).find(p => p.pickIndex === i);
-const posLabel = (slot, index) => slot === "FLEX" ? "Flex " + (index - 1) : slot;
-// Split only at lowercase-to-uppercase boundaries, so "passingYards" reads as two words
-// while an acronym survives intact.
-const statLabel = s => s.split(".")[1].replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
-
-// A missing headshot is a bare 404, not a placeholder, so without this the browser paints a
-// broken-image icon.
-const faceTag = (url, cls) => url
-  ? `<img class="${cls}" src="${esc(url)}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${NOPHOTO}'">`
-  : `<img class="${cls}" src="${NOPHOTO}" alt="">`;
-
-/* Week context belongs beside the wordmark, not standing on its own above the page. A lone
-   label floating over a headline is the single most recognisable thing about a generated
-   layout, and it was carrying two words of information. */
-function setWeekLabel(c, slateLabel) {
-  const host = document.getElementById("weekLabel");
-  if (!c || !c.label) { host.innerHTML = ""; return; }
-  const what = esc(c.label) + (slateLabel ? " &middot; " + esc(slateLabel) : "");
-  host.innerHTML = `<b>${c.archive ? "The vault" : "Live"}</b><span>${what}</span>`;
-}
-
-let slateBoard = null;
-
-async function loadContest() {
+  const ticker = setInterval(() => { sub.textContent = LOAD_STEPS[Math.min(++i, LOAD_STEPS.length - 1)]; }, 1300);
   try {
-    slateBoard = await api("GET", "/slates");
-    setWeekLabel(slateBoard.week);
-    showNotice(slateBoard.week);
-    renderSlates();
-  } catch (e) { showError(e); }
+    const e = await api("/api/play/open", { method: "POST", params: { season, week } });
+    location.href = "/?r=" + encodeURIComponent(e.entryId);
+  } catch (e) {
+    clearInterval(ticker);
+    show("loader", false); show("home", true);
+    err.textContent = e.message;
+  }
 }
 
-const ET = { timeZone: "America/New_York" };
-const kickoffText = iso => new Date(iso).toLocaleString("en-US",
-  Object.assign({ weekday: "short", hour: "numeric", minute: "2-digit" }, ET)).replace(":00", "");
-
-function countdown(iso) {
-  const ms = new Date(iso) - Date.now();
-  if (ms <= 0) return null;
-  const m = Math.floor(ms / 60000), d = Math.floor(m / 1440), h = Math.floor(m % 1440 / 60);
-  return d ? `${d}d ${h}h` : h ? `${h}h ${m % 60}m` : `${m % 60}m`;
+/* The random week is dealt by the same reels as the draft. */
+async function rollWeek() {
+  try { await WH.requireAuth(); } catch (e) { return; }
+  const seasons = [], weeks = [];
+  for (let y = archiveRange.earliest; y <= archiveRange.latest; y++) seasons.push(String(y));
+  for (let w = 2; w <= archiveRange.weeks; w++) weeks.push(String(w));
+  const season = seasons[Math.floor(Math.random() * seasons.length)];
+  const week = weeks[Math.floor(Math.random() * weeks.length)];
+  document.getElementById("weekReels").hidden = false;
+  document.getElementById("rollBtn").disabled = true;
+  const a = buildReel(document.getElementById("seasonReel"), seasons, "");
+  const b = buildReel(document.getElementById("wkReel"), weeks, "");
+  await landReel(a, seasons, season, "");
+  document.getElementById("seasonBox").classList.add("landed");
+  await landReel(b, weeks, week, "");
+  document.getElementById("wkBox").classList.add("landed");
+  await new Promise(r => setTimeout(r, 350));
+  startPast(season, week);
 }
 
-/* One card per slate. The next open one carries the only primary button on the page. */
-function renderSlates() {
-  const host = document.getElementById("slates");
-  const b = slateBoard;
-  if (!b || !b.week) { host.innerHTML = ""; return; }
-  const next = (b.slates || []).find(x => x.key === b.next);
-  document.getElementById("heroTitle").innerHTML = esc(b.week.label) + "<br><em>"
-    + esc(next ? next.label : "In progress") + "</em>";
-  const playable = b.week.ready !== false && b.week.hasProjections !== false;
+/* ================= the draft ================= */
 
-  host.innerHTML = (b.slates || []).map(sl => {
-    const left = countdown(sl.lockAt);
-    const locked = sl.locked || !left;
-    const games = sl.games.length === 1
-      ? `<div class="sl-match"><img src="${esc(sl.games[0].awayLogo)}" alt="">${esc(sl.games[0].away)}
-          <span class="at">@</span>${esc(sl.games[0].home)}<img src="${esc(sl.games[0].homeLogo)}" alt=""></div>`
-      : sl.games.flatMap(g => [g.awayLogo, g.homeLogo]).map(u => `<img src="${esc(u)}" alt="">`).join("");
-    const foot = locked
-      ? `<span class="sl-lock">Kicked off</span><a class="sl-watch" href="/live.html">Watch live</a>`
-      : `<span class="sl-lock">${esc(kickoffText(sl.lockAt))} &middot; <b>${left}</b></span>
-         <button class="${sl.key === b.next ? "primary" : ""}" data-slate="${esc(sl.key)}"
-           ${playable ? "" : "disabled"}>Play</button>`;
-    return `<div class="slate ${locked ? "locked" : ""} ${sl.key === b.next ? "next" : ""}">
-      <div class="sl-top"><span class="sl-name">${esc(sl.label)}</span>
-        <span class="sl-fmt">${sl.picks} picks${sl.games.length > 1 ? " &middot; " + sl.games.length + " games" : ""}</span></div>
-      <div class="sl-games">${games}</div>
-      <div class="sl-foot">${foot}</div></div>`;
+const pickAt = i => entry.positions.flatMap(p => p.picks).find(p => p.pickIndex === i);
+
+function titleHtml() {
+  const c = entry.contest || {};
+  if (c.archive) return `${WH.badge("past", "Past week")}<h2>${esc(c.season)} &middot; Week ${esc(c.week)}</h2>`;
+  return `${WH.badge(entry.slate, entry.slateLabel || c.label, "lg")}<h2>${esc(c.label)}</h2>`;
+}
+
+function renderPickmap() {
+  const groups = entry.positions.map(pos => {
+    const dots = pos.picks.map(p =>
+      `<i class="${p.chosen ? "done" : p.pickIndex === entry.activePick ? "now" : ""}"></i>`).join("");
+    return `<div class="pm-group"><span>${posName(pos.slot, pos)}</span>${dots}</div>`;
   }).join("");
-
-  host.querySelectorAll("[data-slate]").forEach(btn =>
-    btn.addEventListener("click", () => start({ slate: btn.dataset.slate })));
+  const done = entry.positions.flatMap(p => p.picks).filter(p => p.chosen).length;
+  document.getElementById("pickmap").innerHTML = groups
+    + `<span class="pm-step">Pick ${Math.min(done + 1, entry.totalPicks)} of ${entry.totalPicks}</span>`;
 }
-
-/* Only the states that stop play get a sentence. */
-function showNotice(c) {
-  const host = document.getElementById("notice");
-  if (c && c.ready === false) {
-    host.innerHTML = `<div class="notice"><b>Warming up.</b> Back in a minute.</div>`;
-    setTimeout(loadContest, 5000);
-  } else if (c && c.hasProjections === false) {
-    host.innerHTML = `<div class="notice"><b>${esc(c.label)}.</b> No projections yet.</div>`;
-  } else {
-    host.innerHTML = "";
-  }
-}
-
-let archiveRange = { earliest: 2020, latest: 2024, weeks: 18 };
-
-async function loadArchiveOptions() {
-  const a = await api("GET", "/archive");
-  archiveRange = a;
-  // The roster length is a property of the slot definitions, so the page is told it rather
-  // than repeating it. Dropping one part from one position changes the whole draft.
-  if (a.totalPicks) {
-    document.querySelectorAll("[data-picks]").forEach(el => el.textContent = a.totalPicks);
-  }
-  const years = [];
-  for (let y = a.latest; y >= a.earliest; y--) years.push(y);
-  document.getElementById("season").innerHTML = years.map(y => `<option>${y}</option>`).join("");
-  const weeks = [];
-  for (let w = 1; w <= a.weeks; w++) weeks.push(w);
-  document.getElementById("week").innerHTML =
-    weeks.map(w => `<option value="${w}">Week ${w}</option>`).join("");
-}
-
-/* The last six weeks of this player at this stat, measured against the number he is being
-   offered at right now. One bar per game, filled if it cleared the projection.
-
-   This is the only evidence the format gives you. A projection on its own says a receiver is
-   worth sixty yards; it cannot tell you he has hit sixty once since October, which is the
-   difference between a pick and a coin flip. Nothing here is from the week being drafted:
-   the server refuses to send it. */
-/* The card's edge follows where the option sits in its field, not whether the player has been
-   beating his own forecast. Those are different questions and only one of them is the game:
-   points are what score, so out-scoring the other people who could have filled this part is
-   what makes a pick good. Missing your own line four weeks running and still being the best
-   passing-yards option on the board is an ordinary thing for a quarterback to be. */
-/* A game from before this season carries its year, so "Wk 17" is never mistaken for a week
-   that has not happened yet. */
-const thisSeason = () => (entry && entry.contest && entry.contest.season) || 0;
-const weekLabel = g => (g.season && g.season !== thisSeason()
-  ? "'" + String(g.season).slice(2) + " " : "") + "Wk " + g.week;
 
 function formStrip(f) {
-  // Nothing played yet reads as zeros, the same shape as everyone else's strip.
   if (!f || !f.games || !f.games.length) {
-    return `<span class="form"><span class="bars">${"<i style=\"height:2px\"></i>".repeat(6)}</span>
-      <span class="formtxt">avg <b>0</b></span></span>`;
+    return `<div class="bars">${"<i></i>".repeat(6)}</div><div class="formtxt">No games yet</div>`;
   }
   const max = Math.max(...f.games.map(g => g.value), f.line || 0, 1);
-  const bars = f.games.map(g => {
-    const when = weekLabel(g) + (g.home ? " vs " : " at ") + g.opponent + ": " + fmt(g.value);
-    return `<i style="height:${Math.max(2, Math.round((g.value / max) * 28))}px"
-      title="${esc(when)}"></i>`;
-  }).join("");
-
-  // "2/6 over" rather than "cleared 2 of 6": it fits a five-across row without wrapping, and
-  // over is the precise word anyway, since the line it is measured against is the projection.
-  let tail = "";
-  if (f.line != null && f.played) {
-    tail = ` &middot; <b>${f.cleared}/${f.played}</b> over`;
-  }
-  return `<span class="form"><span class="bars">${bars}</span>
-    <span class="formtxt">last ${f.played} &middot; avg <b>${fmt(f.average)}</b>${tail}</span></span>`;
+  const bars = f.games.map(g =>
+    `<i class="${g.cleared ? "ok" : ""}" style="height:${Math.max(2, Math.round(g.value / max * 26))}px"
+       title="${esc(weekLabel(g))} ${g.home ? "vs" : "at"} ${esc(g.opponent)}: ${fmt(g.value)}"></i>`).join("");
+  const pct = f.line != null && f.played ? Math.round(100 * f.cleared / f.played) : null;
+  return `<div class="bars">${bars}</div>
+    <div class="formtxt">Last ${f.played} avg <b>${fmt(f.average)}</b>${pct == null ? "" : ` &middot; over proj <b>${pct}%</b>`}</div>`;
 }
 
-/* Which column is emphasised in the table, if any. The table itself is always on: it shows
-   every stat for the player in front of you, so hiding it behind a click on one stat asked
-   you to choose a column before you were allowed to compare columns. Reset whenever the pick
-   changes, because a highlight pointing at a player you no longer have is worse than none. */
-let openLog = null;
+const thisSeason = () => (entry && entry.contest && entry.contest.season) || 0;
+const weekLabel = g => (g.season && g.season !== thisSeason() ? "'" + String(g.season).slice(2) + " " : "") + "Wk " + g.week;
 
-const crestFor = t => t
-  ? `https://a.espncdn.com/i/teamlogos/nfl/500-dark/${
-      encodeURIComponent(t.toLowerCase() === "was" ? "wsh" : t.toLowerCase())}.png`
-  : null;
-
-/* The whole season so far, every stat at once, one row per game.
- *
- * A single stat's history answers "does he clear this number". It cannot answer the question
- * people actually ask, which is "what does he do in games like this one" — and that needs the
- * columns side by side, because the interesting weeks are the ones where the yardage came
- * without the touchdown, or the catches came without the yards. Reading down a column tells
- * you about the stat; reading across a row tells you about the matchup.
- *
- * Cells that beat the current projection are lit, so a column that is mostly lit is a number
- * he clears and a column that is mostly dark is one the forecast is generous about.
- */
-function renderStatTable(pick, player) {
-  // Every option gets a column, including any the game log has nothing for. The table is the
-  // full set of choices on this pick, so leaving one out would mean a part you could take
-  // from its card but not from here, and the two would disagree about what your options are.
+/* Every game in the window, every stat as a column. Numbers over this week's projection are lit. */
+function statTable(pick, player) {
   const cols = pick.options || [];
   const withForm = cols.filter(o => o.form && o.form.games.length);
   if (!withForm.length) return "";
-
-  // Keyed by week rather than by position in the list. Every column is built from the same
-  // six games today, but a player who misses one leaves a gap, and a mis-aligned row would
-  // sit one week's yardage next to another week's touchdowns and read as fact.
-  // Keyed by season as well, since early in the year the window reaches back into last season
-  // and week two of each would otherwise share a row.
   const gk = g => g.season * 100 + g.week;
-  const weeks = [...new Set(withForm.flatMap(o => o.form.games.map(gk)))].sort((a, b) => b - a);
+  const keys = [...new Set(withForm.flatMap(o => o.form.games.map(gk)))].sort((a, b) => b - a);
   const meta = new Map();
   withForm.forEach(o => o.form.games.forEach(g => { if (!meta.has(gk(g))) meta.set(gk(g), g); }));
-  const at = (o, wk) => o.form ? o.form.games.find(g => gk(g) === wk) : null;
-  const sel = o => o.key === openLog ? "sel" : "";
-
-  const head = cols.map(o => `<th class="sc ${sel(o)}">
-      <span class="p">${esc(o.part)}</span><em>${esc(o.stat)}</em></th>`).join("");
-
-  const body = weeks.map(wk => {
-    const m = meta.get(wk);
-    const cells = cols.map(o => {
-      const g = at(o, wk);
-      return `<td class="v ${sel(o)} ${g && g.cleared ? "ok" : ""}">${
-        g ? fmt(g.value) : "&middot;"}</td>`;
-    }).join("");
-    return `<tr><td class="wk">${esc(weekLabel(m))}</td>
-      <td class="opp">${m.home ? "vs" : "at"} ${esc(m.opponent)}
-        ${crestFor(m.opponent) ? `<img class="crest sm" src="${crestFor(m.opponent)}" alt="">` : ""}
-      </td>${cells}</tr>`;
+  const at = (o, k) => o.form ? o.form.games.find(g => gk(g) === k) : null;
+  const head = cols.map(o => `<th><b>${esc(o.part)}</b>${esc(o.stat)}</th>`).join("");
+  const body = keys.map(k => {
+    const m = meta.get(k);
+    return `<tr><td>${esc(weekLabel(m))}</td>
+      <td class="opp">${m.home ? "vs" : "at"} ${esc(m.opponent)}${WH.crest(m.opponent) ? `<img src="${WH.crest(m.opponent)}" alt="">` : ""}</td>
+      ${cols.map(o => { const g = at(o, k); return `<td class="v ${g && g.cleared ? "ok" : ""}">${g ? fmt(g.value) : "&middot;"}</td>`; }).join("")}</tr>`;
   }).join("");
-
-  const foot = (label, cls, fn) => `<tr class="${cls}"><td class="wk" colspan="2">${label}</td>${
-    cols.map(o => `<td class="${sel(o)}">${o.form ? fn(o.form) : "&middot;"}</td>`).join("")}</tr>`;
-
-  return `<div class="tblhead">
-      <b>${esc(player && player.name ? player.name : "This player")}, last ${weeks.length} games</b>
-    </div>
+  const foot = (label, fn) => `<tr><td colspan="2">${label}</td>${cols.map(o =>
+    `<td>${o.form && o.form.games.length ? fn(o.form) : "&middot;"}</td>`).join("")}</tr>`;
+  return `<div class="gt-head">${esc(player.name)}, last ${keys.length} games<span>Lit numbers beat this week's projection.</span></div>
     <div class="tblwrap"><table class="gt">
-    <thead><tr><th class="wk">Week</th><th class="opp">Opponent</th>${head}</tr></thead>
-    <tbody>${body}</tbody>
-    <tfoot>
-      ${foot("Average", "avg", f => fmt(f.average))}
-      ${foot("Projected this week", "line", f => f.line == null ? "&middot;" : fmt(f.line))}
-      ${foot("Cleared it", "rate", f => f.line == null ? "&middot;"
-        : `<b class="${f.cleared / f.played >= 0.67 ? "hot" : f.cleared / f.played <= 0.34 ? "cold" : ""}">${
-            f.cleared}/${f.played}</b>`)}
-    </tfoot>
-  </table></div>`;
+      <thead><tr><th>Week</th><th class="opp">Opponent</th>${head}</tr></thead>
+      <tbody>${body}</tbody>
+      <tfoot>
+        ${foot("Average", f => fmt(f.average))}
+        ${foot("This week's projection", f => f.line == null ? "&middot;" : fmt(f.line))}
+        ${foot("Over projection", f => { if (f.line == null) return "&middot;";
+          const p = Math.round(100 * f.cleared / f.played);
+          return `<b class="${p >= 67 ? "hot" : p <= 33 ? "cold" : ""}">${p}%</b>`; })}
+      </tfoot></table></div>`;
 }
 
-/* one pick at a time: spin a team, spin a player, decide what they are for */
 function renderStage() {
+  if (busy) return;
   const host = document.getElementById("stage");
-
-  if (entry.activePick == null) {
-    // The slip below carries the numbers now, so this only has to say the week is over.
-    const final = slipFinal(entry);
-    host.innerHTML = `<div class="stage-head"><span class="step">Roster complete</span></div>
-      <div class="prompt">${final ? "Every pick resolved." : "You're in. Scores land as the games are played."}
-      ${final ? "" : '<a class="sl-watch" href="/live.html">Watch live</a>'}</div>`;
-    return;
-  }
-
   const pick = pickAt(entry.activePick);
   const p = pick.player;
-  const landedTeam = !!pick.team;
-  const landedPlayer = !!p;
+  const pos = entry.positions.find(x => x.picks.some(q => q.pickIndex === pick.pickIndex));
+  const spotsLeft = pos.picks.filter(q => !q.chosen).length;
 
-  // Both reels are on screen from the start. Before a spin they idle on a blurred sample; after
-  // one, each shows what it landed on. That is what makes the causality legible: you watch the
-  // player reel repopulate to the team the first reel just picked.
   const reels = `<div class="reels">
-      <div class="reelbox ${landedTeam ? "landed" : ""}" id="teamBox">
-        <div class="reelcap">Team</div>
-        <div class="reel-team">
-          ${landedTeam && pick.teamLogo
-            ? `<img class="crest lg" src="${esc(pick.teamLogo)}" alt="">` : ""}
-          <div id="teamReel" style="flex:1;min-width:0">${landedTeam
-            ? `<div class="reel"><div class="reel-strip"><div class="reel-item hit">${esc(pick.team)}</div></div></div>`
-            : `<div class="reel"><div class="reel-strip"><div class="reel-item">&mdash;</div></div></div>`}</div>
-        </div>
-      </div>
-      <div class="reelbox ${landedPlayer ? "landed" : ""}" id="playerBox">
-        <div class="reelcap">${pick.slot === "FLEX" ? "Receiver" : esc(pick.slot)}</div>
-        <div id="playerReel">${landedPlayer
-          ? `<div class="reel"><div class="reel-strip"><div class="reel-item name hit">${esc(p.name)}</div></div></div>`
-          : `<div class="reel"><div class="reel-strip"><div class="reel-item name">&mdash;</div></div></div>`}</div>
-      </div>
-    </div>`;
+    <div class="reelbox ${pick.team ? "landed" : ""}" id="teamBox"><div class="reelcap">Team</div>
+      <div class="reel-team">${pick.team && pick.teamLogo ? `<img src="${esc(pick.teamLogo)}" alt="">` : ""}
+        <div id="teamReel" class="reel">${reelStatic(pick.team || "—", !!pick.team, "")}</div></div></div>
+    <div class="reelbox ${p ? "landed" : ""}" id="playerBox"><div class="reelcap">${pick.slot === "FLEX" ? "Flex: WR, TE or RB" : esc(pick.slot)}</div>
+      <div id="playerReel" class="reel">${reelStatic(p ? p.name : "—", !!p, "name")}</div></div>
+  </div>`;
 
-  let controls, options = "", who = "";
-
-  if (!landedPlayer) {
-    controls = `<button class="primary" data-act="spin">Spin</button>`;
+  if (!p) {
+    host.innerHTML = `<p class="say">Spin for your ${pick.slot === "FLEX" ? "flex" : esc(pick.slot)}.
+        <span>${spotsLeft} ${posName(pick.slot, pos)} spot${spotsLeft > 1 ? "s" : ""} left.</span></p>
+      ${reels}<button class="btn primary lg" data-act="spin">Spin</button>`;
   } else {
-    who = `<div class="reveal">
-        ${faceTag(p.image, "face")}
-        <div class="whobox"><div class="nm">${esc(p.name)}</div>
-          <div class="sub">${esc(p.position)} &middot; ${esc(p.team)}${
-            pick.opponent ? " &nbsp;vs&nbsp; " + esc(pick.opponent) : ""}${
-            p.injury ? ' &nbsp;<span class="injury">' + esc(p.injury) + "</span>" : ""}</div></div>
-        ${pick.opponentLogo ? `<span class="oppbox"><em>opponent</em>
-          <img class="crest lg" src="${esc(pick.opponentLogo)}" alt=""></span>` : ""}
-      </div>`;
-
-    // The budget sits on the button that spends it, and the arrow says at a glance that these
-    // re-roll rather than confirm. Two identical bordered pills read as a pair of choices; the
-    // icon plus the count reads as a resource you are about to spend.
-    const arrow = `<svg class="ri" viewBox="0 0 16 16" aria-hidden="true">
-        <path d="M14 8a6 6 0 1 1-1.9-4.4"/><path d="M13.6 1.3v3.1h-3.1"/></svg>`;
-    controls = `<div class="respins-row">
-      <button class="respin" data-act="spin" data-respin="team" ${entry.teamRespins > 0 ? "" : "disabled"}>
-        ${arrow}<span>Respin team</span><b>${entry.teamRespins}</b></button>
-      <button class="respin" data-act="spin" data-respin="player" ${entry.playerRespins > 0 ? "" : "disabled"}>
-        ${arrow}<span>Respin player</span><b>${entry.playerRespins}</b></button>
-    </div>`;
-
-    // Two targets per card: the body takes the part, the form strip opens its game log. They
-    // are separate buttons rather than one card with a mode, because a control that does
-    // different things depending on where you hit it is the fastest way to lose a pick.
-    options = `<div class="opts">` + pick.options.map(o => `
-      <div class="opt ${openLog === o.key ? "open" : ""}">
-        ${o["volatile"] ? '<span class="boom" title="Scored on touchdowns, so it is all or nothing">all or nothing</span>' : ""}
-        <button class="opt-take" data-act="choose" data-opt="${esc(o.key)}">
-          <span class="part">${esc(o.part)}</span>
-          <span class="stat">${esc(o.stat)}</span>
-          <span class="val">${o.projectedPoints == null ? "&middot;" : fmt(o.projectedPoints)}<small>PTS</small></span>
-          <span class="math"><b>${fmt(o.projectedRaw)}</b>${
-            o.unit ? " " + esc(o.unit) : ""} projected</span>
-        </button>
-        ${o.form ? `<button class="opt-log" data-act="log" data-opt="${esc(o.key)}">
-          ${formStrip(o.form)}</button>` : `<div class="opt-log">${formStrip(null)}</div>`}
-      </div>`).join("") + `</div>` + renderStatTable(pick, p);
+    const say = pick.options.length === 1
+      ? `Last ${posName(pick.slot, pos)} spot. One stat left.`
+      : `Take one stat from ${esc(p.name.split(" ").slice(-1)[0])}. <span>Each stat can be used once at ${posName(pick.slot, pos)}.</span>`;
+    const respin = (kind, n, label) => `<button class="btn sm" data-act="spin" data-respin="${kind}" ${n > 0 ? "" : "disabled"}>
+        ${WH.icon("again")}${label}<span class="cnt">${n}</span></button>`;
+    host.innerHTML = `${reels}
+      <div class="who">
+        <img class="face" src="${esc(p.image || WH.NOPHOTO)}" alt="" onerror="this.onerror=null;this.src='${WH.NOPHOTO}'">
+        <div><div class="nm">${esc(p.name)}</div>
+          <div class="sub">${esc(p.position)} &middot; ${esc(p.team)}${pick.opponent ? " vs " + esc(pick.opponent) : ""}${
+            p.injury ? ` &middot; <span class="injury">${esc(p.injury)}</span>` : ""}</div></div>
+        <div class="respins">${respin("team", entry.teamRespins, "New team")}${respin("player", entry.playerRespins, "New player")}</div>
+      </div>
+      <p class="say">${say}</p>
+      <div class="opts">${pick.options.map(o => `
+        <button class="opt" data-act="choose" data-opt="${esc(o.key)}">
+          <div class="opt-top">${WH.part(o.key)}<div><b>${esc(o.part)}</b><span>${esc(o.stat)}</span></div></div>
+          <div class="opt-pts">${o.projectedPoints == null ? "0" : fmt1(o.projectedPoints)}<small>PTS</small></div>
+          <div class="opt-proj">${fmt(o.projectedRaw)}${o.unit ? " " + esc(o.unit) : ""} projected</div>
+          ${formStrip(o.form)}
+        </button>`).join("")}</div>
+      ${statTable(pick, p)}`;
   }
-
-  host.innerHTML = `
-    <div class="stage-head">
-      <span class="step">Pick ${entry.activePick + 1} of ${entry.totalPicks} &middot; ${esc(posLabel(pick.slot, pick.position))}</span>
-      ${landedPlayer && pick.opponent
-        ? `<span class="respins">${esc(pick.team)} vs ${esc(pick.opponent)}</span>` : ""}
-    </div>
-    ${reels}
-    ${who}
-    <div class="row" style="margin-bottom:${options ? "18px" : "0"}">${controls}</div>
-    ${options}`;
-
-  host.querySelectorAll("[data-act]").forEach(el =>
-    el.addEventListener("click", () => act(el.dataset, entry.activePick)));
+  host.querySelectorAll("[data-act]").forEach(el => el.addEventListener("click", () => act(el.dataset)));
 }
 
-/* ---------- the slip ----------
-   Rendered only once the week has resolved, and it replaces the position cards rather than
-   sitting beside them: it carries strictly more than they did. "none" means it has not printed
-   yet, "playing" means it is printing and nothing may touch the DOM, "done" means redraws are
-   instant. Without that third state the fifteen-second poll would wipe the animation halfway. */
-let slipState = "none";
+/* A showdown has fewer picks than stats at QB and RB, so it says how many you will use. */
+function leftLine(pos, remaining) {
+  const open = pos.picks.filter(p => !p.chosen).length;
+  const list = remaining.map(esc).join(", ");
+  return open < remaining.length ? `Use ${open} of: ${list}` : `Stats left: ${list}`;
+}
 
-const shortName = n => {
-  const parts = String(n || "").trim().split(/\s+/);
-  return parts.length > 1 ? parts[0][0] + ". " + parts.slice(1).join(" ") : (n || "");
-};
+function renderRail() {
+  const host = document.getElementById("rail");
+  host.innerHTML = `<div class="rail-head"><h3>Your roster</h3>
+      <div><b>${fmt1(entry.projectedTotal)}</b><small>proj</small></div></div>`
+    + entry.positions.map(pos => {
+      const rows = pos.picks.map(p => {
+        if (p.chosen) {
+          const part = (p.options.find(o => o.key === p.chosen) || {}).part || p.chosen;
+          return `<div class="rp-row">${WH.part(p.chosen, "pi sm")}<span class="nm">${esc(part)} &middot; ${esc(shortName(p.player && p.player.name))}</span>
+            <span class="pt">${fmt1(p.projectedPoints)}</span></div>`;
+        }
+        const now = p.pickIndex === entry.activePick;
+        return `<div class="rp-row open ${now ? "now" : ""}"><span style="width:20px"></span><span class="nm"></span>
+          <span class="small">${now ? "Now" : ""}</span></div>`;
+      }).join("");
+      const used = new Set(pos.picks.filter(p => p.chosen).map(p => p.chosen));
+      const remaining = pos.picks.some(p => !p.chosen)
+        ? pos.picks.find(p => !p.chosen).options.filter(o => !used.has(o.key)).map(o => o.part) : [];
+      return `<div class="rp"><div class="rp-head"><span>${posName(pos.slot, pos)}</span><span>${fmt1(pos.projectedTotal)}</span></div>
+        ${rows}${remaining.length ? `<div class="rp-left">${leftLine(pos, remaining)}</div>` : ""}</div>`;
+    }).join("");
+}
 
-/* A live slip is complete long before it is decided. A pick whose game has not kicked off has
-   no score yet, and printing a zero there reads as a bust rather than as waiting. */
+function showPlay() {
+  show("done", false);
+  show("play", true);
+  document.getElementById("playTitle").innerHTML = titleHtml();
+  renderPickmap();
+  renderStage();
+  renderRail();
+}
+
+/* ---- the reels: the server has already decided; the animation shows its work ---- */
+const ITEM_H = () => window.matchMedia("(max-width:640px)").matches ? 48 : 64;
+const FILLERS = 40;
+const reelStatic = (text, hit, cls) =>
+  `<div class="reel-strip"><div class="reel-item ${cls} ${hit ? "hit" : ""}">${esc(text)}</div></div>`;
+
+function buildReel(host, items, cls) {
+  const draw = () => items.length ? items[Math.floor(Math.random() * items.length)] : "?";
+  const strip = [];
+  for (let i = 0; i < FILLERS; i++) strip.push(draw());
+  host.classList.add("reel");
+  host.innerHTML = `<div class="reel-strip spinning">${strip.map(v => `<div class="reel-item ${cls}">${esc(v)}</div>`).join("")}</div>`;
+  return host.querySelector(".reel-strip");
+}
+
+function landReel(strip, items, result, cls) {
+  return new Promise(resolve => {
+    const decoys = items.filter(v => v !== result);
+    const decoy = decoys.length ? decoys[Math.floor(Math.random() * decoys.length)] : result;
+    strip.insertAdjacentHTML("beforeend",
+      `<div class="reel-item ${cls}">${esc(decoy)}</div><div class="reel-item ${cls} hit">${esc(result)}</div>`);
+    const y = new DOMMatrix(getComputedStyle(strip).transform).m42;
+    strip.classList.remove("spinning");
+    strip.style.transform = `translateY(${y}px)`;
+    void strip.offsetHeight;
+    const h = ITEM_H();
+    strip.style.transition = "transform 1.3s cubic-bezier(.12,.72,.24,1)";
+    strip.style.transform = `translateY(${-(FILLERS * h)}px)`;
+    setTimeout(() => {
+      strip.style.transition = "transform .5s cubic-bezier(.3,1.4,.5,1)";
+      strip.style.transform = `translateY(${-((FILLERS + 1) * h)}px)`;
+      setTimeout(resolve, 520);
+    }, 1320);
+  });
+}
+
+async function spin(d) {
+  const i = entry.activePick;
+  const before = pickAt(i);
+  const teamItems = before.teamReel && before.teamReel.length ? before.teamReel : ["?"];
+  const playerItems = before.playerReel && before.playerReel.length ? before.playerReel : ["?"];
+  busy = true;
+  document.querySelectorAll("#stage button").forEach(b => b.disabled = true);
+  // A respin clears the stage down to the reels, so the old player is not left on screen.
+  document.querySelectorAll("#stage .who, #stage .say, #stage .opts, #stage .gt-head, #stage .tblwrap")
+    .forEach(el => el.remove());
+  const teamBox = document.getElementById("teamBox"), playerBox = document.getElementById("playerBox");
+  teamBox.classList.remove("landed"); playerBox.classList.remove("landed");
+  const teamImg = teamBox.querySelector("img"); if (teamImg) teamImg.remove();
+  const tStrip = buildReel(document.getElementById("teamReel"), teamItems, "");
+  const pStrip = buildReel(document.getElementById("playerReel"), playerItems, "name");
+  const params = {};
+  if (d.respin === "team") params.respinTeam = true;
+  if (d.respin === "player") params.respinPlayer = true;
+  let updated;
+  try {
+    updated = await api(`/api/play/${entry.entryId}/pick/${i}/spin`, { method: "POST", params });
+  } catch (e) {
+    busy = false; showErr(e); await refresh(); return;
+  }
+  const after = updated.positions.flatMap(x => x.picks).find(x => x.pickIndex === i);
+  await landReel(tStrip, teamItems, after.team, "");
+  teamBox.classList.add("landed");
+  const roster = after.playerReel && after.playerReel.length ? after.playerReel : playerItems;
+  const restrip = buildReel(document.getElementById("playerReel"), roster, "name");
+  await landReel(restrip, roster, after.player ? after.player.name : "?", "name");
+  playerBox.classList.add("landed");
+  busy = false;
+  entry = updated;
+  showPlay();
+}
+
+async function act(d) {
+  showErr(null);
+  if (d.act === "spin") return spin(d);
+  if (d.act === "choose") {
+    document.querySelectorAll("#stage .opt").forEach(b => b.disabled = true);
+    try {
+      entry = await api(`/api/play/${entry.entryId}/pick/${entry.activePick}/choose`,
+        { method: "POST", params: { option: d.opt } });
+      if (entry.complete) { slipState = "none"; showDone(); window.scrollTo({ top: 0 }); }
+      else showPlay();
+    } catch (e) { showErr(e); showPlay(); }
+  }
+}
+
+const showErr = e => { document.getElementById("err").textContent = e ? e.message : ""; };
+
+/* ================= the slip ================= */
+
 const gameOf = p => p.game || { state: "post" };
-const slipFinal = e => (e.contest || {}).archive
-  || e.positions.flatMap(p => p.picks).every(p => gameOf(p).state === "post");
+const slipFinal = e => (e.contest || {}).archive || e.positions.flatMap(p => p.picks).every(p => gameOf(p).state === "post");
 
-const ordinal = n => n + (["th","st","nd","rd"][(n % 100 - 20) % 10] || ["th","st","nd","rd"][n % 100] || "th");
+function slateInfo() {
+  return board && entry.slate ? board.slates.find(x => x.key === entry.slate) : null;
+}
 
-function slateInfo(e) {
-  return slateBoard && e.slate ? (slateBoard.slates || []).find(x => x.key === e.slate) : null;
+function showDone() {
+  show("play", false);
+  show("done", true);
+  const c = entry.contest || {};
+  const title = c.archive ? `${c.season} · Week ${c.week}` : `${c.label}`;
+  const who = viewing ? `${esc(entry.owner)}'s roster` : "Your roster";
+  document.getElementById("doneHead").innerHTML =
+    (c.archive ? WH.badge("past", "Past week", "lg") : WH.badge(entry.slate, entry.slateLabel || c.label, "lg"))
+    + `<h2>${who}</h2><p class="muted" style="margin-top:6px">${esc(title)}</p>`;
+  renderSlip();
 }
 
 function renderSlip() {
@@ -1215,502 +802,145 @@ function renderSlip() {
       v = `<span class="sp-v pre">${fmt1(p.projectedPoints)}</span>`;
     } else {
       const dir = p.points > p.projectedPoints ? "up" : p.points < p.projectedPoints ? "dn" : "";
-      v = `<span class="sp-v ${dir}">${fmt1(p.points)}<small>${
-        g.state === "in" ? `<span class="clk">${esc(g.detail || "live")}</span>` : fmt1(p.projectedPoints)}</small></span>`;
+      v = `<span class="sp-v ${dir}">${fmt1(p.points)}<small>${g.state === "in"
+        ? `<span class="clk">${esc(g.detail || "live")}</span>` : "proj " + fmt1(p.projectedPoints)}</small></span>`;
     }
-    return `<div class="sp-row"><span class="sp-pos">${i === 0 ? esc(pos.slot === "FLEX" ? "FLEX" : pos.slot) : ""}</span>
-      <span class="sp-who"><span class="sp-nm">${esc(shortName(p.player && p.player.name))}</span>
+    return `<div class="sp-row"><span class="sp-pos">${i === 0 ? posName(pos.slot, pos).toUpperCase() : ""}</span>
+      <span class="sp-who">${WH.part(p.chosen, "pi")}<span class="sp-nm">${esc(shortName(p.player && p.player.name))}</span>
         <span class="sp-part">${esc(part)}</span></span>${v}</div>`;
   }).join("")).join("");
 
-  // The corner says the one thing worth knowing at this moment: when it starts, then where
-  // you stand once there is somebody to stand against.
-  const info = slateInfo(entry);
+  const info = slateInfo();
   const st = entry.standing;
   let meta;
-  if (c.archive) meta = "Vault";
-  else if (started && st && st.of > 1) meta = `${ordinal(st.rank)} of ${st.of}`;
+  if (started && st && st.of > 1) meta = `${WH.ordinal(st.rank)} of ${st.of}`;
+  else if (c.archive) meta = "Final";
   else if (started) meta = final ? "Final" : "Live";
-  else if (info && info.games.length === 1) {
-    const g = info.games[0];
-    meta = `${esc(g.away)} @ ${esc(g.home)} &middot; ${esc(kickoffText(g.kickoff))}`;
-  } else if (info) meta = `${info.games.length} games &middot; ${esc(kickoffText(info.lockAt))}`;
-  else meta = "";
+  else if (info && info.games.length === 1) meta = `Kicks off ${esc(WH.kickoffText(info.games[0].kickoff))}`;
+  else if (info) meta = `Kicks off ${esc(WH.kickoffText(info.lockAt))}`;
+  else meta = "Before kickoff";
 
-  const cap = final && entry.capture ? ` &middot; ${entry.capture.capturePercent}% of board` : "";
-  const footLabel = !started ? "Projected"
-    : `${final ? "Final" : "Live"} &middot; proj ${fmt1(entry.projectedTotal)}${cap}`;
+  const cap = final && entry.capture ? ` &middot; ${entry.capture.capturePercent}% of best` : "";
+  const footLabel = !started ? "Projected" : `${final ? "Final" : "Live"} &middot; proj ${fmt1(entry.projectedTotal)}${cap}`;
   const big = started ? fmt1(entry.total) : fmt1(entry.projectedTotal);
 
+  const boardHref = `/leaderboards.html?c=${encodeURIComponent(c.id)}${entry.slate ? "&s=" + encodeURIComponent(entry.slate) : ""}`;
   let acts;
   if (viewing) {
-    acts = `<button class="go" data-slip="play">Play</button>`;
+    acts = `<a class="btn go" href="/">Play Wheelhouse</a>`;
   } else {
-    const again = playAgainTarget();
-    acts = `<button class="go" data-slip="share">Share</button>`
-      + (again ? `<button data-slip="again">${esc(again.label)}</button>` : "");
+    const again = playAgain();
+    acts = `<button class="btn go" data-slip="share">${WH.icon("share")}Share</button>
+      <a class="btn" href="${boardHref}">${WH.icon("trophy")}Leaderboard</a>`
+      + (again ? `<button class="btn" data-slip="again">${WH.icon("again")}${esc(again.label)}</button>` : "");
   }
 
   host.className = "sp" + (slipState === "done" ? " instant" : "");
-  host.innerHTML = `
-    <div class="sp-head"><span class="sp-title">${esc(entry.slateLabel || c.label || "")}</span>
+  host.innerHTML = `<div class="sp-head"><span class="sp-title">${esc(entry.slateLabel || (c.archive ? c.season + " Wk " + c.week : c.label))}</span>
       <span class="sp-meta">${meta}</span></div>
     ${rows}
-    <div class="sp-foot"><span class="sp-meta" style="text-align:left">${footLabel}</span>
-      <span class="sp-big">${big}</span></div>
+    <div class="sp-foot"><span class="sp-meta" style="text-align:left">${footLabel}</span><span class="sp-big">${big}</span></div>
     <div class="sp-acts">${acts}</div>`;
-
   host.querySelectorAll("[data-slip]").forEach(b => b.addEventListener("click", () => slipAction(b)));
 
   if (slipState === "none") {
     slipState = "playing";
-    printSlip();
+    (async () => {
+      for (const row of host.querySelectorAll(".sp-row")) {
+        row.classList.add("in");
+        await new Promise(r => setTimeout(r, 60));
+      }
+      slipState = "done";
+    })();
   }
 }
 
-const fmt1 = n => n == null ? "0" : (Math.round(n * 10) / 10).toFixed(1);
-
-/* Where "play again" goes. The same slate while it is open, the next open slate once it has
-   locked, the same week again in the vault. */
-function playAgainTarget() {
+function playAgain() {
   const c = entry.contest || {};
-  if (c.archive) return { label: "Play again", params: { season: c.season, week: c.week } };
-  const info = slateInfo(entry);
+  if (c.archive) return { label: "Play again", run: () => startPast(c.season, c.week) };
+  const info = slateInfo();
   if (info && !info.locked && new Date(info.lockAt) > Date.now()) {
-    return { label: "Play again", params: { slate: info.key } };
+    return { label: "Play again", run: () => startSlate(info.key) };
   }
-  const next = slateBoard && (slateBoard.slates || []).find(x => x.key === slateBoard.next);
-  return next ? { label: "Play " + next.label, params: { slate: next.key } } : null;
+  const next = board && board.slates.find(x => x.key === board.next);
+  return next ? { label: "Play " + next.label, run: () => startSlate(next.key) } : null;
 }
 
 async function slipAction(btn) {
-  const what = btn.dataset.slip;
-  if (what === "play") { location.href = "/"; return; }
-  if (what === "again") {
-    const t = playAgainTarget();
-    if (!t) return;
-    if (t.params.season) {
-      const ticker = runLoader(t.params.season + " week " + t.params.week);
-      await start(t.params);
-      clearInterval(ticker); loading = false; render();
-    } else {
-      await start(t.params);
-    }
-    window.scrollTo({ top: 0 });
+  if (btn.dataset.slip === "again") {
+    const a = playAgain();
+    if (a) { show("done", false); a.run(); }
     return;
   }
-  if (what === "share") {
+  if (btn.dataset.slip === "share") {
     try {
-      const { shareId } = await api("POST", "/" + entry.entryId + "/share");
+      const { shareId } = await api(`/api/play/${entry.entryId}/share`, { method: "POST" });
       const url = location.origin + "/?s=" + shareId;
-      const title = (entry.slateLabel || entry.contest.label) + " · " + entry.owner;
       if (navigator.share) {
-        await navigator.share({ title, url });
+        await navigator.share({ title: "My Wheelhouse roster", url });
       } else {
         await navigator.clipboard.writeText(url);
-        btn.textContent = "Link copied";
-        setTimeout(() => { btn.textContent = "Share"; }, 2000);
+        WH.toast("Link copied");
       }
     } catch (e) {
-      if (e && e.name !== "AbortError") showError(e);
+      if (e && e.name !== "AbortError") WH.toast(e.message);
     }
   }
 }
 
-/* Lines print in turn. The number only counts up once there is a score to count. */
-async function printSlip() {
-  const host = document.getElementById("slip");
-  for (const row of host.querySelectorAll(".sp-row")) {
-    row.classList.add("in");
-    await new Promise(r => setTimeout(r, 70));
-  }
-  slipState = "done";
-}
+/* ================= start ================= */
 
-function renderRoster() {
-  const revealed = entry.revealed;
-
-  // Once the week resolves the rail has nothing left to track and the slip carries strictly
-  // more than it did, so the layout drops back to one column for the reveal.
-  document.getElementById("rosterSection").style.display = revealed ? "none" : "block";
-  document.getElementById("slipSection").style.display = revealed ? "block" : "none";
-  if (revealed) { renderSlip(); return; }
-  // Set explicitly rather than through show(), which forces display:block and would flatten
-  // both the position grid and the total bar's flex row.
-  document.getElementById("positions").style.display = "grid";
-  document.getElementById("totalBar").style.display = "flex";
-
-  document.getElementById("positions").innerHTML = entry.positions.map(pos => {
-    const active = entry.activePick != null
-      && pos.picks.some(p => p.pickIndex === entry.activePick);
-
-    // Filled rows only. Five identical "not drafted" lines told you nothing; what you actually
-    // want to know is which parts are still spendable here, and that is one line.
-    const rows = pos.picks.filter(p => p.chosen).map(p => {
-      const part = (p.options.find(o => o.key === p.chosen) || {}).part || p.chosen;
-      return `<div class="part-row">${faceTag(p.player.image, "mini")}
-        ${p.teamLogo ? `<img class="crest sm" src="${esc(p.teamLogo)}" alt="">` : ""}
-        <span class="lbl">${esc(part)}</span>
-        <span class="nm">${esc(p.player.name)}</span>
-        <span class="pt">${fmt(p.projectedPoints)}<small style="font-size:9px;letter-spacing:.1em;color:var(--dim);margin-left:3px">PTS</small></span></div>`;
-    }).join("");
-
-    // Filled picks carry every part of their slot, unfilled ones carry only what is left, so
-    // the union across the position is the full set and the difference is what remains.
-    const all = new Map();
-    pos.picks.forEach(p => (p.options || []).forEach(o => all.set(o.key, o.part)));
-    pos.picks.filter(p => p.chosen).forEach(p => all.delete(p.chosen));
-    const open = [...all.values()];
-
-    return `<div class="pos ${active ? "active" : ""}">
-      <div class="pos-head"><span class="pos-name">${esc(posLabel(pos.slot, pos.index))}</span>
-        <span class="pos-total">${fmt(pos.projectedTotal)}
-          <small>projected</small></span></div>
-      ${rows}
-      ${open.length ? `<div class="pos-open">Open &nbsp;<b>${
-        open.map(esc).join(" &middot; ")}</b></div>` : ""}</div>`;
-  }).join("");
-
-  const picked = entry.positions.flatMap(p => p.picks).filter(p => p.chosen).length;
-  document.getElementById("rosterNote").textContent =
-    picked + " of " + entry.totalPicks + " picked";
-  document.getElementById("totalN").textContent = fmt(entry.projectedTotal);
-}
-
-let loading = false;
-
-function render() {
-  const building = !!entry;
-  const landing = !building && !loading;
-  show("hero", landing);
-  show("howto", landing);
-  show("loader", loading);
-  // Widen the shell only while drafting: five option cards beside a roster rail need the room,
-  // and the landing reads better narrow.
-  document.body.classList.toggle("playing", building);
-  if (!building) { show("slipSection", false); }
-  show("stage", building && !(entry && entry.complete));
-  show("rosterSection", building);
-  document.getElementById("headline").style.display = building ? "block" : "none";
-  if (loading) return;
-  if (!building) { loadContest(); return; }
-
-  const c = entry.contest || {};
-  setWeekLabel(c, entry.slateLabel);
-  // Your own name is a control: it is what the leaderboard shows, and "Player XC4Y" means
-  // nothing to the friends reading it.
-  const name = viewing ? esc(entry.owner)
-    : `<button class="namebtn" id="nameBtn" title="Rename">${esc(entry.owner)}</button>`;
-  document.getElementById("headline").innerHTML = name + "'s roster"
-    + (c.archive ? '<span class="badge">historic</span>'
-        : entry.slateLabel && !entry.complete ? `<span class="badge">${esc(entry.slateLabel)}</span>` : "")
-    + (viewing ? "" : '<button class="backlink" id="leaveBtn">start over</button>');
-  if (viewing) { renderStage(); renderRoster(); return; }
-  document.getElementById("nameBtn").addEventListener("click", editName);
-
-  document.getElementById("leaveBtn").addEventListener("click", () => {
-    entry = null;
-    slipState = "none";
-    localStorage.removeItem("wh.entry");
-    document.getElementById("histSection").style.display = "none";
-    loadContest();
-    render();
-  });
-
-  renderStage();
-  renderRoster();
-}
-
-function editName() {
-  const btn = document.getElementById("nameBtn");
-  const input = document.createElement("input");
-  input.className = "nameinput";
-  input.maxLength = 24;
-  input.value = entry.owner;
-  btn.replaceWith(input);
-  input.focus();
-  input.select();
-  let done = false;
-  const save = async commit => {
-    if (done) return;
-    done = true;
-    const v = input.value.trim();
-    if (commit && v && v !== entry.owner) {
-      try {
-        entry = await api("POST", "/" + entry.entryId + "/name", { owner: v });
-        owner = v;
-        localStorage.setItem("wh.owner", v);
-        refreshTables();
-      } catch (e) { showError(e); }
-    }
-    render();
-  };
-  input.addEventListener("keydown", e => {
-    if (e.key === "Enter") save(true);
-    if (e.key === "Escape") save(false);
-  });
-  input.addEventListener("blur", () => save(true));
-}
-
-/* ---------- the slot reel ----------
-   The server has already decided the result before any of this runs. The reel only shows its
-   work: it starts spinning the instant you click, keeps spinning while the request is in
-   flight, then decelerates onto the answer, pausing on a wrong one first. */
-
-const ITEM_H = 64;
-const FILLERS = 40;
-
-function buildReel(host, items, className) {
-  const draw = () => items.length ? items[Math.floor(Math.random() * items.length)] : "?";
-  const strip = [];
-  for (let i = 0; i < FILLERS; i++) strip.push(draw());
-  host.innerHTML = `<div class="reel"><div class="reel-strip spinning">` +
-    strip.map(v => `<div class="reel-item ${className}">${esc(v)}</div>`).join("") +
-    `</div></div>`;
-  return host.querySelector(".reel-strip");
-}
-
-function landReel(strip, items, result, className) {
-  return new Promise(resolve => {
-    const decoys = items.filter(v => v !== result);
-    const decoy = decoys.length ? decoys[Math.floor(Math.random() * decoys.length)] : result;
-
-    strip.insertAdjacentHTML("beforeend",
-      `<div class="reel-item ${className}">${esc(decoy)}</div>` +
-      `<div class="reel-item ${className} hit">${esc(result)}</div>`);
-
-    // Freeze wherever the loop happens to be, so there is no visible jump.
-    const y = new DOMMatrix(getComputedStyle(strip).transform).m42;
-    strip.classList.remove("spinning");
-    strip.style.transform = `translateY(${y}px)`;
-    void strip.offsetHeight;
-
-    strip.style.transition = "transform 1.45s cubic-bezier(.12,.72,.24,1)";
-    strip.style.transform = `translateY(${-(FILLERS * ITEM_H)}px)`;
-
-    setTimeout(() => {
-      strip.style.transition = "transform .6s cubic-bezier(.3,1.4,.5,1)";
-      strip.style.transform = `translateY(${-((FILLERS + 1) * ITEM_H)}px)`;
-      setTimeout(resolve, 620);
-    }, 1470);
-  });
-}
-
-/** Both reels spin together; the team settles first, then the player reel resolves to it. */
-async function spinFor(d, index) {
-  const before = pickAt(index);
-  const teamItems = (before.teamReel && before.teamReel.length) ? before.teamReel : ["?"];
-  const playerItems = (before.playerReel && before.playerReel.length) ? before.playerReel : ["?"];
-
-  const teamStrip = buildReel(document.getElementById("teamReel"), teamItems, "");
-  const playerStrip = buildReel(document.getElementById("playerReel"), playerItems, "name");
-  document.getElementById("teamBox").classList.remove("landed");
-  document.getElementById("playerBox").classList.remove("landed");
-  document.querySelectorAll("#stage button").forEach(b => b.disabled = true);
-
-  const params = {};
-  if (d.respin === "team") params.respinTeam = true;
-  if (d.respin === "player") params.respinPlayer = true;
-
-  let updated;
+async function refresh() {
+  // Only a finished roster changes on its own, as games are played. A draft in progress is
+  // left alone so the options never redraw under someone reading them.
+  if (!entry || busy || !entry.complete) return;
   try {
-    updated = await api("POST", `/${entry.entryId}/pick/${index}/spin`,
-                        Object.keys(params).length ? params : null);
-  } catch (e) {
-    showError(e); render(); return;
-  }
-
-  const after = updated.positions.flatMap(x => x.picks).find(x => x.pickIndex === index);
-
-  await landReel(teamStrip, teamItems, after.team, "");
-  document.getElementById("teamBox").classList.add("landed");
-
-  // The player reel has been blurring a league-wide sample; now that the team is known it
-  // switches to that roster before it lands, so the result never comes out of nowhere.
-  const roster = (after.playerReel && after.playerReel.length) ? after.playerReel : playerItems;
-  const restrip = buildReel(document.getElementById("playerReel"), roster, "name");
-  await landReel(restrip, roster, after.player ? after.player.name : "?", "name");
-  document.getElementById("playerBox").classList.add("landed");
-
-  entry = updated;
-  render();
-  refreshTables();
+    entry = await api(viewing ? `/api/play/shared/${encodeURIComponent(shareId)}` : `/api/play/${entry.entryId}`);
+    if (entry.complete) showDone(); else showPlay();
+  } catch (e) { /* keep what is on screen */ }
 }
 
-async function act(d, index) {
-  showError(null);
-  if (d.act === "log") {
-    // Local only. Opening a log is a reading action and must not cost a request or disturb
-    // anything the server has decided.
-    openLog = openLog === d.opt ? null : d.opt;
-    renderStage();
-    return;
-  }
-  openLog = null;
-  if (d.act === "spin") return spinFor(d, index);
-  try {
-    entry = await api("POST", `/${entry.entryId}/pick/${index}/choose`, { option: d.opt });
-    render();
-    refreshTables();
-  } catch (e) { showError(e); }
-}
-
-async function refreshTables() {
-  try {
-    const lbArgs = entry ? { contestId: entry.contest.id } : null;
-    if (entry && entry.slate) lbArgs.slate = entry.slate;
-    const lb = await api("GET", "/leaderboard", lbArgs);
-    document.getElementById("lbTitle").textContent =
-      entry && entry.slateLabel ? entry.slateLabel + " leaderboard" : "Leaderboard";
-    // A leaderboard of one is not a leaderboard, it is your own score written twice. It stays
-    // hidden until somebody else has played the same week, and hides again if that stops being
-    // true, which the old check never did: it could turn the section on but never off.
-    show("lbSection", lb.length > 1);
-    if (lb.length > 1) {
-      document.getElementById("lb").innerHTML =
-        `<tr><th style="width:44px">#</th><th>Player</th><th style="text-align:right">Score</th></tr>` +
-        lb.map((r, i) => `<tr><td style="color:var(--muted)">${i + 1}</td>
-          <td>${esc(r.owner)}${r.complete ? "" : ' <span style="color:var(--dim);font-size:12px">building</span>'}</td>
-          <td class="n">${r.complete ? fmt(r.total) : "&middot;"}</td></tr>`).join("");
-    }
-  } catch (e) { /* not worth surfacing */ }
-
-  if (viewing) { show("histSection", false); return; }
-  const ids = myEntries().filter(id => id !== entry?.entryId);
-  if (!ids.length) { show("histSection", false); return; }
-  try {
-    const past = await api("GET", "/mine", { ids: ids.join(",") });
-    show("histSection", past.length > 0);
-    if (past.length) {
-      document.getElementById("hist").innerHTML =
-        `<tr><th>Slate</th><th style="text-align:right">Score</th></tr>` +
-        past.map(h => `<tr><td>${esc(h.label || h.contestId)}${h.slateLabel ? " &middot; " + esc(h.slateLabel) : ""}</td>
-          <td class="n">${h.complete ? fmt(h.total) : "&middot;"}</td></tr>`).join("");
-    }
-  } catch (e) { /* nothing kept yet */ }
-}
-
-/* Anonymous until it is worth not being.
-   Asking for a name before anyone has seen the game charges a stranger for something they have
-   no reason to want yet. The entry id in localStorage is what actually resumes a draft; the
-   name only matters once a finished slip is worth putting on a board. */
-function anonymousName() {
-  return "Player " + Math.random().toString(36).slice(2, 6).toUpperCase();
-}
-
-async function start(params) {
-  const typed = document.getElementById("owner").value.trim();
-  const name = typed || owner || anonymousName();
-  owner = name;
-  document.getElementById("owner").value = name;
-  slipState = "none";
-  localStorage.setItem("wh.owner", name);
-  try {
-    entry = await api("POST", "/open", Object.assign({ owner: name }, params || {}));
-    // Remember the entry, not just the name. Resuming by name alone always reopens the live
-    // week, which silently throws you out of whatever archive week you were playing.
-    localStorage.setItem("wh.entry", entry.entryId);
-    rememberEntry(entry.entryId);
-    render();
-    refreshTables();
-  } catch (e) { showError(e); }
-}
-
-async function startArchive() {
-  const season = document.getElementById("season").value;
-  const week = document.getElementById("week").value;
-
-  const ticker = runLoader(season + " week " + week);
-  await start({ season, week });
-  clearInterval(ticker);
-  loading = false;
-  render();
-}
-
-/* Two dropdowns is a form. The same choice made by the same reels the rest of the game runs on
-   is an opening move, and it costs the player nothing to be handed a week they would never
-   have thought to pick. */
-async function rollWeek() {
-  showError(null);
-
-  const seasons = [];
-  for (let y = archiveRange.earliest; y <= archiveRange.latest; y++) seasons.push(String(y));
-  // From week two, so there is always some form behind the players it deals you.
-  const weeks = [];
-  for (let w = 2; w <= archiveRange.weeks; w++) weeks.push(String(w));
-
-  const season = seasons[Math.floor(Math.random() * seasons.length)];
-  const week = weeks[Math.floor(Math.random() * weeks.length)];
-
-  document.getElementById("weekReels").style.display = "grid";
-  ["rollBtn", "archiveBtn"].forEach(id => document.getElementById(id).disabled = true);
-  document.getElementById("seasonBox").classList.remove("landed");
-  document.getElementById("wkBox").classList.remove("landed");
-
-  // Both start spinning at once and settle one after the other, same as the draft reels.
-  const sStrip = buildReel(document.getElementById("seasonReel"), seasons, "");
-  const wStrip = buildReel(document.getElementById("wkReel"), weeks, "");
-
-  await landReel(sStrip, seasons, season, "");
-  document.getElementById("seasonBox").classList.add("landed");
-  await landReel(wStrip, weeks, week, "");
-  document.getElementById("wkBox").classList.add("landed");
-
-  const ticker = runLoader(season + " week " + week);
-  await start({ season, week });
-  clearInterval(ticker);
-  loading = false;
-  ["rollBtn", "archiveBtn"].forEach(id => document.getElementById(id).disabled = false);
-  document.getElementById("weekReels").style.display = "none";
-  render();
+function gone(title, text, cta) {
+  show("gone", true);
+  document.getElementById("gone").innerHTML = `<b>${esc(title)}</b>${esc(text)}<br>${cta}`;
 }
 
 (async function init() {
-  await loadContest();
-  await loadArchiveOptions();
-  // Picking a specific week is a thing people do once, so it costs one click to reach and
-  // nothing to ignore. Only the label's chevron moves, because a button whose text changes
-  // under the cursor is the thing that makes a control feel unreliable.
-  document.getElementById("moreBtn").addEventListener("click", e => {
-    const more = document.getElementById("more");
-    more.hidden = !more.hidden;
-    e.currentTarget.setAttribute("aria-expanded", String(!more.hidden));
-  });
-
-  document.getElementById("rollBtn").addEventListener("click", rollWeek);
-  document.getElementById("archiveBtn").addEventListener("click", startArchive);
-
-  document.getElementById("owner").value = owner || "";
-  const saved = localStorage.getItem("wh.entry");
-  // Anyone who played before this change has one entry under the old key. Fold it into the
-  // list so their history does not vanish along with the name lookup.
-  if (saved) rememberEntry(saved);
-  if (shareParam) {
-    try {
-      entry = await api("GET", "/shared/" + encodeURIComponent(shareParam));
-      viewing = true;
-      slipState = "none";
-    } catch (e) { history.replaceState(null, "", "/"); }
-  } else if (saved) {
-    try {
-      entry = await api("GET", "/" + saved);
-      // Resuming a week that already finished should not replay the reveal. That moment
-      // belongs to the pick that ended it, not to every page load afterwards.
-      if (entry.revealed) slipState = "done";
-    } catch (e) { localStorage.removeItem("wh.entry"); }
+  const navDone = WH.nav("play");
+  try { board = await api("/api/play/slates"); } catch (e) { board = null; }
+  const who = await WH.me();
+  if (who.signedIn) {
+    try { mine = (await api("/api/account/rosters")).rosters; } catch (e) { mine = []; }
   }
-  render();
-  refreshTables();
+  await navDone;
 
-  // The landing's countdowns tick, and a slate that locks drops to "watch live" by itself.
-  setInterval(() => { if (!entry) renderSlates(); }, 30000);
-
-  // A live week's results move while games are on, so the board refreshes itself.
-  setInterval(async () => {
-    if (!entry) return;
-    const path = viewing ? "/shared/" + encodeURIComponent(shareParam) : "/" + entry.entryId;
-    try { entry = await api("GET", path); render(); refreshTables(); } catch (e) {}
-  }, 15000);
+  if (shareId) {
+    try {
+      entry = await api(`/api/play/shared/${encodeURIComponent(shareId)}`);
+      viewing = true;
+      showDone();
+    } catch (e) {
+      gone("Link not found", "That roster link doesn't work anymore.", `<a class="btn primary" href="/">Play</a>`);
+    }
+  } else if (rosterId) {
+    try {
+      entry = await api(`/api/play/${encodeURIComponent(rosterId)}`);
+      slipState = entry.complete ? "done" : "none";
+      if (entry.complete) showDone(); else showPlay();
+    } catch (e) {
+      if (e.status === 401 || (e.status === 403 && !who.signedIn)) {
+        const back = encodeURIComponent(location.pathname + location.search);
+        gone("Sign in to see this roster", "Rosters belong to a profile.",
+          `<a class="btn primary" href="/profile.html?mode=signin&next=${back}">Sign in</a>`);
+      } else {
+        gone("Roster not found", e.message, `<a class="btn primary" href="/">Go home</a>`);
+      }
+    }
+  } else {
+    await showHome();
+  }
+  WH.ready();
+  setInterval(() => { if (!document.hidden) refresh(); }, 15000);
 })();
 </script>
 </body>

@@ -34,15 +34,13 @@ class WithholdingTest {
     @Autowired
     private WebApplicationContext context;
 
-    private final ObjectMapper mapper = new ObjectMapper();
+    private Api api;
 
     private JsonNode call(String method, String path) throws Exception {
-        MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).build();
-        String body = (method.equals("POST")
-                ? mvc.perform(post(path))
-                : mvc.perform(get(path)))
-                .andReturn().getResponse().getContentAsString();
-        return mapper.readTree(body);
+        if (api == null) {
+            api = Api.signedUp(context);
+        }
+        return method.equals("POST") ? api.post(path) : api.get(path);
     }
 
     @Test
@@ -71,19 +69,40 @@ class WithholdingTest {
 
     @Test
     void theLeaderboardPublishesNoEntryIds() throws Exception {
-        // An entry id is a bearer token: every pick endpoint accepts one on its own. Names are
-        // printed on this board, so a board that also prints ids makes a name a password.
-        JsonNode entry = call("POST", "/api/play/open?owner=tester&season=2023&week=9");
-        String contestId = entry.path("contest").path("id").asText();
+        // An entry id opens a draft. Names are printed on this board, so a board that also
+        // printed ids would hand anyone a way in. Your own row may carry yours; nobody else's.
+        JsonNode view = call("POST", "/api/play/open?season=2023&week=9");
+        String id = view.path("entryId").asText();
+        String contestId = view.path("contest").path("id").asText();
+
+        assertThat(call("GET", "/api/play/leaderboard?contestId=" + contestId))
+                .as("an unfinished roster is not on the board").isEmpty();
+
+        while (!view.path("complete").asBoolean()) {
+            int i = view.path("activePick").asInt();
+            view = call("POST", "/api/play/" + id + "/pick/" + i + "/spin");
+            String option = null;
+            for (JsonNode position : view.path("positions")) {
+                for (JsonNode pick : position.path("picks")) {
+                    if (pick.path("pickIndex").asInt() == i) {
+                        option = pick.path("options").get(0).path("key").asText();
+                    }
+                }
+            }
+            view = call("POST", "/api/play/" + id + "/pick/" + i + "/choose?option=" + option);
+        }
 
         JsonNode board = call("GET", "/api/play/leaderboard?contestId=" + contestId);
-
-        assertThat(board.isArray()).isTrue();
-        assertThat(board).isNotEmpty();
+        assertThat(board).hasSize(1);
         for (JsonNode row : board) {
             assertThat(row.has("entryId")).as("leaderboard row must not carry an entry id").isFalse();
             assertThat(row.has("owner")).isTrue();
         }
+
+        JsonNode stranger = Api.signedUp(context).get("/api/boards/one?contestId=" + contestId);
+        assertThat(stranger.path("rows").get(0).path("entryId").isNull()).isTrue();
+        JsonNode mine = call("GET", "/api/boards/one?contestId=" + contestId);
+        assertThat(mine.path("rows").get(0).path("entryId").asText()).isEqualTo(id);
     }
 
     @Test
@@ -100,17 +119,17 @@ class WithholdingTest {
     }
 
     @Test
-    void anIncompleteEntryScoresZeroOnTheBoardRatherThanShowingItsRealTotal() throws Exception {
-        JsonNode entry = call("POST", "/api/play/open?owner=partial&season=2023&week=9");
-        String id = entry.path("entryId").asText();
+    void anIncompleteEntryIsNotOnTheBoardAtAll() throws Exception {
+        // A half-built roster's total is a side channel into results it has not earned yet.
+        Api partial = Api.signedUp(context);
+        String name = partial.get("/api/account/me").path("name").asText();
+        JsonNode entry = partial.post("/api/play/open?season=2023&week=9");
         String contestId = entry.path("contest").path("id").asText();
-        call("POST", "/api/play/" + id + "/pick/0/spin");
+        partial.post("/api/play/" + entry.path("entryId").asText() + "/pick/0/spin");
 
         JsonNode board = call("GET", "/api/play/leaderboard?contestId=" + contestId);
         for (JsonNode row : board) {
-            if (!row.path("complete").asBoolean()) {
-                assertThat(row.path("total").asDouble()).isEqualTo(0.0);
-            }
+            assertThat(row.path("owner").asText()).isNotEqualTo(name);
         }
     }
 }
