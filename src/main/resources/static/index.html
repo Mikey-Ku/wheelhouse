@@ -488,13 +488,23 @@ function renderSlates() {
   }).join("");
 }
 
+/* Each step drawn as what it describes: the wheel, a stat card taken, a filled checklist, a
+   scoreboard. The stat parts' own icons belong to the draft, not to these. */
+const STEP_ICONS = {
+  spin: '<circle cx="16" cy="17.5" r="11"/><circle cx="16" cy="17.5" r="2.6"/><path d="M18.6 17.5H27M17.8 19.3l6 6M16 20.1v8.4M14.2 19.3l-6 6M13.4 17.5H5M14.2 15.7l-6-6M17.8 15.7l6-6"/><path d="M12.6 2.8h6.8L16 8.2z"/>',
+  stat: '<path d="M16.2 25.5H6.5A2.5 2.5 0 0 1 4 23V6.5A2.5 2.5 0 0 1 6.5 4h12A2.5 2.5 0 0 1 21 6.5v9.3"/><path d="M8 10h9M8 14h5.5M8 18h4"/><circle cx="23" cy="23" r="6.2"/><path d="M20.2 23.1l1.9 1.9 3.7-3.9"/>',
+  fill: '<rect x="6.5" y="6" width="19" height="22.5" rx="2.5"/><path d="M12 6V4.2h8V6"/><path d="M10 12.2l1.5 1.5 2.6-2.9M10 18.2l1.5 1.5 2.6-2.9M10 24.2l1.5 1.5 2.6-2.9"/><path d="M17 12.5h5M17 18.5h5M17 24.5h5"/>',
+  score: '<rect x="3.5" y="7" width="25" height="15.5" rx="2.5"/><path d="M16 7v15.5"/><rect x="7.5" y="10.5" width="5" height="8.5" rx="1.2"/><path d="M19.5 10.5h5v4h-5v4.5h5"/><path d="M9 22.5v5.5M23 22.5v5.5M7 28h4M21 28h4"/>',
+};
+
 function renderSteps() {
   document.getElementById("steps").innerHTML = [
-    ["legs", "Spin", "The wheel picks a team, then one of its players."],
-    ["arm", "Take one stat", "Arm, legs, hands and more. Each stat once per position."],
-    ["chest", "Fill every pick", "7 picks on Thursday and Monday nights. 14 on Sunday."],
-    ["cleats", "Score", "Standard PPR points from what really happens."],
-  ].map(([icon, title, text]) => `<div class="step">${WH.part(icon)}<b>${title}</b><span>${text}</span></div>`).join("");
+    ["spin", "Spin", "The wheel picks a team, then one of its players."],
+    ["stat", "Take one stat", "Arm, legs, hands and more. Each stat once per position."],
+    ["fill", "Fill every pick", "7 picks on Thursday and Monday nights. 14 on Sunday."],
+    ["score", "Score", "Standard PPR points from what really happens."],
+  ].map(([icon, title, text]) => `<div class="step"><svg class="pi" viewBox="0 0 32 32" aria-hidden="true">${STEP_ICONS[icon]}</svg>
+      <b>${title}</b><span>${text}</span></div>`).join("");
 }
 
 let archiveRange = null;
