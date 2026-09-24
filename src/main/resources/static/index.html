@@ -102,6 +102,8 @@
   .past-pick .field{margin:0}
   .past-pick select{width:130px}
   #weekReels{display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:520px;margin-top:16px}
+  /* display:grid above would otherwise override the hidden attribute and show two empty reels. */
+  #weekReels[hidden]{display:none}
 
   .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
   .step{background:rgba(19,27,56,.85);border:1px solid var(--line);border-radius:14px;padding:18px}
