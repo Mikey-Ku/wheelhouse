@@ -1,0 +1,379 @@
+{
+ "season": {
+  "year": 2026,
+  "type": 2
+ },
+ "week": {
+  "number": 3
+ },
+ "events": [
+  {
+   "id": "401872948",
+   "date": "2026-09-25T00:15Z",
+   "shortName": "ATL @ GB",
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "team": {
+        "abbreviation": "GB"
+       }
+      },
+      {
+       "homeAway": "away",
+       "team": {
+        "abbreviation": "ATL"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401872953",
+   "date": "2026-09-27T17:00Z",
+   "shortName": "LAC @ BUF",
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "team": {
+        "abbreviation": "BUF"
+       }
+      },
+      {
+       "homeAway": "away",
+       "team": {
+        "abbreviation": "LAC"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401872949",
+   "date": "2026-09-27T17:00Z",
+   "shortName": "CAR @ CLE",
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "team": {
+        "abbreviation": "CLE"
+       }
+      },
+      {
+       "homeAway": "away",
+       "team": {
+        "abbreviation": "CAR"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401872954",
+   "date": "2026-09-27T17:00Z",
+   "shortName": "NYJ @ DET",
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "team": {
+        "abbreviation": "DET"
+       }
+      },
+      {
+       "homeAway": "away",
+       "team": {
+        "abbreviation": "NYJ"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401872951",
+   "date": "2026-09-27T17:00Z",
+   "shortName": "HOU @ IND",
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "team": {
+        "abbreviation": "IND"
+       }
+      },
+      {
+       "homeAway": "away",
+       "team": {
+        "abbreviation": "HOU"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401872952",
+   "date": "2026-09-27T17:00Z",
+   "shortName": "KC @ MIA",
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "team": {
+        "abbreviation": "MIA"
+       }
+      },
+      {
+       "homeAway": "away",
+       "team": {
+        "abbreviation": "KC"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401872956",
+   "date": "2026-09-27T17:00Z",
+   "shortName": "TEN @ NYG",
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "team": {
+        "abbreviation": "NYG"
+       }
+      },
+      {
+       "homeAway": "away",
+       "team": {
+        "abbreviation": "TEN"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401872950",
+   "date": "2026-09-27T17:00Z",
+   "shortName": "CIN @ PIT",
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "team": {
+        "abbreviation": "PIT"
+       }
+      },
+      {
+       "homeAway": "away",
+       "team": {
+        "abbreviation": "CIN"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401872955",
+   "date": "2026-09-27T17:00Z",
+   "shortName": "SEA @ WSH",
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "team": {
+        "abbreviation": "WSH"
+       }
+      },
+      {
+       "homeAway": "away",
+       "team": {
+        "abbreviation": "SEA"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401872957",
+   "date": "2026-09-27T17:00Z",
+   "shortName": "NE @ JAX",
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "team": {
+        "abbreviation": "JAX"
+       }
+      },
+      {
+       "homeAway": "away",
+       "team": {
+        "abbreviation": "NE"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401872958",
+   "date": "2026-09-27T20:05Z",
+   "shortName": "ARI @ SF",
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "team": {
+        "abbreviation": "SF"
+       }
+      },
+      {
+       "homeAway": "away",
+       "team": {
+        "abbreviation": "ARI"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401872959",
+   "date": "2026-09-27T20:05Z",
+   "shortName": "MIN @ TB",
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "team": {
+        "abbreviation": "TB"
+       }
+      },
+      {
+       "homeAway": "away",
+       "team": {
+        "abbreviation": "MIN"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401872960",
+   "date": "2026-09-27T20:25Z",
+   "shortName": "BAL VS DAL",
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "team": {
+        "abbreviation": "DAL"
+       }
+      },
+      {
+       "homeAway": "away",
+       "team": {
+        "abbreviation": "BAL"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401872961",
+   "date": "2026-09-27T20:25Z",
+   "shortName": "LV @ NO",
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "team": {
+        "abbreviation": "NO"
+       }
+      },
+      {
+       "homeAway": "away",
+       "team": {
+        "abbreviation": "LV"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401872962",
+   "date": "2026-09-28T00:20Z",
+   "shortName": "LAR @ DEN",
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "team": {
+        "abbreviation": "DEN"
+       }
+      },
+      {
+       "homeAway": "away",
+       "team": {
+        "abbreviation": "LAR"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401872963",
+   "date": "2026-09-29T00:15Z",
+   "shortName": "PHI @ CHI",
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "team": {
+        "abbreviation": "CHI"
+       }
+      },
+      {
+       "homeAway": "away",
+       "team": {
+        "abbreviation": "PHI"
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

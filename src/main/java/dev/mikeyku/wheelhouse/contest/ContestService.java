@@ -12,6 +12,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.List;
 
 /**
  * Knows which week it currently is and when that week locks.
@@ -28,6 +29,7 @@ public class ContestService {
     private final EspnClient espn;
     private final ProjectionService projections;
     private volatile Contest current;
+    private volatile List<Slate> slates = List.of();
 
     public ContestService(EspnClient espn, ProjectionService projections) {
         this.espn = espn;
@@ -55,6 +57,15 @@ public class ContestService {
                 log.info("contest is now {} ({}), locks {}",
                         refreshed.label(), refreshed.id(), refreshed.lockAt());
             }
+            List<Slate> refreshedSlates = Slate.from(board);
+            if (!refreshedSlates.equals(slates)) {
+                for (Slate s : refreshedSlates) {
+                    log.info("slate {} ({}, {} games) locks {}",
+                            s.label(), s.format(), s.games().size(), s.lockAt());
+                }
+            }
+            // Slates first: a reader that sees the new week must also see its slates.
+            slates = refreshedSlates;
             current = refreshed;
             projections.load(refreshed);
         } catch (Exception e) {
@@ -67,6 +78,28 @@ public class ContestService {
             refresh();
         }
         return current;
+    }
+
+    /** The current week's slates, in kickoff order. */
+    public List<Slate> slates() {
+        if (current == null) {
+            refresh();
+        }
+        return slates;
+    }
+
+    /** One of the current week's slates, or null if the key is not one of them. */
+    public Slate slate(String key) {
+        if (key == null) {
+            return null;
+        }
+        return slates().stream().filter(s -> s.key().equalsIgnoreCase(key)).findFirst().orElse(null);
+    }
+
+    /** The slate a visitor should be offered: the next one still open, else null. */
+    public Slate nextOpenSlate() {
+        Instant now = Instant.now();
+        return slates().stream().filter(s -> !s.locked(now)).findFirst().orElse(null);
     }
 
     /** The current contest if it has been read yet, without going to ESPN to find out. */

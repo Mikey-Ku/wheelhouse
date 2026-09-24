@@ -134,6 +134,37 @@
   button.big{font-size:14px;padding:15px 30px}
   .cta-note{font-size:13.5px;color:var(--muted);margin-top:13px;max-width:520px;line-height:1.6}
 
+  /* ---- slates ----
+     The week as it is actually played: one card per lockable group of games, soonest first.
+     The next open one is the call to action; the rest are there to be seen. */
+  .slates{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:26px}
+  .slate{border:1px solid var(--line);border-radius:12px;background:rgba(19,27,56,.72);
+    padding:16px 18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+  .slate.next{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+  .slate.locked{opacity:.62}
+  .sl-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  .sl-name{font-family:var(--display);font-weight:700;font-size:26px;text-transform:uppercase;
+    letter-spacing:.02em;line-height:1}
+  .sl-fmt{font-family:var(--mono);font-size:11.5px;color:var(--secondary);white-space:nowrap}
+  .sl-games{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:34px}
+  .sl-games img{width:26px;height:26px;object-fit:contain}
+  .sl-match{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:700;
+    font-size:20px;letter-spacing:.03em}
+  .sl-match img{width:34px;height:34px}
+  .sl-match .at{color:var(--dim);font-size:14px}
+  .sl-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:auto}
+  .sl-lock{font-family:var(--mono);font-size:12px;color:var(--secondary)}
+  .sl-lock b{color:var(--accent);font-weight:600}
+  .slate .primary{padding:10px 22px}
+  .sl-watch{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);
+    text-decoration:none;font-weight:600}
+  .vault{margin-top:34px;padding-top:22px;border-top:1px solid var(--line)}
+  .vault-head{font-family:var(--display);font-weight:700;font-size:20px;text-transform:uppercase;
+    letter-spacing:.04em;color:var(--secondary)}
+  .vault .cta{margin-top:12px}
+  .pend{color:var(--dim);font-family:var(--mono)}
+  .liveclk{color:var(--accent);font-family:var(--mono);font-size:10.5px;letter-spacing:.06em}
+
   /* Vertical padding rather than a bigger font: the label should stay quiet, but an 11px
      line of text is a target you can miss, and a control you miss reads as broken. */
   .disclose{background:none;border:none;padding:9px 2px;margin-top:14px;color:var(--muted);
@@ -449,6 +480,49 @@
      A finished roster is a betting slip in everything but the money, so it prints like one.
      This is the only light surface in the product, which is the point: it reads as an object
      you were handed rather than another panel in the same interface. */
+  /* ---- the slip ----
+     One line per pick and one number per line: the projection before kickoff, the score after,
+     with the projection kept small underneath so beating it reads at a glance. */
+  .sp{max-width:460px;margin:0 auto;background:var(--paper);color:var(--ink);border-radius:10px;
+    padding:20px 22px 18px;font-family:var(--mono);font-size:12.5px}
+  .sp-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:12px}
+  .sp-title{font-family:var(--display);font-weight:700;font-size:26px;text-transform:uppercase;
+    letter-spacing:.02em;line-height:1}
+  .sp-meta{font-size:11.5px;color:#6f7078;text-align:right}
+  .sp-row{display:grid;grid-template-columns:42px minmax(0,1fr) 62px;gap:10px;align-items:center;
+    padding:7px 0;border-top:1px dashed #cbc6b8;opacity:0;transform:translateY(3px);
+    transition:opacity .22s ease,transform .22s ease}
+  .sp-row.in,.sp.instant .sp-row{opacity:1;transform:none}
+  .sp-pos{font-size:10.5px;letter-spacing:.12em;color:#7d8189}
+  .sp-who{display:flex;align-items:baseline;gap:8px;min-width:0}
+  .sp-nm{font-family:var(--display);font-weight:700;font-size:18px;text-transform:uppercase;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sp-part{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#8b8f97;white-space:nowrap}
+  .sp-v{text-align:right;font-variant-numeric:tabular-nums;font-weight:600;font-size:14px;line-height:1.2}
+  .sp-v small{display:block;font-weight:400;font-size:10.5px;color:#8b8f97}
+  .sp-v.pre{color:#6f7078;font-weight:500}
+  .sp-v.up{color:#0b7a5c}
+  .sp-v.dn{color:#b3263e}
+  .sp-v .clk{color:#b3263e;font-size:10px;font-weight:500}
+  .sp-foot{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+    border-top:2px solid var(--ink);margin-top:6px;padding-top:12px}
+  .sp-big{font-family:var(--display);font-weight:700;font-size:40px;line-height:.9}
+  .sp-acts{display:flex;gap:8px;margin-top:16px}
+  .sp-acts button{flex:1;background:transparent;border:1.5px solid var(--ink);color:var(--ink);
+    border-radius:8px;padding:11px 10px;font-weight:600}
+  .sp-acts button:hover:not(:disabled){background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  .sp-acts button.go{background:var(--ink);color:var(--paper)}
+  .namebtn{background:none;border:none;padding:0;font:inherit;color:inherit;text-transform:inherit;
+    letter-spacing:inherit;cursor:text;text-decoration:underline dashed var(--dim) 1px;
+    text-underline-offset:6px}
+  .namebtn:hover{color:var(--accent);border:none;text-decoration-color:var(--accent)}
+  #err:empty{display:none}
+  #slipSection{margin-top:8px}
+  .nameinput{font-family:var(--display);font-size:inherit;font-weight:700;text-transform:uppercase;
+    width:min(320px,70vw);padding:2px 8px}
+  @media (max-width:480px){.nav-week{display:none}}
+  @media (max-width:600px){.sp{padding:18px 16px}.sp-title{font-size:22px}.sp-row{grid-template-columns:36px minmax(0,1fr) 54px;gap:8px}
+    .sp-nm{font-size:16px}.sp-part{display:none}}
   .slip{position:relative;max-width:530px;margin:0 auto;background:var(--paper);color:var(--ink);
     font-family:var(--mono);font-size:12.5px;line-height:1.72;padding:34px 30px 30px;
     box-shadow:0 26px 70px rgba(0,0,0,.6);
@@ -585,36 +659,30 @@
     <h2 id="headline" style="display:none">Build your guy</h2>
 
     <div id="hero" class="hero" style="display:none">
-      <h1>Test your football brain<br><em>one random week at a time</em></h1>
-      <p class="lede">The wheel deals you a player. You decide which one of his stats is most
-        likely to beat its projection, and you only get to use each stat once. <b data-picks>17</b>
-        calls later, the week resolves and you find out whether you read it better than the
-        forecast did.</p>
+      <h1 id="heroTitle">This week</h1>
+      <div id="slates" class="slates"></div>
+      <div id="notice"></div>
 
-      <div class="cta">
-        <button class="primary big" id="rollBtn">Play a week</button>
-        <button class="ghost" id="moreBtn" aria-expanded="false">Choose a week yourself</button>
-      </div>
-      <p class="cta-note">No sign-up. You land on a random week from five seasons of the vault
-        and draft it blind against the projections that were live at the time. Name it at the
-        end if you want to keep it.</p>
-
-      <input type="hidden" id="owner" value="">
-      <div class="reels even" id="weekReels" style="display:none">
-        <div class="reelbox" id="seasonBox"><div class="reelcap">Season</div>
-          <div id="seasonReel"><div class="reel"><div class="reel-strip"><div class="reel-item">&mdash;</div></div></div></div></div>
-        <div class="reelbox" id="wkBox"><div class="reelcap">Week</div>
-          <div id="wkReel"><div class="reel"><div class="reel-strip"><div class="reel-item">&mdash;</div></div></div></div></div>
-      </div>
-
-      <div id="more" class="more" hidden>
-        <div class="pickrow">
-          <label><span>Season</span><select id="season"></select></label>
-          <label><span>Week</span><select id="week"></select></label>
-          <button id="archiveBtn">Play it</button>
-          <button class="ghost" id="liveBtn" hidden>Play the live week</button>
+      <div class="vault">
+        <div class="vault-head">The vault</div>
+        <div class="cta">
+          <button id="rollBtn">Random past week</button>
+          <button class="ghost" id="moreBtn" aria-expanded="false">Pick a week</button>
         </div>
-        <div id="notice"></div>
+        <input type="hidden" id="owner" value="">
+        <div class="reels even" id="weekReels" style="display:none">
+          <div class="reelbox" id="seasonBox"><div class="reelcap">Season</div>
+            <div id="seasonReel"><div class="reel"><div class="reel-strip"><div class="reel-item">&mdash;</div></div></div></div></div>
+          <div class="reelbox" id="wkBox"><div class="reelcap">Week</div>
+            <div id="wkReel"><div class="reel"><div class="reel-strip"><div class="reel-item">&mdash;</div></div></div></div></div>
+        </div>
+        <div id="more" class="more" hidden>
+          <div class="pickrow">
+            <label><span>Season</span><select id="season"></select></label>
+            <label><span>Week</span><select id="week"></select></label>
+            <button id="archiveBtn">Play it</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -635,7 +703,7 @@
           <span class="sec-note" id="rosterNote"></span></div>
         <div class="total" id="totalBar">
           <div><div class="tlabel" id="totalLabel">Projected</div>
-            <div class="thint" id="totalHint">Results arrive once every pick is in</div></div>
+            </div>
           <div class="tnum"><div class="n" id="totalN">0</div><small>PTS</small></div>
           <div class="vs" id="totalVs"></div>
         </div>
@@ -645,8 +713,7 @@
   </section>
 
   <section id="howto" class="howto" style="display:none">
-    <div class="sec-head"><h2>How it works</h2>
-      <span class="sec-note">Four steps, <b data-picks>17</b> picks</span></div>
+    <div class="sec-head"><h2>How it works</h2></div>
     <div class="rail">
       <div><b>01</b>
         <svg viewBox="0 0 120 52" aria-hidden="true">
@@ -697,27 +764,22 @@
           <rect class="dim" x="38" y="34" width="26" height="3" rx="1.5"/>
           <rect class="hi" x="66" y="40" width="16" height="6" rx="2"/>
         </svg>
-        <span><i>Every call in, then the truth.</i> The whole week resolves at once and
-          prints as a slip against what actually happened.</span></div>
+        <span><i>Every call in, then the truth.</i> Your slip scores against what
+          actually happens.</span></div>
     </div>
   </section>
 
   <section id="slipSection" style="display:none">
-    <div class="sec-head"><h2>Your slip</h2>
-      <span class="sec-note">Every pick, resolved</span></div>
-    <div id="slip" class="slip"></div>
-    <div id="captureCard"></div>
+    <div id="slip"></div>
   </section>
 
   <section id="lbSection" style="display:none">
-    <div class="sec-head"><h2>Leaderboard</h2>
-      <span class="sec-note">Everyone who played this week</span></div>
+    <div class="sec-head"><h2 id="lbTitle">Leaderboard</h2></div>
     <div class="card"><table id="lb"></table></div>
   </section>
 
   <section id="histSection" style="display:none">
-    <div class="sec-head"><h2>Your past weeks</h2>
-      <span class="sec-note">Rosters you have already resolved</span></div>
+    <div class="sec-head"><h2>Your rosters</h2></div>
     <div class="card"><table id="hist"></table></div>
   </section>
 </div>
@@ -748,6 +810,9 @@ function rememberEntry(id) {
 
 let entry = null;
 let owner = localStorage.getItem("wh.owner") || "";
+/* A shared slip opened from a link: read-only, and not remembered as one of yours. */
+const shareParam = new URLSearchParams(location.search).get("s");
+let viewing = false;
 
 async function api(method, path, params) {
   const qs = params ? "?" + new URLSearchParams(params) : "";
@@ -798,40 +863,76 @@ const faceTag = (url, cls) => url
 /* Week context belongs beside the wordmark, not standing on its own above the page. A lone
    label floating over a headline is the single most recognisable thing about a generated
    layout, and it was carrying two words of information. */
-function setWeekLabel(c) {
+function setWeekLabel(c, slateLabel) {
   const host = document.getElementById("weekLabel");
   if (!c || !c.label) { host.innerHTML = ""; return; }
-  host.innerHTML = `<b>${c.archive ? "The vault" : "Live"}</b><span>${esc(c.label)}</span>`;
+  const what = esc(c.label) + (slateLabel ? " &middot; " + esc(slateLabel) : "");
+  host.innerHTML = `<b>${c.archive ? "The vault" : "Live"}</b><span>${what}</span>`;
 }
+
+let slateBoard = null;
 
 async function loadContest() {
-  const c = await api("GET", "/contest");
-  setWeekLabel(c);
-  showNotice(c);
+  try {
+    slateBoard = await api("GET", "/slates");
+    setWeekLabel(slateBoard.week);
+    showNotice(slateBoard.week);
+    renderSlates();
+  } catch (e) { showError(e); }
 }
 
-/* A week that cannot be drafted gets no button at all. A greyed-out control still asks to be
-   read and reasoned about; a sentence saying why does the same job in less space. */
+const ET = { timeZone: "America/New_York" };
+const kickoffText = iso => new Date(iso).toLocaleString("en-US",
+  Object.assign({ weekday: "short", hour: "numeric", minute: "2-digit" }, ET)).replace(":00", "");
+
+function countdown(iso) {
+  const ms = new Date(iso) - Date.now();
+  if (ms <= 0) return null;
+  const m = Math.floor(ms / 60000), d = Math.floor(m / 1440), h = Math.floor(m % 1440 / 60);
+  return d ? `${d}d ${h}h` : h ? `${h}h ${m % 60}m` : `${m % 60}m`;
+}
+
+/* One card per slate. The next open one carries the only primary button on the page. */
+function renderSlates() {
+  const host = document.getElementById("slates");
+  const b = slateBoard;
+  if (!b || !b.week) { host.innerHTML = ""; return; }
+  const next = (b.slates || []).find(x => x.key === b.next);
+  document.getElementById("heroTitle").innerHTML = esc(b.week.label) + "<br><em>"
+    + esc(next ? next.label : "In progress") + "</em>";
+  const playable = b.week.ready !== false && b.week.hasProjections !== false;
+
+  host.innerHTML = (b.slates || []).map(sl => {
+    const left = countdown(sl.lockAt);
+    const locked = sl.locked || !left;
+    const games = sl.games.length === 1
+      ? `<div class="sl-match"><img src="${esc(sl.games[0].awayLogo)}" alt="">${esc(sl.games[0].away)}
+          <span class="at">@</span>${esc(sl.games[0].home)}<img src="${esc(sl.games[0].homeLogo)}" alt=""></div>`
+      : sl.games.flatMap(g => [g.awayLogo, g.homeLogo]).map(u => `<img src="${esc(u)}" alt="">`).join("");
+    const foot = locked
+      ? `<span class="sl-lock">Kicked off</span><a class="sl-watch" href="/live.html">Watch live</a>`
+      : `<span class="sl-lock">${esc(kickoffText(sl.lockAt))} &middot; <b>${left}</b></span>
+         <button class="${sl.key === b.next ? "primary" : ""}" data-slate="${esc(sl.key)}"
+           ${playable ? "" : "disabled"}>Play</button>`;
+    return `<div class="slate ${locked ? "locked" : ""} ${sl.key === b.next ? "next" : ""}">
+      <div class="sl-top"><span class="sl-name">${esc(sl.label)}</span>
+        <span class="sl-fmt">${sl.picks} picks${sl.games.length > 1 ? " &middot; " + sl.games.length + " games" : ""}</span></div>
+      <div class="sl-games">${games}</div>
+      <div class="sl-foot">${foot}</div></div>`;
+  }).join("");
+
+  host.querySelectorAll("[data-slate]").forEach(btn =>
+    btn.addEventListener("click", () => start({ slate: btn.dataset.slate })));
+}
+
+/* Only the states that stop play get a sentence. */
 function showNotice(c) {
   const host = document.getElementById("notice");
-  const live = document.getElementById("liveBtn");
-  const playable = !!c && c.ready !== false && c.hasProjections !== false && !c.locked;
-  if (live) live.hidden = !playable;
-
   if (c && c.ready === false) {
-    /* The first minute after the server has been asleep: the player list is still being
-       fetched. Say so and ask again shortly, rather than blaming the preseason. */
-    host.innerHTML = `<div class="notice"><b>Warming up.</b> The player list is loading, which
-      takes about a minute after the server has been idle. This page will update by itself.</div>`;
+    host.innerHTML = `<div class="notice"><b>Warming up.</b> Back in a minute.</div>`;
     setTimeout(loadContest, 5000);
   } else if (c && c.hasProjections === false) {
-    host.innerHTML = `<div class="notice"><b>The live week is ${esc(c.label)}.</b>
-      Nobody forecasts the preseason, and the game is played against forecasts, so there is
-      nothing to draft against until the season starts.</div>`;
-  } else if (c && c.locked) {
-    host.innerHTML = `<div class="notice"><b>${esc(c.label)} has kicked off.</b>
-      Live weeks lock at the first whistle, so nobody drafts with the scores already on
-      screen.</div>`;
+    host.innerHTML = `<div class="notice"><b>${esc(c.label)}.</b> No projections yet.</div>`;
   } else {
     host.innerHTML = "";
   }
@@ -868,29 +969,21 @@ async function loadArchiveOptions() {
    points are what score, so out-scoring the other people who could have filled this part is
    what makes a pick good. Missing your own line four weeks running and still being the best
    passing-yards option on the board is an ordinary thing for a quarterback to be. */
-function rankClass(o) {
-  if (o.rank == null) return "";
-  return o.rank >= 70 ? "hot" : o.rank <= 30 ? "cold" : "";
-}
-
-/* A meter rather than a bare number, because "68" means nothing until you see it against the
-   bar it sits in. */
-function rankMeter(o) {
-  if (o.rank == null) return "";
-  const band = o.rank >= 70 ? "hot" : o.rank <= 30 ? "cold" : "";
-  const label = o.rank >= 70 ? "strong for the position"
-              : o.rank <= 30 ? "weak for the position"
-              : "middling for the position";
-  return `<span class="rank ${band}">
-      <span class="rmeter"><i style="width:${Math.max(3, o.rank)}%"></i></span>
-      <span class="rtxt">Beats <b>${o.rank}%</b> of the field &middot; ${label}</span></span>`;
-}
+/* A game from before this season carries its year, so "Wk 17" is never mistaken for a week
+   that has not happened yet. */
+const thisSeason = () => (entry && entry.contest && entry.contest.season) || 0;
+const weekLabel = g => (g.season && g.season !== thisSeason()
+  ? "'" + String(g.season).slice(2) + " " : "") + "Wk " + g.week;
 
 function formStrip(f) {
-  if (!f || !f.games || !f.games.length) return "";
+  // Nothing played yet reads as zeros, the same shape as everyone else's strip.
+  if (!f || !f.games || !f.games.length) {
+    return `<span class="form"><span class="bars">${"<i style=\"height:2px\"></i>".repeat(6)}</span>
+      <span class="formtxt">avg <b>0</b></span></span>`;
+  }
   const max = Math.max(...f.games.map(g => g.value), f.line || 0, 1);
   const bars = f.games.map(g => {
-    const when = "Week " + g.week + (g.home ? " vs " : " at ") + g.opponent + ": " + fmt(g.value);
+    const when = weekLabel(g) + (g.home ? " vs " : " at ") + g.opponent + ": " + fmt(g.value);
     return `<i style="height:${Math.max(2, Math.round((g.value / max) * 28))}px"
       title="${esc(when)}"></i>`;
   }).join("");
@@ -903,32 +996,6 @@ function formStrip(f) {
   }
   return `<span class="form"><span class="bars">${bars}</span>
     <span class="formtxt">last ${f.played} &middot; avg <b>${fmt(f.average)}</b>${tail}</span></span>`;
-}
-
-/* A player the game can tell you nothing about.
- *
- * Two things can be missing and they are not the same. A backup nobody forecast has no
- * projection to judge him against. A player who has not taken a snap this season has no game
- * log to read. Someone called on in relief in week four often has neither, and the honest
- * thing is to say which, rather than to render a card of zeroes and a table that silently
- * fails to appear. */
-function blankSlate(pick, p) {
-  const noLine = pick.options.every(o => o.projectedRaw == null);
-  const noPast = !pick.options.some(o => o.form && o.form.games.length);
-  if (!noLine && !noPast) return "";
-
-  const body = noLine && noPast
-    ? `Nobody forecast him this week and he has not taken a snap before it, so there is
-       neither a number to judge him against nor a history to read. He played, so whatever he
-       did still scores, but this pick is completely blind.`
-    : noLine
-      ? `Nobody forecast him this week, so there is no projection to judge him against and no
-         line for his history to be measured on. He played, so whatever he did still scores.`
-      : `He has not taken a snap before this week, so there is no form to read. You still have
-         his projection.`;
-  return `<div class="notice"><b>${esc(p.name)}:
-    ${noLine && noPast ? "nothing to go on." : noLine ? "no projection." : "no history."}</b>
-    ${body} This is what the respins are for.</div>`;
 }
 
 /* Which column is emphasised in the table, if any. The table itself is always on: it shows
@@ -964,10 +1031,13 @@ function renderStatTable(pick, player) {
   // Keyed by week rather than by position in the list. Every column is built from the same
   // six games today, but a player who misses one leaves a gap, and a mis-aligned row would
   // sit one week's yardage next to another week's touchdowns and read as fact.
-  const weeks = [...new Set(withForm.flatMap(o => o.form.games.map(g => g.week)))].sort((a, b) => b - a);
+  // Keyed by season as well, since early in the year the window reaches back into last season
+  // and week two of each would otherwise share a row.
+  const gk = g => g.season * 100 + g.week;
+  const weeks = [...new Set(withForm.flatMap(o => o.form.games.map(gk)))].sort((a, b) => b - a);
   const meta = new Map();
-  withForm.forEach(o => o.form.games.forEach(g => { if (!meta.has(g.week)) meta.set(g.week, g); }));
-  const at = (o, wk) => o.form ? o.form.games.find(g => g.week === wk) : null;
+  withForm.forEach(o => o.form.games.forEach(g => { if (!meta.has(gk(g))) meta.set(gk(g), g); }));
+  const at = (o, wk) => o.form ? o.form.games.find(g => gk(g) === wk) : null;
   const sel = o => o.key === openLog ? "sel" : "";
 
   const head = cols.map(o => `<th class="sc ${sel(o)}">
@@ -980,7 +1050,7 @@ function renderStatTable(pick, player) {
       return `<td class="v ${sel(o)} ${g && g.cleared ? "ok" : ""}">${
         g ? fmt(g.value) : "&middot;"}</td>`;
     }).join("");
-    return `<tr><td class="wk">Wk ${m.week}</td>
+    return `<tr><td class="wk">${esc(weekLabel(m))}</td>
       <td class="opp">${m.home ? "vs" : "at"} ${esc(m.opponent)}
         ${crestFor(m.opponent) ? `<img class="crest sm" src="${crestFor(m.opponent)}" alt="">` : ""}
       </td>${cells}</tr>`;
@@ -991,8 +1061,6 @@ function renderStatTable(pick, player) {
 
   return `<div class="tblhead">
       <b>${esc(player && player.name ? player.name : "This player")}, last ${weeks.length} games</b>
-      <span>A lit number beat the projection he is being offered at this week.
-        Read down a column for the stat, across a row for the matchup.</span>
     </div>
     <div class="tblwrap"><table class="gt">
     <thead><tr><th class="wk">Week</th><th class="opp">Opponent</th>${head}</tr></thead>
@@ -1013,9 +1081,10 @@ function renderStage() {
 
   if (entry.activePick == null) {
     // The slip below carries the numbers now, so this only has to say the week is over.
+    const final = slipFinal(entry);
     host.innerHTML = `<div class="stage-head"><span class="step">Roster complete</span></div>
-      <div class="prompt">${entry.totalPicks} picks, all resolved against what actually
-      happened. Your slip is printed below.</div>`;
+      <div class="prompt">${final ? "Every pick resolved." : "You're in. Scores land as the games are played."}
+      ${final ? "" : '<a class="sl-watch" href="/live.html">Watch live</a>'}</div>`;
     return;
   }
 
@@ -1059,10 +1128,7 @@ function renderStage() {
             p.injury ? ' &nbsp;<span class="injury">' + esc(p.injury) + "</span>" : ""}</div></div>
         ${pick.opponentLogo ? `<span class="oppbox"><em>opponent</em>
           <img class="crest lg" src="${esc(pick.opponentLogo)}" alt=""></span>` : ""}
-      </div>
-      <div class="prompt" style="margin-bottom:14px">What are you taking from ${
-        pick.options.length === 1 ? "him? Only one part left in this position." : "him?"}</div>
-      ${blankSlate(pick, p)}`;
+      </div>`;
 
     // The budget sits on the button that spends it, and the arrow says at a glance that these
     // re-roll rather than confirm. Two identical bordered pills read as a pair of choices; the
@@ -1074,26 +1140,23 @@ function renderStage() {
         ${arrow}<span>Respin team</span><b>${entry.teamRespins}</b></button>
       <button class="respin" data-act="spin" data-respin="player" ${entry.playerRespins > 0 ? "" : "disabled"}>
         ${arrow}<span>Respin player</span><b>${entry.playerRespins}</b></button>
-      <span class="respin-note">Re-rolls this pick. You get three of each per roster.</span>
     </div>`;
 
     // Two targets per card: the body takes the part, the form strip opens its game log. They
     // are separate buttons rather than one card with a mode, because a control that does
     // different things depending on where you hit it is the fastest way to lose a pick.
     options = `<div class="opts">` + pick.options.map(o => `
-      <div class="opt ${rankClass(o)} ${openLog === o.key ? "open" : ""}">
+      <div class="opt ${openLog === o.key ? "open" : ""}">
         ${o["volatile"] ? '<span class="boom" title="Scored on touchdowns, so it is all or nothing">all or nothing</span>' : ""}
         <button class="opt-take" data-act="choose" data-opt="${esc(o.key)}">
           <span class="part">${esc(o.part)}</span>
           <span class="stat">${esc(o.stat)}</span>
           <span class="val">${o.projectedPoints == null ? "&middot;" : fmt(o.projectedPoints)}<small>PTS</small></span>
           <span class="math"><b>${fmt(o.projectedRaw)}</b>${
-            o.unit ? " " + esc(o.unit) : ""} projected &times; ${fmt(o.multiplier)}${
-            o.fieldMedian != null ? ` &middot; median ${fmt(o.fieldMedian)}` : ""}</span>
-          ${rankMeter(o)}
+            o.unit ? " " + esc(o.unit) : ""} projected</span>
         </button>
         ${o.form ? `<button class="opt-log" data-act="log" data-opt="${esc(o.key)}">
-          ${formStrip(o.form)}</button>` : ""}
+          ${formStrip(o.form)}</button>` : `<div class="opt-log">${formStrip(null)}</div>`}
       </div>`).join("") + `</div>` + renderStatTable(pick, p);
   }
 
@@ -1124,44 +1187,80 @@ const shortName = n => {
   return parts.length > 1 ? parts[0][0] + ". " + parts.slice(1).join(" ") : (n || "");
 };
 
+/* A live slip is complete long before it is decided. A pick whose game has not kicked off has
+   no score yet, and printing a zero there reads as a bust rather than as waiting. */
+const gameOf = p => p.game || { state: "post" };
+const slipFinal = e => (e.contest || {}).archive
+  || e.positions.flatMap(p => p.picks).every(p => gameOf(p).state === "post");
+
+const ordinal = n => n + (["th","st","nd","rd"][(n % 100 - 20) % 10] || ["th","st","nd","rd"][n % 100] || "th");
+
+function slateInfo(e) {
+  return slateBoard && e.slate ? (slateBoard.slates || []).find(x => x.key === e.slate) : null;
+}
+
 function renderSlip() {
   const host = document.getElementById("slip");
   if (slipState === "playing") return;
-
-  const body = entry.positions.map(pos => {
-    const lines = pos.picks.map(p => {
-      const part = (p.options.find(o => o.key === p.chosen) || {}).part || p.chosen || "";
-      return `<div class="slip-line" data-pts="${p.points || 0}">
-        <span class="sl-part">${esc(part)}</span>
-        <span class="sl-name">${esc(shortName(p.player && p.player.name))}</span>
-        <span class="sl-raw">${fmt(p.raw)}</span>
-        <span class="sl-pts">${fmt(p.points)}</span></div>`;
-    }).join("");
-    return `<div class="slip-sec">${esc(posLabel(pos.slot, pos.index))}</div>${lines}
-      <div class="slip-sub"><span>subtotal</span><span>${fmt(pos.total)}</span></div>`;
-  }).join("");
-
-  const d = entry.total - entry.projectedTotal;
   const c = entry.contest || {};
-  host.className = "slip" + (slipState === "done" ? " instant" : "");
-  host.innerHTML = `
-    <div class="slip-brand">Wheelhouse</div>
-    <div class="slip-meta"><span>${esc(c.label || "")}</span>
-      <span>${c.archive ? "Vault" : "Live"}</span></div>
-    <div class="slip-rule"></div>
-    <div class="slip-meta"><span>${esc(entry.owner)}</span>
-      <span>${esc(String(entry.entryId).slice(0, 8))}</span></div>
-    ${body}
-    <div class="slip-foot">
-      <div class="slip-rule"></div>
-      <div class="slip-meta"><span>projected</span><span>${fmt(entry.projectedTotal)}</span></div>
-      <div class="slip-tot"><span>Final</span>
-        <span class="big" id="slipTotal">${fmt(entry.total)}</span></div>
-      <div class="slip-verdict">${d >= 0 ? "beat the forecast by" : "missed the forecast by"}
-        <b>${fmt(Math.abs(d))}</b></div>
-    </div>`;
+  const final = slipFinal(entry);
+  const picks = entry.positions.flatMap(p => p.picks);
+  const started = c.archive || picks.some(p => gameOf(p).state !== "pre");
 
-  document.getElementById("captureCard").innerHTML = captureCard(entry);
+  const rows = entry.positions.map(pos => pos.picks.map((p, i) => {
+    const part = (p.options.find(o => o.key === p.chosen) || {}).part || p.chosen || "";
+    const g = gameOf(p);
+    let v;
+    if (g.state === "pre") {
+      v = `<span class="sp-v pre">${fmt1(p.projectedPoints)}</span>`;
+    } else {
+      const dir = p.points > p.projectedPoints ? "up" : p.points < p.projectedPoints ? "dn" : "";
+      v = `<span class="sp-v ${dir}">${fmt1(p.points)}<small>${
+        g.state === "in" ? `<span class="clk">${esc(g.detail || "live")}</span>` : fmt1(p.projectedPoints)}</small></span>`;
+    }
+    return `<div class="sp-row"><span class="sp-pos">${i === 0 ? esc(pos.slot === "FLEX" ? "FLEX" : pos.slot) : ""}</span>
+      <span class="sp-who"><span class="sp-nm">${esc(shortName(p.player && p.player.name))}</span>
+        <span class="sp-part">${esc(part)}</span></span>${v}</div>`;
+  }).join("")).join("");
+
+  // The corner says the one thing worth knowing at this moment: when it starts, then where
+  // you stand once there is somebody to stand against.
+  const info = slateInfo(entry);
+  const st = entry.standing;
+  let meta;
+  if (c.archive) meta = "Vault";
+  else if (started && st && st.of > 1) meta = `${ordinal(st.rank)} of ${st.of}`;
+  else if (started) meta = final ? "Final" : "Live";
+  else if (info && info.games.length === 1) {
+    const g = info.games[0];
+    meta = `${esc(g.away)} @ ${esc(g.home)} &middot; ${esc(kickoffText(g.kickoff))}`;
+  } else if (info) meta = `${info.games.length} games &middot; ${esc(kickoffText(info.lockAt))}`;
+  else meta = "";
+
+  const cap = final && entry.capture ? ` &middot; ${entry.capture.capturePercent}% of board` : "";
+  const footLabel = !started ? "Projected"
+    : `${final ? "Final" : "Live"} &middot; proj ${fmt1(entry.projectedTotal)}${cap}`;
+  const big = started ? fmt1(entry.total) : fmt1(entry.projectedTotal);
+
+  let acts;
+  if (viewing) {
+    acts = `<button class="go" data-slip="play">Play</button>`;
+  } else {
+    const again = playAgainTarget();
+    acts = `<button class="go" data-slip="share">Share</button>`
+      + (again ? `<button data-slip="again">${esc(again.label)}</button>` : "");
+  }
+
+  host.className = "sp" + (slipState === "done" ? " instant" : "");
+  host.innerHTML = `
+    <div class="sp-head"><span class="sp-title">${esc(entry.slateLabel || c.label || "")}</span>
+      <span class="sp-meta">${meta}</span></div>
+    ${rows}
+    <div class="sp-foot"><span class="sp-meta" style="text-align:left">${footLabel}</span>
+      <span class="sp-big">${big}</span></div>
+    <div class="sp-acts">${acts}</div>`;
+
+  host.querySelectorAll("[data-slip]").forEach(b => b.addEventListener("click", () => slipAction(b)));
 
   if (slipState === "none") {
     slipState = "playing";
@@ -1169,44 +1268,62 @@ function renderSlip() {
   }
 }
 
-/* The score says how the wheel treated you. This says how you played.
- *
- * Holding the exact players you were dealt, the ceiling is the best arrangement of parts that
- * was available, so the percentage is your decisions with the luck divided out. The arrangement
- * itself stays hidden: a week can be replayed, and printing the answer at the end would turn a
- * second run into transcription.
- */
-function captureCard(entry) {
-  const c = entry.capture;
-  if (!c) return "";
-  const band = c.capturePercent >= 85 ? "hot" : c.capturePercent <= 55 ? "cold" : "";
-  return `<div class="cap ${band}">
-    <div class="cap-head">
-      <div><b>${c.capturePercent}%</b><span>of your board</span></div>
-      <div class="cap-of">You scored <b>${fmt(c.scored)}</b>. The best possible use of the exact
-        players the wheel dealt you was <b>${fmt(c.ceiling)}</b>.</div>
-    </div>
-    <div class="cap-swap">Which arrangement got there is not shown. The week is still there to
-      play again, and the wheel deals differently every time.</div>
-  </div>`;
+const fmt1 = n => n == null ? "0" : (Math.round(n * 10) / 10).toFixed(1);
+
+/* Where "play again" goes. The same slate while it is open, the next open slate once it has
+   locked, the same week again in the vault. */
+function playAgainTarget() {
+  const c = entry.contest || {};
+  if (c.archive) return { label: "Play again", params: { season: c.season, week: c.week } };
+  const info = slateInfo(entry);
+  if (info && !info.locked && new Date(info.lockAt) > Date.now()) {
+    return { label: "Play again", params: { slate: info.key } };
+  }
+  const next = slateBoard && (slateBoard.slates || []).find(x => x.key === slateBoard.next);
+  return next ? { label: "Play " + next.label, params: { slate: next.key } } : null;
 }
 
-/* Every pick resolves at once on the server, so the page is the only thing that can make
-   that land as an event rather than a number quietly changing. Each line prints in turn with
-   the total climbing behind it. */
+async function slipAction(btn) {
+  const what = btn.dataset.slip;
+  if (what === "play") { location.href = "/"; return; }
+  if (what === "again") {
+    const t = playAgainTarget();
+    if (!t) return;
+    if (t.params.season) {
+      const ticker = runLoader(t.params.season + " week " + t.params.week);
+      await start(t.params);
+      clearInterval(ticker); loading = false; render();
+    } else {
+      await start(t.params);
+    }
+    window.scrollTo({ top: 0 });
+    return;
+  }
+  if (what === "share") {
+    try {
+      const { shareId } = await api("POST", "/" + entry.entryId + "/share");
+      const url = location.origin + "/?s=" + shareId;
+      const title = (entry.slateLabel || entry.contest.label) + " · " + entry.owner;
+      if (navigator.share) {
+        await navigator.share({ title, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        btn.textContent = "Link copied";
+        setTimeout(() => { btn.textContent = "Share"; }, 2000);
+      }
+    } catch (e) {
+      if (e && e.name !== "AbortError") showError(e);
+    }
+  }
+}
+
+/* Lines print in turn. The number only counts up once there is a score to count. */
 async function printSlip() {
   const host = document.getElementById("slip");
-  const total = document.getElementById("slipTotal");
-  let running = 0;
-  total.textContent = "0";
-
-  for (const line of host.querySelectorAll(".slip-line")) {
-    line.classList.add("in");
-    running += Number(line.dataset.pts || 0);
-    total.textContent = fmt(Math.round(running * 100) / 100);
-    await new Promise(r => setTimeout(r, 95));
+  for (const row of host.querySelectorAll(".sp-row")) {
+    row.classList.add("in");
+    await new Promise(r => setTimeout(r, 70));
   }
-  host.querySelector(".slip-foot").classList.add("in");
   slipState = "done";
 }
 
@@ -1272,19 +1389,24 @@ function render() {
   // and the landing reads better narrow.
   document.body.classList.toggle("playing", building);
   if (!building) { show("slipSection", false); }
-  show("stage", building);
+  show("stage", building && !(entry && entry.complete));
   show("rosterSection", building);
   document.getElementById("headline").style.display = building ? "block" : "none";
   if (loading) return;
   if (!building) { loadContest(); return; }
 
   const c = entry.contest || {};
-  setWeekLabel(c);
-  showNotice(c);
-  document.getElementById("headline").innerHTML =
-    esc(entry.owner) + "'s roster"
-    + (c.archive ? '<span class="badge">historic</span>' : "")
-    + '<button class="backlink" id="leaveBtn">start over</button>';
+  setWeekLabel(c, entry.slateLabel);
+  // Your own name is a control: it is what the leaderboard shows, and "Player XC4Y" means
+  // nothing to the friends reading it.
+  const name = viewing ? esc(entry.owner)
+    : `<button class="namebtn" id="nameBtn" title="Rename">${esc(entry.owner)}</button>`;
+  document.getElementById("headline").innerHTML = name + "'s roster"
+    + (c.archive ? '<span class="badge">historic</span>'
+        : entry.slateLabel && !entry.complete ? `<span class="badge">${esc(entry.slateLabel)}</span>` : "")
+    + (viewing ? "" : '<button class="backlink" id="leaveBtn">start over</button>');
+  if (viewing) { renderStage(); renderRoster(); return; }
+  document.getElementById("nameBtn").addEventListener("click", editName);
 
   document.getElementById("leaveBtn").addEventListener("click", () => {
     entry = null;
@@ -1297,6 +1419,37 @@ function render() {
 
   renderStage();
   renderRoster();
+}
+
+function editName() {
+  const btn = document.getElementById("nameBtn");
+  const input = document.createElement("input");
+  input.className = "nameinput";
+  input.maxLength = 24;
+  input.value = entry.owner;
+  btn.replaceWith(input);
+  input.focus();
+  input.select();
+  let done = false;
+  const save = async commit => {
+    if (done) return;
+    done = true;
+    const v = input.value.trim();
+    if (commit && v && v !== entry.owner) {
+      try {
+        entry = await api("POST", "/" + entry.entryId + "/name", { owner: v });
+        owner = v;
+        localStorage.setItem("wh.owner", v);
+        refreshTables();
+      } catch (e) { showError(e); }
+    }
+    render();
+  };
+  input.addEventListener("keydown", e => {
+    if (e.key === "Enter") save(true);
+    if (e.key === "Escape") save(false);
+  });
+  input.addEventListener("blur", () => save(true));
 }
 
 /* ---------- the slot reel ----------
@@ -1404,7 +1557,11 @@ async function act(d, index) {
 
 async function refreshTables() {
   try {
-    const lb = await api("GET", "/leaderboard", entry ? { contestId: entry.contest.id } : null);
+    const lbArgs = entry ? { contestId: entry.contest.id } : null;
+    if (entry && entry.slate) lbArgs.slate = entry.slate;
+    const lb = await api("GET", "/leaderboard", lbArgs);
+    document.getElementById("lbTitle").textContent =
+      entry && entry.slateLabel ? entry.slateLabel + " leaderboard" : "Leaderboard";
     // A leaderboard of one is not a leaderboard, it is your own score written twice. It stays
     // hidden until somebody else has played the same week, and hides again if that stops being
     // true, which the old check never did: it could turn the section on but never off.
@@ -1418,6 +1575,7 @@ async function refreshTables() {
     }
   } catch (e) { /* not worth surfacing */ }
 
+  if (viewing) { show("histSection", false); return; }
   const ids = myEntries().filter(id => id !== entry?.entryId);
   if (!ids.length) { show("histSection", false); return; }
   try {
@@ -1425,8 +1583,8 @@ async function refreshTables() {
     show("histSection", past.length > 0);
     if (past.length) {
       document.getElementById("hist").innerHTML =
-        `<tr><th>Week</th><th style="text-align:right">Score</th></tr>` +
-        past.map(h => `<tr><td>${esc(h.label || h.contestId)}</td>
+        `<tr><th>Slate</th><th style="text-align:right">Score</th></tr>` +
+        past.map(h => `<tr><td>${esc(h.label || h.contestId)}${h.slateLabel ? " &middot; " + esc(h.slateLabel) : ""}</td>
           <td class="n">${h.complete ? fmt(h.total) : "&middot;"}</td></tr>`).join("");
     }
   } catch (e) { /* nothing kept yet */ }
@@ -1485,7 +1643,7 @@ async function rollWeek() {
   const week = weeks[Math.floor(Math.random() * weeks.length)];
 
   document.getElementById("weekReels").style.display = "grid";
-  ["rollBtn", "archiveBtn", "liveBtn"].forEach(id => document.getElementById(id).disabled = true);
+  ["rollBtn", "archiveBtn"].forEach(id => document.getElementById(id).disabled = true);
   document.getElementById("seasonBox").classList.remove("landed");
   document.getElementById("wkBox").classList.remove("landed");
 
@@ -1502,7 +1660,7 @@ async function rollWeek() {
   await start({ season, week });
   clearInterval(ticker);
   loading = false;
-  ["rollBtn", "archiveBtn", "liveBtn"].forEach(id => document.getElementById(id).disabled = false);
+  ["rollBtn", "archiveBtn"].forEach(id => document.getElementById(id).disabled = false);
   document.getElementById("weekReels").style.display = "none";
   render();
 }
@@ -1520,7 +1678,6 @@ async function rollWeek() {
   });
 
   document.getElementById("rollBtn").addEventListener("click", rollWeek);
-  document.getElementById("liveBtn").addEventListener("click", () => start());
   document.getElementById("archiveBtn").addEventListener("click", startArchive);
 
   document.getElementById("owner").value = owner || "";
@@ -1528,7 +1685,13 @@ async function rollWeek() {
   // Anyone who played before this change has one entry under the old key. Fold it into the
   // list so their history does not vanish along with the name lookup.
   if (saved) rememberEntry(saved);
-  if (saved) {
+  if (shareParam) {
+    try {
+      entry = await api("GET", "/shared/" + encodeURIComponent(shareParam));
+      viewing = true;
+      slipState = "none";
+    } catch (e) { history.replaceState(null, "", "/"); }
+  } else if (saved) {
     try {
       entry = await api("GET", "/" + saved);
       // Resuming a week that already finished should not replay the reveal. That moment
@@ -1539,10 +1702,14 @@ async function rollWeek() {
   render();
   refreshTables();
 
+  // The landing's countdowns tick, and a slate that locks drops to "watch live" by itself.
+  setInterval(() => { if (!entry) renderSlates(); }, 30000);
+
   // A live week's results move while games are on, so the board refreshes itself.
   setInterval(async () => {
     if (!entry) return;
-    try { entry = await api("GET", "/" + entry.entryId); render(); refreshTables(); } catch (e) {}
+    const path = viewing ? "/shared/" + encodeURIComponent(shareParam) : "/" + entry.entryId;
+    try { entry = await api("GET", path); render(); refreshTables(); } catch (e) {}
   }, 15000);
 })();
 </script>

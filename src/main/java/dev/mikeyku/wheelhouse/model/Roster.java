@@ -18,33 +18,20 @@ public record Roster(String id, String contestId, String owner, List<Pick> picks
     /** One filled pick: who, and which part of their position they are covering. */
     public record Pick(Slot slot, String playerId, String option) {}
 
-    /** One QB, one RB, two flex. */
-    public static final List<Slot> POSITIONS = List.of(Slot.QB, Slot.RB, Slot.FLEX, Slot.FLEX);
+    /** One QB, one RB, two flex. The classic shape; a showdown's is in {@link Format}. */
+    public static final List<Slot> POSITIONS = Format.CLASSIC.positions();
 
-    /**
-     * Positions no longer hold the same number of parts: five at quarterback and running back,
-     * four at flex. So a flat pick index has to be walked rather than divided.
-     */
-    public static final int TOTAL_PICKS =
-            POSITIONS.stream().mapToInt(s -> s.options().size()).sum();
+    public static final int TOTAL_PICKS = Format.CLASSIC.totalPicks();
 
     public static int partsIn(int position) {
-        return POSITIONS.get(position).options().size();
+        return Format.CLASSIC.picksIn(position);
     }
 
     public static int positionOf(int pickIndex) {
-        int remaining = pickIndex;
-        for (int position = 0; position < POSITIONS.size(); position++) {
-            int parts = partsIn(position);
-            if (remaining < parts) {
-                return position;
-            }
-            remaining -= parts;
-        }
-        throw new IllegalArgumentException("no position holds pick " + pickIndex);
+        return Format.CLASSIC.positionOf(pickIndex);
     }
 
     public static Slot slotForPick(int pickIndex) {
-        return POSITIONS.get(positionOf(pickIndex));
+        return Format.CLASSIC.slotForPick(pickIndex);
     }
 }

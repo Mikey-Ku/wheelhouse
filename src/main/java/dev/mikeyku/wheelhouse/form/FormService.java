@@ -60,11 +60,11 @@ public class FormService {
     }
 
     /** One completed game: who they played, and every stat ESPN recorded for them in it. */
-    public record Game(int week, String opponent, boolean home, String result,
+    public record Game(int season, int week, String opponent, boolean home, String result,
                        Map<String, Double> stats) {}
 
     /** One prior week as the client draws it. */
-    public record Outing(int week, String opponent, boolean home, String result,
+    public record Outing(int season, int week, String opponent, boolean home, String result,
                          double value, boolean cleared) {}
 
     /**
@@ -101,7 +101,7 @@ public class FormService {
             double value = wanted.stream()
                     .mapToDouble(stat -> game.stats().getOrDefault(stat, 0.0))
                     .sum();
-            outings.add(new Outing(game.week(), game.opponent(), game.home(), game.result(),
+            outings.add(new Outing(game.season(), game.week(), game.opponent(), game.home(), game.result(),
                     round(value), line != null && value >= line));
         }
 
@@ -117,16 +117,30 @@ public class FormService {
      * <p>Regular season only, and strictly earlier than {@code beforeWeek}. Byes and missed
      * games mean the weeks are not contiguous, which is why this filters on the week number
      * rather than counting backwards from the end of the list.
+     *
+     * <p>Early in a season there are not six games yet, so the window is topped up from the
+     * end of the previous one. Week three used to show a starter's two games, and week one
+     * showed nothing at all. Last season is entirely before the week being drafted, so this
+     * cannot leak anything.
      */
     public List<Game> before(String espnId, int season, int beforeWeek) {
         if (espnId == null || espnId.isBlank()) {
             return List.of();
         }
-        List<Game> prior = season(espnId, season).stream()
+        List<Game> prior = new ArrayList<>(season(espnId, season).stream()
                 .filter(g -> g.week() < beforeWeek)
                 .sorted(Comparator.comparingInt(Game::week))
-                .toList();
-        return prior.size() <= WINDOW ? prior : prior.subList(prior.size() - WINDOW, prior.size());
+                .toList());
+        if (prior.size() < WINDOW) {
+            List<Game> last = season(espnId, season - 1).stream()
+                    .sorted(Comparator.comparingInt(Game::week))
+                    .toList();
+            int need = Math.min(WINDOW - prior.size(), last.size());
+            prior.addAll(0, last.subList(last.size() - need, last.size()));
+        }
+        return prior.size() <= WINDOW
+                ? List.copyOf(prior)
+                : List.copyOf(prior.subList(prior.size() - WINDOW, prior.size()));
     }
 
     private List<Game> season(String espnId, int season) {
@@ -138,7 +152,7 @@ public class FormService {
         // Fetched outside the map's lock: computeIfAbsent on a synchronized map would hold every
         // other lookup behind one ESPN call. Two threads racing the same player just fetch twice.
         try {
-            games = parse(espn.gamelog(espnId, season));
+            games = parse(espn.gamelog(espnId, season), season);
         } catch (Exception e) {
             log.debug("no game log for {} in {}: {}", espnId, season, e.toString());
             games = List.of();
@@ -153,7 +167,7 @@ public class FormService {
      * number their weeks from one, which would collide with the regular season if both were
      * read, so only the regular season is taken.
      */
-    private List<Game> parse(JsonNode root) {
+    private List<Game> parse(JsonNode root, int season) {
         List<String> names = new ArrayList<>();
         for (JsonNode name : root.path("names")) {
             names.add(name.asText());
@@ -167,7 +181,7 @@ public class FormService {
             }
             for (JsonNode category : seasonType.path("categories")) {
                 for (JsonNode entry : category.path("events")) {
-                    Game game = game(events, names, entry);
+                    Game game = game(events, names, entry, season);
                     if (game != null) {
                         games.add(game);
                     }
@@ -177,7 +191,7 @@ public class FormService {
         return List.copyOf(games);
     }
 
-    private Game game(JsonNode events, List<String> names, JsonNode entry) {
+    private Game game(JsonNode events, List<String> names, JsonNode entry, int season) {
         JsonNode meta = events.path(entry.path("eventId").asText());
         if (meta.isMissingNode() || !meta.has("week")) {
             return null;
@@ -193,6 +207,7 @@ public class FormService {
         }
 
         return new Game(
+                season,
                 meta.path("week").asInt(),
                 meta.path("opponent").path("abbreviation").asText(""),
                 "vs".equalsIgnoreCase(meta.path("atVs").asText("")),

@@ -41,7 +41,39 @@ from them. Both wheels animate. Entries are stored in a file-backed database and
 restart; an archived week rehydrates itself from ESPN when an old entry is resumed.
 
 Weeks come from ESPN, so preseason, regular season and playoffs all work without a calendar
-to maintain. The week locks at its first kickoff.
+to maintain.
+
+### Slates
+
+A live week is split by day, and each part locks at its own first kickoff:
+
+| Slate | Games | Roster |
+|---|---|---|
+| Sunday | every Sunday game, 1pm through Sunday night | Classic, 14 picks |
+| Thursday Night, Monday Night, any other day | that day's games | Showdown, 7 picks |
+
+A week that locked at its first kickoff was closed from Thursday night until the following
+week, which is exactly when people want to play. Slates are derived from ESPN's kickoff times
+(in Eastern), so Thanksgiving, Saturday doubleheaders and international Friday games fall out
+without a calendar.
+
+**A slate's wheel only lands on its own teams.** By Sunday the Thursday teams have already
+played, and a wheel that could still reach them would hand out results. This also keeps bye
+teams off the wheel.
+
+**A showdown is QB ×2, RB ×2, Flex ×3.** A classic roster needs four different quarterbacks
+and a single game has two. In the backfield positions there are fewer picks than parts, so
+part of the decision is which parts to leave empty. The showdown pool is everyone projected
+for at least three points at their best part rather than the league-wide relevance cutoff,
+which would drop a backup starting in place of an injured quarterback.
+
+**Entries keep the week as their contest id.** Stats, projections and scoring are keyed by
+week and every slate's games are in that week, so none of them know slates exist. The slate
+decides the lock, the teams, the roster shape and which leaderboard an entry is on.
+
+A finished live roster reads "pending" rather than zero until its games kick off, and the
+Live tab shows your rosters scoring as the games are played. The ingestion view that used to
+live there is at `/ops.html`.
 
 ### Historic mode
 
@@ -95,11 +127,11 @@ point — it reads as an object you were handed rather than another panel.
 ## Tests
 
 ```sh
-./mvnw test                          # everything, 27 tests
-./mvnw test -DexcludedGroups=network  # the 25 that need no network
+./mvnw test                          # everything, 60 tests
+./mvnw test -DexcludedGroups=network  # the 54 not tagged network
 ```
 
-Two of them replay a real archived week and therefore need ESPN and Sleeper to be reachable;
+Five of them replay a real week and therefore need ESPN and Sleeper to be reachable;
 they are tagged `network` so CI can skip them. The rest run offline in under a second.
 
 What they pin, and why each one exists:
@@ -112,6 +144,10 @@ What they pin, and why each one exists:
 | `WithholdingTest` | A mid-draft payload carries no actuals, and the leaderboard publishes no entry ids. Both have been broken before. |
 | `CaptureRateTest` | Your score can never exceed the ceiling, and the arrangement that reaches it is never reported. |
 | `LiveWeekDryRunTest` | The live path, driven a poll at a time. See below. |
+| `SlateTest` | A week splits into Thursday, Sunday and Monday against the real week 3 scoreboard, each locks at its own kickoff, and Sunday never offers a team that played Thursday. |
+| `SlateDraftTest` | Every slate in the current week drafts to completion inside its own games, including a showdown filled from one game. |
+| `SharedSlipTest` | A share link is a separate token: the shared view carries no entry id, and the token opens nothing for writing. |
+| `ReleasedWeekTest` | A draft keeps working after its archived week is released from memory. A load run found spins failing with "no team has an eligible QB left" once more weeks were in play than the cap holds. |
 
 ### The live-week dry run
 
@@ -215,14 +251,18 @@ Endpoints, all temporary scaffolding:
 | `GET /api/wheel/teams?slot=FLEX` | Teams the wheel can land on |
 | `GET /api/wheel/players?slot=FLEX&team=SF` | Who a team spin resolves to |
 | `GET /api/play/contest` | Current week and lock time |
-| `POST /api/play/open?owner=` | Open or resume this week's entry |
+| `GET /api/play/slates` | This week's slates, their games and lock times |
+| `POST /api/play/open?owner=&slate=` | Open an entry for a slate (the next open one if omitted) |
 | `POST /api/play/open?owner=&season=&week=` | Open an archived week |
 | `GET /api/play/archive` | Which seasons the archive can reach |
 | `POST /api/play/{id}/pick/{i}/team?respin=` | Spin a team |
 | `POST /api/play/{id}/pick/{i}/player?respin=` | Spin a player |
 | `POST /api/play/{id}/pick/{i}/choose?option=` | Take a body part |
-| `GET /api/play/leaderboard` | This week's standings |
+| `GET /api/play/leaderboard?slate=` | One slate's standings (the whole week if omitted) |
 | `GET /api/play/mine?ids=` | Summaries for entries you already hold |
+| `POST /api/play/{id}/name?owner=` | Rename a roster (1 to 24 characters) |
+| `POST /api/play/{id}/share` | Mint a read-only link token for a finished slip |
+| `GET /api/play/shared/{shareId}` | A shared slip, without its entry id or respins |
 
 ## Design notes
 

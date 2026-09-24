@@ -1,8 +1,9 @@
 package dev.mikeyku.wheelhouse.entry;
 
-import dev.mikeyku.wheelhouse.model.Roster;
+import dev.mikeyku.wheelhouse.model.Format;
 import dev.mikeyku.wheelhouse.model.Slot;
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -19,7 +20,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
-/** One player's roster for one week: four composite positions, fourteen picks. */
+/** One player's roster for one slate: fourteen picks for a Sunday, seven for a single game. */
 @Entity
 @Table(name = "entries")
 public class EntryRecord {
@@ -28,7 +29,30 @@ public class EntryRecord {
     private String id;
 
     private String contestId;
+
+    /**
+     * Which of the week's slates this roster is for: "sun", "thu", "mon". Null for archived
+     * weeks, which are never split, and for rows written before slates existed.
+     *
+     * <p>The contest id stays the week, deliberately. Stats, projections and scoring are all
+     * keyed by week, and every game in a slate is a game in that week, so none of them need to
+     * know slates exist. The slate only decides when the roster locks, which teams the wheel
+     * may land on, and which leaderboard it appears on.
+     */
+    private String slate;
+
+    /** Null reads as classic, which is every row written before formats existed. */
+    @Enumerated(EnumType.STRING)
+    private Format format;
+
     private String owner;
+
+    /**
+     * What a shared link carries, never the entry id. The entry id opens the draft for writing,
+     * so a slip posted to a group chat must not contain it. Minted on the first share.
+     */
+    @Column(unique = true)
+    private String shareId;
     private Instant createdAt;
 
     /** Set once every pick is filled. Null means still building. */
@@ -41,7 +65,7 @@ public class EntryRecord {
     private int teamRespins;
     private int playerRespins;
 
-    // Eager on purpose. An entry is never useful without its picks, there are always exactly
+    // Eager on purpose. An entry is never useful without its picks, there are never more than
     // fourteen, and open-in-view is off, so lazy loading would just fail outside the
     // transaction that read the entry.
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
@@ -52,16 +76,18 @@ public class EntryRecord {
     protected EntryRecord() {
     }
 
-    public EntryRecord(String id, String contestId, String owner, Instant createdAt,
-                       int teamRespins, int playerRespins) {
+    public EntryRecord(String id, String contestId, String slate, Format format, String owner,
+                       Instant createdAt, int teamRespins, int playerRespins) {
         this.id = id;
         this.contestId = contestId;
+        this.slate = slate;
+        this.format = format;
         this.owner = owner;
         this.createdAt = createdAt;
         this.teamRespins = teamRespins;
         this.playerRespins = playerRespins;
-        for (int i = 0; i < Roster.TOTAL_PICKS; i++) {
-            picks.add(new PickRecord(i, Roster.positionOf(i), Roster.slotForPick(i)));
+        for (int i = 0; i < format.totalPicks(); i++) {
+            picks.add(new PickRecord(i, format.positionOf(i), format.slotForPick(i)));
         }
     }
 
@@ -80,7 +106,12 @@ public class EntryRecord {
 
     public String id() { return id; }
     public String contestId() { return contestId; }
+    public String slate() { return slate; }
+    public Format format() { return format == null ? Format.CLASSIC : format; }
     public String owner() { return owner; }
+    public void owner(String owner) { this.owner = owner; }
+    public String shareId() { return shareId; }
+    public void shareId(String shareId) { this.shareId = shareId; }
     public Instant createdAt() { return createdAt; }
     public Instant submittedAt() { return submittedAt; }
     public void submittedAt(Instant at) { this.submittedAt = at; }

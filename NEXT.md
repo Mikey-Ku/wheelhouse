@@ -126,5 +126,12 @@ legs correctly and here is what the vig actually is" is the version a quant resp
   slot could wheel straight to a player.
 - Hard mode exists in `Slot` (interceptions and fumbles lost as parts that only cost you)
   and is not wired to anything.
-- `live.html` is an operations view of the ingestion pipeline. It is honest and useful and
-  looks nothing like the game.
+- **A finished live week does not survive a restart.** Its box scores live in memory and only
+  the current week is polled, so once ESPN rolls to the next week a restart leaves last week's
+  rosters scoring zero. An archived week rehydrates itself on read; a finished week of the
+  current season should do the same.
+- **The classic wheel can land on a backup quarterback.** The relevance cutoff lets about
+  twenty backups through. The showdown already filters on projected points instead, and the
+  same rule would work for Sunday.
+- **Thursday Night is the first real test of slates under live scoring.** Watch `/live.html`
+  and `/ops.html` during ATL @ GB: a pick should move from pending to a live clock to final.

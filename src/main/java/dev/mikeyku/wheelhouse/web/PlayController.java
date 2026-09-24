@@ -3,10 +3,14 @@ package dev.mikeyku.wheelhouse.web;
 import dev.mikeyku.wheelhouse.contest.ArchiveService;
 import dev.mikeyku.wheelhouse.contest.Contest;
 import dev.mikeyku.wheelhouse.contest.ContestService;
+import dev.mikeyku.wheelhouse.contest.Slate;
+import dev.mikeyku.wheelhouse.contest.TeamCodes;
 import dev.mikeyku.wheelhouse.entry.EntryRecord;
 import dev.mikeyku.wheelhouse.entry.EntryService;
 import dev.mikeyku.wheelhouse.form.FormService;
 import dev.mikeyku.wheelhouse.ingest.IngestService;
+import dev.mikeyku.wheelhouse.model.Format;
+import dev.mikeyku.wheelhouse.model.GameSnapshot;
 import dev.mikeyku.wheelhouse.model.Player;
 import dev.mikeyku.wheelhouse.model.Roster;
 import dev.mikeyku.wheelhouse.model.Slot;
@@ -35,7 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-/** The build-and-score flow: fourteen picks across four composite positions. */
+/** The build-and-score flow: pick a slate, fill its roster, watch it score. */
 @RestController
 @RequestMapping("/api/play")
 public class PlayController {
@@ -83,6 +87,51 @@ public class PlayController {
     }
 
     /**
+     * This week's slates, soonest first, each with its games and whether it is still open.
+     * The landing page leads with the first open one.
+     */
+    @GetMapping("/slates")
+    public Map<String, Object> slates() {
+        Contest week = contests.current();
+        Instant now = Instant.now();
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Slate slate : contests.slates()) {
+            Map<String, Object> m = describe(slate, now);
+            List<Map<String, Object>> games = new ArrayList<>();
+            for (Slate.Game g : slate.games()) {
+                Map<String, Object> gm = new LinkedHashMap<>();
+                gm.put("away", g.away());
+                gm.put("home", g.home());
+                gm.put("awayLogo", logo(g.away()));
+                gm.put("homeLogo", logo(g.home()));
+                gm.put("kickoff", g.kickoff().toString());
+                games.add(gm);
+            }
+            m.put("games", games);
+            m.put("entries", week == null ? 0 : entries.forContest(week.id()).stream()
+                    .filter(e -> slate.key().equals(e.slate())).count());
+            out.add(m);
+        }
+        Slate next = contests.nextOpenSlate();
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("week", week == null ? null : describe(week));
+        body.put("next", next == null ? null : next.key());
+        body.put("slates", out);
+        return body;
+    }
+
+    private Map<String, Object> describe(Slate slate, Instant now) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("key", slate.key());
+        m.put("label", slate.label());
+        m.put("format", slate.format().name());
+        m.put("picks", slate.format().totalPicks());
+        m.put("lockAt", slate.lockAt().toString());
+        m.put("locked", slate.locked(now));
+        return m;
+    }
+
+    /**
      * Which seasons the archive can reach, and how long a roster is.
      *
      * <p>The pick count ships from here so the page never hardcodes it. Dropping a single part
@@ -101,24 +150,44 @@ public class PlayController {
     @PostMapping("/open")
     public Map<String, Object> open(@RequestParam String owner,
                                     @RequestParam(required = false) Integer season,
-                                    @RequestParam(required = false) Integer week) {
-        Contest contest = (season != null && week != null)
-                ? archive.load(season, week)
-                : contests.current();
-        return view(entries.openEntry(owner, contest));
+                                    @RequestParam(required = false) Integer week,
+                                    @RequestParam(required = false) String slate) {
+        if (season != null && week != null) {
+            return view(entries.openEntry(owner, archive.load(season, week), null));
+        }
+        // No slate named means the next one still open, which is what a bare "play" wants.
+        Slate chosen = slate == null ? contests.nextOpenSlate() : contests.slate(slate);
+        if (chosen == null) {
+            throw new IllegalStateException(slate == null
+                    ? "every slate this week has kicked off"
+                    : "no slate called " + slate + " this week");
+        }
+        return view(entries.openEntry(owner, contests.current(), chosen));
     }
 
     @GetMapping("/{entryId}")
     public Map<String, Object> get(@PathVariable String entryId) {
+        return view(warm(entryId));
+    }
+
+    /**
+     * Makes sure the week an entry belongs to is in memory before anything reads it.
+     *
+     * <p>Entries are on disk; the stats they are scored against and the player pool they name
+     * are not. A resumed archive week would otherwise come back scoring zero with "unknown
+     * player" on every row. Every endpoint that acts on an entry passes through here, not only
+     * the read: with more weeks being played than the cap holds, a week was released between
+     * two picks of a draft still in progress, and the next spin found an empty pool and
+     * reported "no team has an eligible QB left". Passing through here also marks the week as
+     * recently used, so a week somebody is drafting is never the stalest one. Loading is
+     * idempotent and returns immediately once the week is already in memory.
+     */
+    private EntryRecord warm(String entryId) {
         EntryRecord entry = entries.byId(entryId);
-        // Entries are on disk now; the stats they are scored against and the player pool they
-        // name are not. A resumed archive week would otherwise come back scoring zero with
-        // "unknown player" on every row. Loading is idempotent and returns immediately once
-        // the week is already in memory.
         if (entry != null) {
             rehydrate(entry.contestId());
         }
-        return view(entry);
+        return entry;
     }
 
     /** Pulls an archived week back in if this process has not seen it yet. */
@@ -143,6 +212,7 @@ public class PlayController {
     public Map<String, Object> spin(@PathVariable String entryId, @PathVariable int index,
                                     @RequestParam(defaultValue = "false") boolean respinTeam,
                                     @RequestParam(defaultValue = "false") boolean respinPlayer) {
+        warm(entryId);
         if (!respinPlayer) {
             entries.spinTeam(entryId, index, respinTeam);
         }
@@ -152,19 +222,72 @@ public class PlayController {
     @PostMapping("/{entryId}/pick/{index}/team")
     public Map<String, Object> spinTeam(@PathVariable String entryId, @PathVariable int index,
                                         @RequestParam(defaultValue = "false") boolean respin) {
+        warm(entryId);
         return view(entries.spinTeam(entryId, index, respin));
     }
 
     @PostMapping("/{entryId}/pick/{index}/player")
     public Map<String, Object> spinPlayer(@PathVariable String entryId, @PathVariable int index,
                                           @RequestParam(defaultValue = "false") boolean respin) {
+        warm(entryId);
         return view(entries.spinPlayer(entryId, index, respin));
     }
 
     @PostMapping("/{entryId}/pick/{index}/choose")
     public Map<String, Object> choose(@PathVariable String entryId, @PathVariable int index,
                                       @RequestParam String option) {
+        warm(entryId);
         return view(entries.choose(entryId, index, option));
+    }
+
+    /** A read-only link for a finished slip. Returns a token, never the entry id. */
+    @PostMapping("/{entryId}/share")
+    public Map<String, Object> share(@PathVariable String entryId) {
+        return Map.of("shareId", entries.share(entryId));
+    }
+
+    @PostMapping("/{entryId}/name")
+    public Map<String, Object> rename(@PathVariable String entryId, @RequestParam String owner) {
+        warm(entryId);
+        return view(entries.rename(entryId, owner));
+    }
+
+    /**
+     * A shared slip, as anyone with the link sees it. The same view the owner gets, minus
+     * everything that would let a reader act on the entry: its id and its respin budget.
+     */
+    @GetMapping("/shared/{shareId}")
+    public Map<String, Object> shared(@PathVariable String shareId) {
+        EntryRecord entry = entries.byShareId(shareId);
+        if (entry == null || !entry.complete()) {
+            throw new IllegalArgumentException("no such slip");
+        }
+        rehydrate(entry.contestId());
+        Map<String, Object> out = new LinkedHashMap<>(view(entry));
+        out.remove("entryId");
+        out.remove("teamRespins");
+        out.remove("playerRespins");
+        out.put("shared", true);
+        return out;
+    }
+
+    /**
+     * Where a finished roster sits on its slate's board, counting only finished rosters. A
+     * ranking of one says nothing, so the page hides it until there is a field.
+     */
+    private Map<String, Object> standing(EntryRecord entry, double total) {
+        List<EntryRecord> field = entries.forContest(entry.contestId()).stream()
+                .filter(EntryRecord::complete)
+                .filter(e -> Objects.equals(e.slate(), entry.slate()))
+                .toList();
+        int ahead = 0;
+        for (EntryRecord other : field) {
+            if (!other.id().equals(entry.id())
+                    && scoring.score(entries.asRoster(other)).total() > total) {
+                ahead++;
+            }
+        }
+        return Map.of("rank", ahead + 1, "of", field.size());
     }
 
     /**
@@ -195,10 +318,15 @@ public class PlayController {
     }
 
     @GetMapping("/leaderboard")
-    public List<Map<String, Object>> leaderboard(@RequestParam(required = false) String contestId) {
+    public List<Map<String, Object>> leaderboard(@RequestParam(required = false) String contestId,
+                                                 @RequestParam(required = false) String slate) {
+        // A slate is its own competition. Without a slate named, the board is the whole week,
+        // which is also what an archived week and a pre-slate entry get.
         return entries.forContest(contestId == null ? contests.current().id() : contestId).stream()
+                .filter(entry -> slate == null || slate.equalsIgnoreCase(entry.slate()))
                 .map(entry -> summary(entry, false))
-                .sorted(Comparator.comparingDouble(m -> -(double) m.get("total")))
+                .sorted(Comparator.comparingDouble((Map<String, Object> m) -> -(double) m.get("total"))
+                        .thenComparingDouble(m -> -(double) m.get("projectedTotal")))
                 .toList();
     }
 
@@ -235,6 +363,9 @@ public class PlayController {
         m.put("contestId", entry.contestId());
         Contest c = contests.byId(entry.contestId());
         m.put("label", c == null ? entry.contestId() : c.label());
+        m.put("slate", entry.slate());
+        m.put("slateLabel", slateLabel(entry));
+        m.put("format", entry.format().name());
         m.put("complete", entry.complete());
         m.put("projectedTotal", scored.projectedTotal());
         // A leaderboard is a side channel. Half-built rosters report nothing they have not yet
@@ -268,8 +399,9 @@ public class PlayController {
             byPick.put(filled.get(i).pickIndex(), scored.picks().get(i));
         }
 
+        Format format = entry.format();
         List<Map<String, Object>> positions = new ArrayList<>();
-        for (int p = 0; p < Roster.POSITIONS.size(); p++) {
+        for (int p = 0; p < format.positions().size(); p++) {
             List<EntryRecord.PickRecord> inPosition = entry.picksInPosition(p);
             List<Map<String, Object>> picks = inPosition.stream()
                     .map(pick -> describePick(entry, pick, byPick.get(pick.pickIndex()), revealed))
@@ -277,7 +409,10 @@ public class PlayController {
 
             Map<String, Object> pos = new LinkedHashMap<>();
             pos.put("index", p);
-            pos.put("slot", Roster.POSITIONS.get(p).name());
+            pos.put("slot", format.positions().get(p).name());
+            // A showdown fills fewer picks than the position has parts; the page shows how many.
+            pos.put("picks", format.picksIn(p));
+            pos.put("parts", format.positions().get(p).options().size());
             pos.put("projectedTotal", round(sum(inPosition, byPick, true)));
             if (revealed) {
                 pos.put("total", round(sum(inPosition, byPick, false)));
@@ -291,11 +426,17 @@ public class PlayController {
         out.put("entryId", entry.id());
         out.put("owner", entry.owner());
         out.put("contest", describe(contests.byId(entry.contestId())));
+        out.put("slate", entry.slate());
+        out.put("slateLabel", slateLabel(entry));
+        out.put("format", format.name());
+        // The entry's own lock, not the week's: Sunday is still open after Thursday kicks off.
+        out.put("locked", entries.locked(entry));
         out.put("complete", revealed);
         out.put("revealed", revealed);
         out.put("projectedTotal", scored.projectedTotal());
         if (revealed) {
             out.put("total", scored.total());
+            out.put("standing", standing(entry, scored.total()));
             // How much of the board you were dealt you actually took. Only meaningful once
             // every pick is in, which is also the only point at which it can be computed.
             CaptureRate.Result c = capture.of(entry);
@@ -306,7 +447,7 @@ public class PlayController {
         out.put("teamRespins", entry.teamRespins());
         out.put("playerRespins", entry.playerRespins());
         out.put("activePick", active == null ? null : active.pickIndex());
-        out.put("totalPicks", Roster.TOTAL_PICKS);
+        out.put("totalPicks", format.totalPicks());
         out.put("positions", positions);
         return out;
     }
@@ -328,8 +469,9 @@ public class PlayController {
         m.put("slot", pick.slot().name());
         m.put("team", pick.team());
         m.put("teamLogo", logo(pick.team()));
-        String opponent = ingest.opponentOf(entry.contestId(), pick.team());
+        String opponent = opponentOf(entry, pick.team());
         m.put("opponent", opponent);
+        m.put("game", gameState(entry, pick.team()));
         m.put("opponentLogo", logo(opponent));
         m.put("chosen", pick.option());
 
@@ -416,9 +558,9 @@ public class PlayController {
         // it, and only the names: the server has already decided the result, the animation is
         // just showing its work.
         if (isActive) {
-            m.put("teamReel", pool.teams(entry.contestId(), pick.slot()).stream()
+            m.put("teamReel", entries.teams(entry, pick.slot()).stream()
                     .limit(REEL_SIZE).toList());
-            m.put("playerReel", playerReel(entry.contestId(), pick));
+            m.put("playerReel", playerReel(entry, pick));
         }
         return m;
     }
@@ -433,7 +575,8 @@ public class PlayController {
     private FormService.Form formFor(EntryRecord entry, Player player,
                                      Slot.StatOption option, Double line) {
         Contest contest = contests.byId(entry.contestId());
-        if (contest == null || contest.seasonType() != 2 || contest.week() <= 1) {
+        // Week one has no games this season, but the form falls back to the end of last season.
+        if (contest == null || contest.seasonType() != 2) {
             return null;
         }
         String espnId = resolver.espnIdFor(player);
@@ -449,19 +592,93 @@ public class PlayController {
      * quarterback and a reel showing the same name forty times does not read as a spin. The
      * padding is decoration only: the server has already decided the result.
      */
-    private List<String> playerReel(String contestId, EntryRecord.PickRecord pick) {
+    private List<String> playerReel(EntryRecord entry, EntryRecord.PickRecord pick) {
         List<String> names = new ArrayList<>();
         if (pick.team() != null) {
-            pool.candidates(contestId, pick.slot(), pick.team()).stream()
+            entries.candidates(entry, pick.slot(), pick.team()).stream()
                     .map(Player::name).filter(Objects::nonNull).forEach(names::add);
         }
-        pool.candidates(contestId, pick.slot()).stream()
+        pool.candidates(entry.contestId(), pick.slot()).stream()
                 .map(Player::name)
                 .filter(Objects::nonNull)
                 .filter(n -> !names.contains(n))
                 .limit(Math.max(0, REEL_SIZE - names.size()))
                 .forEach(names::add);
         return names.stream().limit(REEL_SIZE).toList();
+    }
+
+    /**
+     * Who a team plays this week. Read off the box score once there is one, and off the slate
+     * before that: a matchup is exactly what a pick should turn on, and before slates existed
+     * a live week showed no opponent at all until the game had kicked off.
+     */
+    private String opponentOf(EntryRecord entry, String team) {
+        String fromBox = ingest.opponentOf(entry.contestId(), team);
+        if (fromBox != null) {
+            return fromBox;
+        }
+        Slate slate = entries.slateOf(entry);
+        if (slate == null || team == null) {
+            return null;
+        }
+        for (Slate.Game g : slate.games()) {
+            if (g.away().equals(team)) {
+                return g.home();
+            }
+            if (g.home().equals(team)) {
+                return g.away();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Where a pick's game is: not started, in progress with its clock, or final. The page uses
+     * it to say "pending" rather than print a zero for a game nobody has played yet.
+     */
+    private Map<String, Object> gameState(EntryRecord entry, String team) {
+        if (team == null) {
+            return null;
+        }
+        for (GameSnapshot snapshot : ingest.snapshots(entry.contestId())) {
+            boolean plays = snapshot.athleteTeams().values().stream()
+                    .anyMatch(t -> team.equals(TeamCodes.fromEspn(t)));
+            if (plays) {
+                Map<String, Object> g = new LinkedHashMap<>();
+                g.put("state", snapshot.state());
+                g.put("detail", snapshot.detail());
+                return g;
+            }
+        }
+        Slate slate = entries.slateOf(entry);
+        if (slate != null) {
+            for (Slate.Game g : slate.games()) {
+                if (g.away().equals(team) || g.home().equals(team)) {
+                    Map<String, Object> out = new LinkedHashMap<>();
+                    out.put("state", "pre");
+                    out.put("kickoff", g.kickoff().toString());
+                    return out;
+                }
+            }
+        }
+        return null;
+    }
+
+    private String slateLabel(EntryRecord entry) {
+        if (entry.slate() == null) {
+            return null;
+        }
+        Slate slate = entries.slateOf(entry);
+        if (slate != null) {
+            return slate.label();
+        }
+        // The week has moved on and its slates with it; the key still names the day.
+        return switch (entry.slate()) {
+            case "sun" -> "Sunday";
+            case "mon" -> "Monday Night";
+            case "thu" -> "Thursday Night";
+            default -> entry.slate();
+        };
     }
 
     /**

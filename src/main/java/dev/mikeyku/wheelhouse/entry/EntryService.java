@@ -2,9 +2,13 @@ package dev.mikeyku.wheelhouse.entry;
 
 import dev.mikeyku.wheelhouse.contest.Contest;
 import dev.mikeyku.wheelhouse.contest.ContestService;
+import dev.mikeyku.wheelhouse.contest.Slate;
+import dev.mikeyku.wheelhouse.model.Format;
 import dev.mikeyku.wheelhouse.model.Player;
 import dev.mikeyku.wheelhouse.model.Roster;
 import dev.mikeyku.wheelhouse.model.Slot;
+import dev.mikeyku.wheelhouse.projection.ProjectionService;
+import dev.mikeyku.wheelhouse.scoring.ScoringService;
 import dev.mikeyku.wheelhouse.wheel.WheelPool;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -20,7 +24,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * The build flow, fourteen picks long: spin a team, spin a player, then decide which of the
+ * The build flow, fourteen picks for a Sunday and seven for a single game: spin a team, spin a player, then decide which of the
  * position's remaining parts you spend them on.
  *
  * <p>The wheel decides who you get; you decide what they are for. The third pick in any
@@ -45,6 +49,15 @@ public class EntryService {
     private final SpinRepository spins;
     private final ContestService contests;
     private final WheelPool pool;
+    private final ScoringService scoring;
+    private final ProjectionService projections;
+
+    /**
+     * A showdown draws on everyone forecast for at least this many points at their best part,
+     * rather than on the league-wide relevance cutoff. Low enough to keep a starting backup,
+     * high enough to keep a fourth receiver who is projected for one catch off the wheel.
+     */
+    private final double showdownFloor;
 
     private final int teamRespins;
     private final int playerRespins;
@@ -57,20 +70,23 @@ public class EntryService {
     private final boolean enforceLock;
 
     public EntryService(EntryRepository entries, SpinRepository spins, ContestService contests,
-                        WheelPool pool,
+                        WheelPool pool, ScoringService scoring, ProjectionService projections,
                         @Value("${wheelhouse.contest.enforce-lock:true}") boolean enforceLock,
+                        @Value("${wheelhouse.wheel.showdown-floor:3.0}") double showdownFloor,
                         @Value("${wheelhouse.respins.team:3}") int teamRespins,
                         @Value("${wheelhouse.respins.player:3}") int playerRespins) {
         this.entries = entries;
         this.spins = spins;
         this.contests = contests;
         this.pool = pool;
+        this.scoring = scoring;
+        this.projections = projections;
         this.enforceLock = enforceLock;
+        this.showdownFloor = showdownFloor;
         this.teamRespins = teamRespins;
         this.playerRespins = playerRespins;
     }
 
-    /** A player has exactly one entry per week. Returning here resumes where they left off. */
     @Transactional
     /**
      * Always a new roster, never a resumed one.
@@ -84,10 +100,14 @@ public class EntryService {
      * the entry id the browser is holding, which is the only thing that ever identified a
      * specific roster.
      */
-    public EntryRecord openEntry(String owner, Contest contest) {
+    public EntryRecord openEntry(String owner, Contest contest, Slate slate) {
+        if (enforceLock && slate != null && slate.locked(Instant.now())) {
+            throw new IllegalStateException(slate.label() + " has kicked off");
+        }
+        Format format = slate == null ? Format.CLASSIC : slate.format();
         return entries.save(new EntryRecord(
-                UUID.randomUUID().toString(), contest.id(), owner.trim(), Instant.now(),
-                teamRespins, playerRespins));
+                UUID.randomUUID().toString(), contest.id(), slate == null ? null : slate.key(),
+                format, owner.trim(), Instant.now(), teamRespins, playerRespins));
     }
 
     @Transactional
@@ -129,8 +149,8 @@ public class EntryService {
         // quarterback you already own: fifteen of thirty-two teams have exactly one. Exhausted
         // teams are filtered out before the spin rather than erroring after it.
         Set<String> rostered = rosteredPlayerIds(entry, pick.pickIndex());
-        List<String> options = pool.teams(entry.contestId(), pick.slot()).stream()
-                .filter(team -> pool.candidates(entry.contestId(), pick.slot(), team).stream()
+        List<String> options = teams(entry, pick.slot()).stream()
+                .filter(team -> candidates(entry, pick.slot(), team).stream()
                         .anyMatch(c -> !rostered.contains(c.id())))
                 .toList();
         if (options.isEmpty()) {
@@ -176,7 +196,7 @@ public class EntryService {
         }
 
         Set<String> taken = rosteredPlayerIds(entry, pickIndex);
-        List<Player> options = pool.candidates(entry.contestId(), pick.slot(), pick.team()).stream()
+        List<Player> options = candidates(entry, pick.slot(), pick.team()).stream()
                 .filter(p -> !taken.contains(p.id()))
                 .toList();
 
@@ -230,6 +250,74 @@ public class EntryService {
         return entries.save(entry);
     }
 
+    /**
+     * Teams the wheel may land on for this entry: the slate's own teams, or the whole pool for
+     * an archived week or an entry written before slates existed.
+     */
+    public List<String> teams(EntryRecord entry, Slot slot) {
+        Slate slate = slateOf(entry);
+        if (slate == null) {
+            return pool.teams(entry.contestId(), slot);
+        }
+        Set<String> playing = slate.teams();
+        return playing.stream()
+                .filter(team -> !candidates(entry, slot, team).isEmpty())
+                .sorted()
+                .toList();
+    }
+
+    /** Who a team spin can resolve to for this entry. */
+    public List<Player> candidates(EntryRecord entry, Slot slot, String team) {
+        if (entry.format() != Format.SHOWDOWN || !projections.available(entry.contestId())) {
+            return pool.candidates(entry.contestId(), slot, team);
+        }
+        return pool.everyone(slot, team).stream()
+                .filter(p -> bestProjection(entry.contestId(), slot, p) >= showdownFloor)
+                .toList();
+    }
+
+    private double bestProjection(String contestId, Slot slot, Player player) {
+        double best = 0;
+        for (Slot.StatOption option : slot.options()) {
+            best = Math.max(best, scoring.scoreOne(contestId, slot, player, option).projectedPoints());
+        }
+        return best;
+    }
+
+    /**
+     * The slate an entry belongs to, while its week is still the current one. Once the week
+     * has moved on the slate is gone, and so is any reason to spin for it.
+     */
+    public Slate slateOf(EntryRecord entry) {
+        if (entry.slate() == null) {
+            return null;
+        }
+        Contest now = contests.current();
+        if (now == null || !now.id().equals(entry.contestId())) {
+            return null;
+        }
+        return contests.slate(entry.slate());
+    }
+
+    /**
+     * Whether an entry can still be changed. Archived weeks never lock. A live entry locks with
+     * its slate, and an entry for a week that is no longer current is locked outright: before
+     * slates, a week that had rolled over rebuilt itself with no lock time at all, so an
+     * unfinished roster from last week could still be drafted with every result known.
+     */
+    public boolean locked(EntryRecord entry) {
+        Contest contest = contests.byId(entry.contestId());
+        if (contest == null || contest.archive()) {
+            return false;
+        }
+        Contest now = contests.current();
+        if (now == null || !now.id().equals(entry.contestId())) {
+            return true;
+        }
+        Slate slate = slateOf(entry);
+        return slate != null ? slate.locked(Instant.now()) : now.locked(Instant.now());
+    }
+
     /** Nobody appears twice on the same roster, in any position. */
     private Set<String> rosteredPlayerIds(EntryRecord entry, int excludingPick) {
         return entry.picks().stream()
@@ -269,6 +357,41 @@ public class EntryService {
         return entries.findByContestId(contestId);
     }
 
+    /** The link token for a slip, minted the first time it is shared. */
+    @Transactional
+    public String share(String entryId) {
+        EntryRecord entry = entries.findById(entryId)
+                .orElseThrow(() -> new IllegalArgumentException("no such entry"));
+        if (!entry.complete()) {
+            throw new IllegalStateException("finish the roster first");
+        }
+        if (entry.shareId() == null) {
+            entry.shareId(UUID.randomUUID().toString().replace("-", "").substring(0, 12));
+            entries.save(entry);
+        }
+        return entry.shareId();
+    }
+
+    public EntryRecord byShareId(String shareId) {
+        return shareId == null ? null : entries.findByShareId(shareId).orElse(null);
+    }
+
+    /**
+     * Renames the roster. The name is what the leaderboard shows, so it is allowed after the
+     * lock as well; nothing about the picks changes.
+     */
+    @Transactional
+    public EntryRecord rename(String entryId, String owner) {
+        EntryRecord entry = entries.findById(entryId)
+                .orElseThrow(() -> new IllegalArgumentException("no such entry"));
+        String name = owner == null ? "" : owner.strip().replaceAll("\\s+", " ");
+        if (name.isEmpty() || name.length() > 24) {
+            throw new IllegalArgumentException("names are 1 to 24 characters");
+        }
+        entry.owner(name);
+        return entries.save(entry);
+    }
+
     public EntryRecord byId(String entryId) {
         return entries.findById(entryId).orElse(null);
     }
@@ -276,9 +399,8 @@ public class EntryService {
     private EntryRecord require(String entryId) {
         EntryRecord entry = entries.findById(entryId)
                 .orElseThrow(() -> new IllegalArgumentException("no such entry"));
-        // Archived weeks never lock; they are already over and are not a ranked competition.
-        if (enforceLock && contests.byId(entry.contestId()).locked(Instant.now())) {
-            throw new IllegalStateException("this week is locked, first kickoff has passed");
+        if (enforceLock && locked(entry)) {
+            throw new IllegalStateException("locked, kickoff has passed");
         }
         return entry;
     }

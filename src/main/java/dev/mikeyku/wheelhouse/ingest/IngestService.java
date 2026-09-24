@@ -1,5 +1,6 @@
 package dev.mikeyku.wheelhouse.ingest;
 
+import dev.mikeyku.wheelhouse.contest.TeamCodes;
 import dev.mikeyku.wheelhouse.model.GameSnapshot;
 import dev.mikeyku.wheelhouse.model.StatDelta;
 import dev.mikeyku.wheelhouse.model.StatKey;
@@ -106,10 +107,14 @@ public class IngestService {
         if (team == null) {
             return null;
         }
+        // Box scores carry ESPN's codes and a live pick carries Sleeper's. They differ only on
+        // Washington, which is enough for every Commanders pick to have shown no opponent.
+        String wanted = TeamCodes.fromEspn(team);
         for (GameSnapshot snapshot : snapshots(contestId)) {
-            List<String> sides = snapshot.athleteTeams().values().stream().distinct().toList();
-            if (sides.contains(team)) {
-                return sides.stream().filter(t -> !t.equals(team)).findFirst().orElse(null);
+            List<String> sides = snapshot.athleteTeams().values().stream()
+                    .map(TeamCodes::fromEspn).distinct().toList();
+            if (sides.contains(wanted)) {
+                return sides.stream().filter(t -> !t.equals(wanted)).findFirst().orElse(null);
             }
         }
         return null;

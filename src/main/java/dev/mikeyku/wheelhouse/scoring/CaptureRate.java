@@ -1,8 +1,8 @@
 package dev.mikeyku.wheelhouse.scoring;
 
 import dev.mikeyku.wheelhouse.entry.EntryRecord;
+import dev.mikeyku.wheelhouse.model.Format;
 import dev.mikeyku.wheelhouse.model.Player;
-import dev.mikeyku.wheelhouse.model.Roster;
 import dev.mikeyku.wheelhouse.model.Slot;
 import dev.mikeyku.wheelhouse.sleeper.PlayerCatalog;
 import org.springframework.stereotype.Service;
@@ -23,8 +23,8 @@ import java.util.List;
  * your draw.
  *
  * <p>Each position is an assignment problem, and a small one: the parts and the players are
- * equal in number and each part goes once, so it is a perfect matching over at most five
- * elements. A hundred and twenty permutations is not worth an algorithm, so it is brute forced.
+ * equal in number and each part goes once, so it is a perfect matching over at most four
+ * elements. Twenty-four permutations is not worth an algorithm, so it is brute forced.
  */
 @Service
 public class CaptureRate {
@@ -52,13 +52,14 @@ public class CaptureRate {
         double scored = 0;
         double ceiling = 0;
 
-        for (int position = 0; position < Roster.POSITIONS.size(); position++) {
+        Format format = entry.format();
+        for (int position = 0; position < format.positions().size(); position++) {
             List<EntryRecord.PickRecord> picks = entry.picksInPosition(position).stream()
                     .filter(EntryRecord.PickRecord::filled)
                     .toList();
-            Slot slot = Roster.POSITIONS.get(position);
+            Slot slot = format.positions().get(position);
             List<Slot.StatOption> parts = slot.options();
-            if (picks.size() != parts.size()) {
+            if (picks.size() != format.picksIn(position)) {
                 continue;
             }
 
@@ -77,7 +78,7 @@ public class CaptureRate {
                 int chosen = indexOf(parts, picks.get(i).option());
                 scored += chosen < 0 ? 0 : points[i][chosen];
             }
-            ceiling += best(points, new int[points.length], new boolean[points.length], 0);
+            ceiling += best(points, new int[points.length], new boolean[parts.size()], 0);
         }
 
         // A ceiling of zero does not mean a perfect roster. It means the week's stats are not
@@ -90,7 +91,11 @@ public class CaptureRate {
         return new Result(round(scored), round(ceiling), Math.min(percent, 100));
     }
 
-    /** Highest total over every one-to-one assignment of parts to players. */
+    /**
+     * Highest total over every one-to-one assignment of parts to players. A showdown has more
+     * parts than players, and the same search covers it: each player takes a different part and
+     * the parts nobody takes are simply left over.
+     */
     private double best(double[][] points, int[] pick, boolean[] used, int row) {
         if (row == points.length) {
             double total = 0;

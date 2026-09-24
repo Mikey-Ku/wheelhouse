@@ -72,6 +72,24 @@ public class WheelPool {
     }
 
     /**
+     * Everyone on one team who could fill this slot, with no relevance cutoff at all.
+     *
+     * <p>For a single game the cutoff is the wrong filter. It keeps the league-wide wheel free
+     * of practice-squad names, but it also drops a backup starting in place of an injured
+     * quarterback, and a one-game slate with one quarterback missing cannot be filled. A
+     * showdown filters on who is actually forecast to play instead, which needs projections
+     * and so happens a layer up.
+     */
+    public List<Player> everyone(Slot slot, String team) {
+        return catalog.all().stream()
+                .filter(Player::rostered)
+                .filter(slot::accepts)
+                .filter(p -> p.team().equalsIgnoreCase(team))
+                .sorted(Comparator.comparingInt(Player::searchRank))
+                .toList();
+    }
+
+    /**
      * Teams the wheel may land on for this slot. A team with no eligible player would be a
      * dead spin, so it is never offered.
      */

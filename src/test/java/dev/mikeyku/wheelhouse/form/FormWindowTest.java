@@ -45,11 +45,18 @@ class FormWindowTest {
         }
         """;
 
+    /** The log above as 2024, and nothing for any other season. */
     private FormService serviceReturning(String json) {
+        return serviceReturning(json, "{}");
+    }
+
+    /** The log above as 2024, and {@code lastSeason} as 2023. */
+    private FormService serviceReturning(String json, String lastSeason) {
         return new FormService(new EspnClient("test-agent") {
             @Override
             public tools.jackson.databind.JsonNode gamelog(String athleteId, int season) {
-                return new ObjectMapper().readTree(json);
+                return new ObjectMapper().readTree(season == 2024 ? json
+                        : season == 2023 ? lastSeason : "{}");
             }
         }, 400);
     }
@@ -64,8 +71,26 @@ class FormWindowTest {
     }
 
     @Test
-    void weekOneHasNothingBehindIt() {
+    void weekOneWithNoPreviousSeasonHasNothingBehindIt() {
         assertThat(serviceReturning(GAMELOG).before("1", 2024, 1)).isEmpty();
+    }
+
+    @Test
+    void weekOneReadsTheEndOfLastSeason() {
+        // The same log served as 2023: weeks 1, 2, 3, 5, 6 of the previous year.
+        List<FormService.Game> before = serviceReturning(GAMELOG, GAMELOG).before("1", 2024, 1);
+
+        assertThat(before).extracting(FormService.Game::season).containsOnly(2023);
+        assertThat(before).extracting(FormService.Game::week).containsExactly(1, 2, 3, 5, 6);
+    }
+
+    @Test
+    void anEarlyWeekIsToppedUpFromLastSeasonOldestFirst() {
+        List<FormService.Game> before = serviceReturning(GAMELOG, GAMELOG).before("1", 2024, 3);
+
+        // Four from the end of 2023, then this season's weeks 1 and 2, and never week 3.
+        assertThat(before).extracting(g -> g.season() + "-" + g.week())
+                .containsExactly("2023-2", "2023-3", "2023-5", "2023-6", "2024-1", "2024-2");
     }
 
     @Test
