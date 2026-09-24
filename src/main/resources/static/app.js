@@ -85,7 +85,7 @@ const WH = (() => {
   const BACK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.5 5.5v13L3 12zM21 5.5v13L12.5 12z"/></svg>';
   function badge(key, label, size = "") {
     if (LOGOS[key]) {
-      return `<span class="sb-logo ${key === "sun" ? "keep" : ""} ${size}" title="${esc(label)}">`
+      return `<span class="sb-logo ${size}" title="${esc(label)}">`
         + `<img src="${LOGOS[key]}" alt="${esc(label)}" onerror="this.remove()"><span class="sb-txt">${esc(label)}</span></span>`;
     }
     const k = ["thu", "mon", "sun", "sat", "fri"].includes(key) ? key : "past";
@@ -214,6 +214,8 @@ const WH = (() => {
     });
   }
 
-  return { esc, fmt1, ordinal, kickoffText, crest, NOPHOTO, api, me, nav, ready, badge, part,
+  const logo = key => LOGOS[key] || null;
+
+  return { esc, fmt1, ordinal, kickoffText, crest, NOPHOTO, api, me, nav, ready, badge, logo, part,
            icon, toast, requireAuth, ensurePlayer, authForm };
 })();

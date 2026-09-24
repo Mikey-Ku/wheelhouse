@@ -21,22 +21,59 @@
 <link rel="stylesheet" href="/app.css">
 <style>
   /* ---------- home ---------- */
-  .hero{position:relative;padding:40px 0 8px}
+  /* ---- the next slate, in one composed card ----
+     Logo on the left, the matchup in the middle, the clock on the right. On a phone the logo
+     and matchup share a row and the clock and button each take the full width. */
+  .hero{position:relative;padding:28px 0 4px}
   .hero::before{content:"";position:absolute;z-index:-1;pointer-events:none;top:-80px;right:-120px;
     width:min(720px,80%);aspect-ratio:3/2;background:url("img/lights.jpg") center/cover no-repeat;
-    mix-blend-mode:screen;opacity:.5;
+    mix-blend-mode:screen;opacity:.45;
     -webkit-mask-image:radial-gradient(ellipse 74% 70% at 74% 32%,#000 14%,transparent 78%);
     mask-image:radial-gradient(ellipse 74% 70% at 74% 32%,#000 14%,transparent 78%)}
-  .kicker{font-size:13px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--secondary);margin-bottom:12px}
-  .hero h1{margin:12px 0 22px}
-  .countdown{display:flex;gap:10px;flex-wrap:wrap}
-  .countdown div{min-width:84px;background:rgba(19,27,56,.85);border:1px solid var(--line-hi);border-radius:12px;
-    padding:10px 12px 8px;text-align:center}
-  .countdown b{display:block;font-family:var(--display);font-size:52px;line-height:1;font-variant-numeric:tabular-nums}
-  .countdown span{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
-  .cd-note{color:var(--secondary);margin:12px 0 22px}
-  .hero-cta{display:flex;gap:10px;flex-wrap:wrap}
-  @media (max-width:640px){.countdown div{min-width:0;flex:1}.countdown b{font-size:38px}}
+  .upnext{display:grid;grid-template-columns:150px minmax(0,1fr) auto;
+    grid-template-areas:"logo info clock" "logo cta clock";gap:6px 26px;align-items:center;
+    background:rgba(19,27,56,.82);border:1px solid var(--line-hi);border-radius:18px;padding:22px 26px}
+  .upnext-logo{grid-area:logo}.upnext-info{grid-area:info;align-self:end}
+  .hero-cta{grid-area:cta;align-self:start}.clock{grid-area:clock}
+  .upnext-logo{width:150px;height:150px;border-radius:16px;background:#f4f1e8;display:flex;
+    align-items:center;justify-content:center;padding:14px}
+  .upnext-logo img{max-width:100%;max-height:100%;object-fit:contain}
+  .upnext-logo .sb{transform:none}
+  .kicker{font-size:12.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--secondary)}
+  .teams{display:flex;align-items:center;gap:12px;margin:8px 0 6px;font-family:var(--display);
+    font-weight:700;font-size:46px;line-height:1;text-transform:uppercase}
+  .teams img{width:52px;height:52px}
+  .teams .at{color:var(--dim);font-size:24px}
+  .when{color:var(--secondary);font-size:14.5px}
+  .hero-cta{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:10px}
+  .hero-cta .progress{color:var(--secondary);font-size:14px}
+  .hero-cta .progress b{color:var(--accent);font-family:var(--mono)}
+  .clock{text-align:center}
+  .clock > span{display:block;font-size:11.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--muted);margin-bottom:8px}
+  .countdown{display:flex;gap:8px;justify-content:center}
+  .countdown div{min-width:64px;background:var(--surface-deep);border:1px solid var(--line-hi);border-radius:10px;padding:8px 8px 6px}
+  .countdown b{display:block;font-family:var(--display);font-size:38px;line-height:1;font-variant-numeric:tabular-nums}
+  .countdown i{display:block;font-style:normal;font-size:10px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+  .hero h1{margin:10px 0}
+  .cd-note{color:var(--secondary);margin:10px 0 18px}
+  @media (max-width:900px){
+    .upnext{grid-template-columns:96px minmax(0,1fr);grid-template-areas:"logo info" "clock clock" "cta cta";
+      gap:16px 18px;padding:18px}
+    .upnext-info{align-self:center}
+    .upnext-logo{width:96px;height:96px;padding:9px;border-radius:12px}
+    .clock{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .clock > span{margin:0;text-align:left}
+    .hero-cta{margin-top:0}
+  }
+  @media (max-width:520px){
+    .teams{font-size:30px;gap:8px}.teams img{width:32px;height:32px}.teams .at{font-size:16px}
+    .upnext-logo{width:80px;height:80px}
+    .upnext{grid-template-columns:80px minmax(0,1fr)}
+    .countdown div{min-width:50px;padding:6px 6px 4px}.countdown b{font-size:28px}
+    .hero-cta .btn{flex:1}
+    .clock > span{font-size:10.5px;max-width:80px}
+  }
 
   .slates{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
   .slate{background:rgba(19,27,56,.9);border:1px solid var(--line);border-radius:14px;padding:18px;
@@ -363,17 +400,33 @@ function renderHero() {
         <a class="btn lg" href="#past">Play a past week</a></div>`;
     return;
   }
-  const inProgress = myFor(next.key).find(r => !r.complete);
+  const mineHere = myFor(next.key);
+  const building = mineHere.find(r => !r.complete);
+  const done = mineHere.find(r => r.complete);
   const g = next.games.length === 1 ? next.games[0] : null;
-  host.innerHTML = `<div class="kicker">${esc(week.label)}</div>
-    ${WH.badge(next.key, next.label, "lg")}
-    <h1>${g ? `${esc(g.away)} @ ${esc(g.home)}` : `${next.games.length} games`}</h1>
-    <div class="countdown" id="cd"></div>
-    <p class="cd-note">Rosters lock at kickoff, ${esc(WH.kickoffText(next.lockAt))} ET.</p>
-    <div class="hero-cta">
-      ${inProgress
-        ? `<a class="btn primary lg" href="/?r=${esc(inProgress.entryId)}">Finish your roster</a>`
-        : `<button class="btn primary lg" data-slate="${esc(next.key)}">Play ${esc(next.label)}</button>`}
+  const logo = WH.logo(next.key);
+  const teams = g
+    ? `<img src="${esc(g.awayLogo)}" alt="">${esc(g.away)}<span class="at">@</span>${esc(g.home)}<img src="${esc(g.homeLogo)}" alt="">`
+    : `${next.games.length} games`;
+  let cta;
+  if (building) {
+    cta = `<a class="btn primary lg" href="/?r=${esc(building.entryId)}">Continue draft</a>
+      <span class="progress"><b>${building.picked}/${building.totalPicks}</b> picked</span>`;
+  } else if (done) {
+    cta = `<a class="btn primary lg" href="/?r=${esc(done.entryId)}">View roster</a>
+      <button class="btn lg" data-slate="${esc(next.key)}">Play again</button>`;
+  } else {
+    cta = `<button class="btn primary lg" data-slate="${esc(next.key)}">Play ${esc(next.label)}</button>`;
+  }
+  host.innerHTML = `<div class="upnext">
+      <div class="upnext-logo">${logo ? `<img src="${logo}" alt="${esc(next.label)}">` : WH.badge(next.key, next.label, "lg")}</div>
+      <div class="upnext-info">
+        <div class="kicker">${esc(week.label)} &middot; ${esc(next.label)}</div>
+        <div class="teams">${teams}</div>
+        <div class="when">${esc(WH.kickoffText(next.lockAt))} ET &middot; ${next.picks} picks</div>
+      </div>
+      <div class="hero-cta">${cta}</div>
+      <div class="clock"><span>Locks in</span><div class="countdown" id="cd"></div></div>
     </div>`;
   tickCountdown();
 }
@@ -384,9 +437,9 @@ function tickCountdown() {
   if (!el || !next) return;
   const { d, h, m, s } = countdownParts(next.lockAt);
   if (d + h + m + s === 0) { location.reload(); return; }
-  el.innerHTML = (d ? `<div><b>${d}</b><span>${d === 1 ? "day" : "days"}</span></div>` : "")
-    + `<div><b>${pad(h)}</b><span>hrs</span></div><div><b>${pad(m)}</b><span>min</span></div>`
-    + `<div><b>${pad(s)}</b><span>sec</span></div>`;
+  el.innerHTML = (d ? `<div><b>${d}</b><i>${d === 1 ? "day" : "days"}</i></div>` : "")
+    + `<div><b>${pad(h)}</b><i>hrs</i></div><div><b>${pad(m)}</b><i>min</i></div>`
+    + `<div><b>${pad(s)}</b><i>sec</i></div>`;
 }
 
 function renderSlates() {
@@ -411,7 +464,7 @@ function renderSlates() {
     let foot;
     if (building && !locked) {
       foot = `<span class="status">${building.picked} of ${building.totalPicks} picked</span>
-        <span class="btns"><a class="btn primary sm" href="/?r=${esc(building.entryId)}">Finish</a></span>`;
+        <span class="btns"><a class="btn primary sm" href="/?r=${esc(building.entryId)}">Continue</a></span>`;
     } else if (done) {
       foot = `<span class="status">You're in &middot; ${fmt1(done.status === "pending" ? done.projectedTotal : done.total)}
           ${done.status === "pending" ? "proj" : "pts"}</span>
