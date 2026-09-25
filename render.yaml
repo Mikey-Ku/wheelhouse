@@ -1,0 +1,31 @@
+# Render Blueprint. New → Blueprint in the Render dashboard, pick this repo, and it creates the
+# web service from this file. Render prompts for the three datasource values on first creation;
+# they are typed into the dashboard and never live in the repo.
+services:
+  - type: web
+    name: wheelhouse
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+
+    # Free sleeps after 15 minutes idle: the first visitor waits about a minute and the ESPN
+    # poller stops until someone wakes it. Fine for a friends beta. "starter" (0.5 CPU, 512MB)
+    # stays up, and the Dockerfile's memory settings were measured for 512MB either way.
+    plan: free
+
+    # The Supabase pooler is in us-east-1. Every query crosses this gap, so keep it short.
+    region: virginia
+
+    # Readiness includes the player catalog, so a wake-up reads as starting rather than as a
+    # wheel with nobody on it. See the health section of application.properties.
+    healthCheckPath: /actuator/health/readiness
+
+    autoDeployTrigger: commit
+
+    # PORT is not listed: Render sets it (10000) and application.properties binds it.
+    envVars:
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
