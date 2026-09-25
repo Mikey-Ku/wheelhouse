@@ -75,7 +75,7 @@ class GuestTest {
         assertThat(onBoard(guest, contestId, done.path("owner").asText())).isFalse();
 
         String profile = name();
-        guest.signUp(profile, "hunter22");
+        guest.signUp(profile);
 
         assertThat(onBoard(guest, contestId, profile)).as("the roster came with the new profile").isTrue();
         assertThat(guest.get("/api/play/" + done.path("entryId").asText()).path("owner").asText())
@@ -84,14 +84,15 @@ class GuestTest {
 
     @Test
     void signingInFromAGuestSessionBringsTheGuestsRosters() throws Exception {
+        String person = UUID.randomUUID().toString();
         String profile = name();
-        new Api(context).signUp(profile, "hunter22");
+        new Api(context).signInAs(person, profile);
 
         Api guest = new Api(context);
         guest.post("/api/account/guest");
         String id = finish(guest).path("entryId").asText();
 
-        guest.signIn(profile, "hunter22");
+        guest.signInAs(person, profile);
 
         JsonNode rosters = guest.get("/api/account/rosters");
         assertThat(rosters.path("name").asText()).isEqualTo(profile);

@@ -40,15 +40,15 @@ Playable at `http://localhost:8080`. Five pages share one nav:
 | Page | What it is |
 |---|---|
 | Play (`/`) | This week's slates with a countdown to the next lock, past weeks, and the draft itself. A roster lives at `/?r=<id>`; a shared slip at `/?s=<token>`. |
-| Live (`/live.html`) | Every game this week: score, clock, network, and each started game's passing, rushing and receiving leaders. Your own rosters for the week sit on top. |
+| Live (`/live.html`) | Every game this week, grouped by slate: score, clock, network, and each started game's passing, rushing and receiving leaders. Your own rosters for the week sit on top. |
 | Leaderboards (`/leaderboards.html`) | One board per slate and one per past week. Each profile's best roster counts. |
-| Profile (`/profile.html`) | Sign up or sign in, change your name, and every roster you have played. |
+| Profile (`/profile.html`) | Sign in with Google or an email address, change your name, and every roster you have played. |
 | Ops (`/ops.html`) | The ingestion view. Not linked. |
 
 Anyone can play straight away as a guest: pressing Play makes a guest session, with no form.
-Guest rosters are kept and shown on the slip, but stay off the leaderboards. Making a profile (a
-name and a password) turns the guest into it and brings every roster along; signing in to an
-existing profile from a guest session does the same. Rosters belong to whoever played them, so
+Guest rosters are kept and shown on the slip, but stay off the leaderboards. Making a profile
+(through Supabase Auth: Google, or an email and password) turns the guest into it and brings
+every roster along; signing in to an existing profile from a guest session does the same. Rosters belong to whoever played them, so
 an id in the address bar reads or changes nothing for anyone else. Everything is stored in a file-backed database and survives a restart; an archived week
 rehydrates itself from ESPN when an old roster is opened.
 
@@ -160,7 +160,7 @@ What they pin, and why each one exists:
 | `SlateTest` | A week splits into Thursday, Sunday and Monday against the real week 3 scoreboard, each locks at its own kickoff, and Sunday never offers a team that played Thursday. |
 | `SlateDraftTest` | Every slate in the current week drafts to completion inside its own games, including a showdown filled from one game. |
 | `GuestTest` | A guest plays and stays off the board; making a profile or signing in to one brings the guest's rosters along; a guest cannot claim a name. |
-| `AccountTest` | Sign up signs you in; names are unique whatever their case; a wrong password and an unknown name get the same answer; playing needs a profile. |
+| `AccountTest` | A first sign-in makes a profile and signs you in; signing in again keeps the name you chose; a taken name gets the next free number and the name check says so first; a token Supabase does not vouch for signs nobody in; playing needs a profile. |
 | `OwnershipTest` | Nobody else can read or spin your roster by its id, a made pick cannot be re-rolled or reassigned, and a rename reaches your rosters. |
 | `SharedSlipTest` | A share link is a separate token: the shared view carries no entry id, and the token opens nothing for writing. |
 | `ReleasedWeekTest` | A draft keeps working after its archived week is released from memory. A load run found spins failing with "no team has an eligible QB left" once more weeks were in play than the cap holds. |
@@ -228,6 +228,26 @@ and a host needs no code change:
 | `SPRING_DATASOURCE_URL` | local H2 file | Point at Postgres in production; container disks are ephemeral. |
 | `SPRING_DATASOURCE_USERNAME` | `sa` | |
 | `SPRING_DATASOURCE_PASSWORD` | empty | Set it in the host's dashboard, never in the repo. |
+| `SUPABASE_URL` | empty | `https://<ref>.supabase.co`. Empty means guests only; the sign-in form says it isn't set up. |
+| `SUPABASE_PUBLISHABLE_KEY` | empty | Project Settings → API Keys. Public by design: the page is given it to start a sign-in. |
+
+### Sign-in
+
+The page signs in with Supabase and hands the access token to `POST /api/account/supabase`
+once. The server asks Supabase whose it is and swaps it for its own session cookie, so no
+signing secret lives here. In the Supabase dashboard:
+
+1. **Authentication → URL Configuration.** Site URL is the deployed address. Add
+   `https://<render-host>/**` and `http://localhost:8080/**` to the redirect URLs.
+2. **Authentication → Providers → Email.** Turn off **Confirm email** unless custom SMTP is set
+   up. Supabase's built-in mailer only reaches the project's own team, two messages an hour.
+3. **Authentication → Providers → Google.** A Google Cloud OAuth client (Web application), with
+   `https://<ref>.supabase.co/auth/v1/callback` as its redirect URI, and its ID and secret here.
+
+Putting the publishable key in a page makes Supabase's Data API reachable, and by default it
+serves every table in the public schema. `DataApiLockdown` closes it on every boot: row-level
+security on, the `anon` and `authenticated` grants revoked, and the defaults changed so tables
+added later start closed. The app connects as the tables' owner and is unaffected.
 
 `/actuator/health` is already exposed for health checks. The app boots in under two seconds, so
 a slow first request on a free tier is the platform waking a container, not the application
@@ -283,7 +303,10 @@ Endpoints, all temporary scaffolding:
 | `POST /api/play/{id}/share` | Mint a read-only link token for a finished slip |
 | `GET /api/play/shared/{shareId}` | A shared slip, without its entry id or respins |
 | `POST /api/account/guest` | Start a guest session (no-op if there is already one) |
-| `POST /api/account/signup` · `signin` · `signout` | JSON `{name, password}`; sets an HttpOnly session cookie. From a guest session, keeps the guest's rosters |
+| `GET /api/account/auth-config` | The Supabase project URL and publishable key the page signs in with; empty if unset |
+| `POST /api/account/supabase` | JSON `{accessToken}` from Supabase; sets an HttpOnly session cookie. From a guest session, keeps the guest's rosters |
+| `POST /api/account/name-check` | JSON `{name}`; says whether a name is free, before an email sign-up |
+| `POST /api/account/signout` | Ends this browser's session |
 | `GET /api/account/me` | Who is signed in |
 | `POST /api/account/name` | Change your name, on every roster too |
 | `GET /api/account/rosters` | Every roster on your profile, with status, score and rank |
@@ -432,10 +455,8 @@ for kickoff.
 
 ## Next
 
-- **Accounts on a host.** Profiles are a name and a PBKDF2 password with a session cookie,
-  which is right for running locally and for friends. On a public host this is the piece to
-  swap for a real identity provider; nothing outside the `account` package knows how a user
-  was established.
+- **Password reset.** Needs custom SMTP in Supabase first (Resend or similar); the built-in
+  mailer cannot reach players. Until then a forgotten password means signing in with Google.
 - **Decide whether the lopsided choice still needs a fix.** Standard scoring means the highest
   expected option is nearly always the same one. The uniqueness rule is now in (each part goes
   once per position), which turns the question into which player gets the good part. Worth

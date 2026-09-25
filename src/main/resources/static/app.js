@@ -127,19 +127,91 @@ const WH = (() => {
     } catch (e) { /* not worth interrupting sign-in for */ }
   }
 
-  /* The sign-up / sign-in form. Used in the dialog and on the profile page. */
-  function authForm(host, onDone, startMode = "signup") {
+  /* ---- sign-in, through Supabase ----
+     The page does the Supabase part (Google, or an email and password) and hands the access token
+     to the server once, which swaps it for this app's own session cookie. The Supabase session is
+     then dropped from this browser: the cookie is the only thing that says who you are. The
+     library is pinned and hash-checked, since it is the one script here that handles a login. */
+  const SUPABASE_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.js";
+  const SUPABASE_SRI = "sha384-K1nraABOP/zFehpLIUksXebbs7jMpB8gYMlb+uhVKZcWT/9Vkq1+qhv6ndC+1Yuz";
+  const NOT_SET_UP = "Sign-in isn't set up on this server yet.";
+  let sbClient = null;
+
+  function supabaseClient() {
+    sbClient = sbClient || (async () => {
+      const cfg = await api("/api/account/auth-config");
+      if (!cfg.url || !cfg.key) return null;
+      if (!window.supabase) {
+        await new Promise((resolve, reject) => {
+          const s = document.createElement("script");
+          s.src = SUPABASE_JS;
+          s.integrity = SUPABASE_SRI;
+          s.crossOrigin = "anonymous";
+          s.onload = resolve;
+          s.onerror = () => reject(new Error("Couldn't load sign-in. Check your connection and try again."));
+          document.head.appendChild(s);
+        });
+      }
+      // The return from Google is finished explicitly in finishRedirect, not by the library on load.
+      return window.supabase.createClient(cfg.url, cfg.key, { auth: { flowType: "pkce", detectSessionInUrl: false } });
+    })().catch(e => { sbClient = null; throw e; });
+    return sbClient;
+  }
+
+  async function exchange(sb, session) {
+    const who = await api("/api/account/supabase", { method: "POST", body: { accessToken: session.access_token } });
+    try { await sb.auth.signOut({ scope: "local" }); } catch (e) { /* the cookie is what counts */ }
+    meCache = who;
+    await claimLocal();
+    return who;
+  }
+
+  /* Only somewhere on this site, never another origin. */
+  const safeNext = next => (next && /^\/(?![\/\\])/.test(next) ? next : "/profile.html");
+
+  /* Where Google, or an email confirmation link, sends the browser back to. */
+  const returnUrl = next => `${location.origin}/profile.html?next=${encodeURIComponent(safeNext(next))}`;
+
+  /* Back from Google or a confirmation email: finish signing in, or say why it didn't. Resolves
+     with who signed in, or null when this page load was not a return from either. */
+  async function finishRedirect() {
+    const q = new URLSearchParams(location.search);
+    const h = new URLSearchParams(location.hash.slice(1));
+    const failed = q.get("error_description") || h.get("error_description");
+    const code = q.get("code");
+    if (!code && !failed) return null;
+    // One use only, so it comes out of the address bar before anything else can reload with it.
+    history.replaceState(null, "", location.pathname + (q.get("next") ? "?next=" + encodeURIComponent(q.get("next")) : ""));
+    if (failed) throw new Error(failed);
+    const sb = await supabaseClient();
+    if (!sb) throw new Error(NOT_SET_UP);
+    const { data, error } = await sb.auth.exchangeCodeForSession(code);
+    if (error || !data.session) {
+      throw new Error("That sign-in didn't finish. If you were confirming your email, it's confirmed: sign in below.");
+    }
+    return exchange(sb, data.session);
+  }
+
+  const GOOGLE_G = `<svg class="g" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>`;
+
+  /* The sign-up / sign-in form. Used in the dialog and on the profile page. `next` is where to land
+     after a Google sign-in, which leaves the page and comes back. */
+  function authForm(host, onDone, startMode = "signup", next = location.pathname + location.search) {
     let mode = startMode;
     const draw = () => {
       host.innerHTML = `
+        <button type="button" class="btn lg google" style="width:100%">${GOOGLE_G}Continue with Google</button>
+        <div class="or">or with email</div>
         <div class="tabs">
           <button type="button" data-mode="signup" class="${mode === "signup" ? "on" : ""}">New profile</button>
           <button type="button" data-mode="signin" class="${mode === "signin" ? "on" : ""}">Sign in</button>
         </div>
         <form novalidate>
-          <label class="field"><span>Name</span>
-            <input name="name" autocomplete="username" maxlength="20" required
-              placeholder="${mode === "signup" ? "What the leaderboard calls you" : ""}"></label>
+          ${mode === "signup" ? `<label class="field"><span>Name</span>
+            <input name="name" autocomplete="nickname" maxlength="20" required
+              placeholder="What the leaderboard calls you"></label>` : ""}
+          <label class="field"><span>Email</span>
+            <input name="email" type="email" autocomplete="email" required></label>
           <label class="field"><span>Password</span>
             <input name="password" type="password" required minlength="6"
               autocomplete="${mode === "signup" ? "new-password" : "current-password"}"
@@ -152,26 +224,58 @@ const WH = (() => {
       }));
       const form = host.querySelector("form");
       const err = host.querySelector(".err");
+      const submit = form.querySelector("button[type=submit]");
+      const google = host.querySelector(".google");
       form.addEventListener("input", () => { err.textContent = ""; });
+
+      google.addEventListener("click", async () => {
+        google.disabled = true;
+        try {
+          const sb = await supabaseClient();
+          if (!sb) throw new Error(NOT_SET_UP);
+          const { error } = await sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: returnUrl(next) } });
+          if (error) throw error;
+          // The browser is on its way to Google now.
+        } catch (x) {
+          err.textContent = x.message;
+          google.disabled = false;
+        }
+      });
+
       form.addEventListener("submit", async e => {
         e.preventDefault();
-        const name = form.name.value.trim();
+        const name = form.name ? form.name.value.trim() : "";
+        const email = form.email.value.trim();
         const password = form.password.value;
-        if (!name) { err.textContent = "Enter a name."; return; }
+        if (mode === "signup" && !name) { err.textContent = "Enter a name."; return; }
+        if (!email) { err.textContent = "Enter your email."; return; }
         if (!password) { err.textContent = "Enter a password."; return; }
-        const submit = form.querySelector("button[type=submit]");
         submit.disabled = true;
         try {
-          const who = await api(`/api/account/${mode}`, { method: "POST", body: { name, password } });
-          meCache = who;
-          await claimLocal();
-          onDone(who);
+          const sb = await supabaseClient();
+          if (!sb) throw new Error(NOT_SET_UP);
+          let result;
+          if (mode === "signup") {
+            // Checked first, so a taken name is said before an account exists behind it.
+            const ok = await api("/api/account/name-check", { method: "POST", body: { name } });
+            result = await sb.auth.signUp({ email, password,
+              options: { data: { name: ok.name }, emailRedirectTo: returnUrl(next) } });
+          } else {
+            result = await sb.auth.signInWithPassword({ email, password });
+          }
+          if (result.error) throw result.error;
+          if (!result.data.session) {
+            // Supabase is set to confirm addresses first; the link in the email finishes this.
+            host.innerHTML = `<p style="margin:0">Check <b>${esc(email)}</b> for a link to confirm it. It brings you straight back here, signed in.</p>`;
+            return;
+          }
+          onDone(await exchange(sb, result.data.session));
         } catch (x) {
           err.textContent = x.message;
           submit.disabled = false;
         }
       });
-      host.querySelector("input[name=name]").focus();
+      (form.name || form.email).focus();
     };
     draw();
   }
@@ -217,5 +321,5 @@ const WH = (() => {
   const logo = key => LOGOS[key] || null;
 
   return { esc, fmt1, ordinal, kickoffText, crest, NOPHOTO, api, me, nav, ready, badge, logo, part,
-           icon, toast, requireAuth, ensurePlayer, authForm };
+           icon, toast, requireAuth, ensurePlayer, authForm, finishRedirect };
 })();

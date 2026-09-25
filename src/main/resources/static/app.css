@@ -167,6 +167,11 @@ table.list tr.me td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
 .tabs button{flex:1;height:38px;border:none;border-radius:8px;background:transparent;color:var(--muted);
   font-family:var(--sans);font-size:12.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
 .tabs button.on{background:var(--surface-2);color:var(--text)}
+/* Sign-in: Google's mark keeps its own colours, and email sits under a ruled "or". */
+.btn svg.g{width:18px;height:18px;stroke:none}
+.or{display:flex;align-items:center;gap:12px;margin:18px 0 16px;color:var(--muted);font-size:11.5px;
+  font-weight:600;letter-spacing:.12em;text-transform:uppercase}
+.or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}
 .modal .btn{width:100%}
 .modal .close{float:right;background:none;border:none;color:var(--muted);font-size:24px;line-height:1;cursor:pointer;margin:-6px -6px 0 0}
 

@@ -47,20 +47,23 @@
 <script>
 const { esc, fmt1, api } = WH;
 
-async function signedOut(who) {
+// Back to where sign-in was asked for, if that was a page on this site.
+const next = new URLSearchParams(location.search).get("next");
+const destination = next && /^\/(?![\/\\])/.test(next) ? next : "/profile.html";
+const land = () => { location.replace(destination); };
+
+async function signedOut(who, failed) {
   const main = document.getElementById("main");
   const guest = who && who.guest;
   main.innerHTML = `<div class="auth"><img class="brand" src="/img/logo-full.jpg" alt="Wheelhouse" width="180" height="180">
     <h1>${guest ? "Save your results" : "Your profile"}</h1>
     <p>${guest
       ? "You're playing as a guest. Make a profile to keep your rosters and get on the leaderboards. Everything you've played comes with you."
-      : "Pick a name and a password. Your rosters, scores and spot on the leaderboards are saved to it."}</p>
+      : "Sign in with Google or an email address. Your rosters, scores and spot on the leaderboards are saved to your profile."}</p>
     <div class="card" id="authHost"></div></div><div id="guestRosters"></div>`;
-  // Back to where sign-in was asked for, if that was a page on this site.
-  const next = new URLSearchParams(location.search).get("next");
-  const done = () => { location.href = next && /^\/(?![\/\\])/.test(next) ? next : "/profile.html"; };
-  WH.authForm(document.getElementById("authHost"), done,
-    new URLSearchParams(location.search).get("mode") === "signin" ? "signin" : "signup");
+  WH.authForm(document.getElementById("authHost"), land,
+    new URLSearchParams(location.search).get("mode") === "signin" ? "signin" : "signup", destination);
+  if (failed) document.querySelector("#authHost .err").textContent = failed;
   if (guest) {
     try {
       const rs = (await api("/api/account/rosters")).rosters;
@@ -153,8 +156,13 @@ async function signedIn(who) {
 
 (async function init() {
   await WH.nav("profile");
+  // Arriving back from Google or a confirmation email finishes the sign-in first.
+  let failed = null;
+  try {
+    if (await WH.finishRedirect()) { land(); return; }
+  } catch (x) { failed = x.message; }
   const who = await WH.me();
-  if (who.signedIn) await signedIn(who); else await signedOut(who);
+  if (who.signedIn) await signedIn(who); else await signedOut(who, failed);
   WH.ready();
 })();
 </script>

@@ -50,9 +50,8 @@ Deploy free first. Live beats optimised.
 
 ### After it is live
 
-- **Accounts.** OAuth through Supabase, Discord and Google. The entry id is currently
-  the capability: unguessable, kept in localStorage, enough for a shared link and not
-  enough to follow somebody between devices. Needs the deployed callback URL to start.
+- **Accounts.** Done: Supabase Auth with Google and email. Discord is one more provider in the
+  Supabase dashboard and needs no code.
 - **A week grid.** Ninety weeks across five seasons, showing which you have played and
   what you captured on each. This is the retention mechanic; it needs accounts first.
 

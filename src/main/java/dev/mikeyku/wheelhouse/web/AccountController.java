@@ -1,11 +1,13 @@
 package dev.mikeyku.wheelhouse.web;
 
 import dev.mikeyku.wheelhouse.account.AccountService;
+import dev.mikeyku.wheelhouse.account.Identities;
 import dev.mikeyku.wheelhouse.account.UserRecord;
 import dev.mikeyku.wheelhouse.entry.EntryRecord;
 import dev.mikeyku.wheelhouse.entry.EntryRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,26 +24,37 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Sign up, sign in, sign out, and the profile page's data.
+ * Sign in, sign out, and the profile page's data.
  *
- * <p>Credentials only ever travel in a request body. A password in a query string ends up in
- * server logs, browser history and any proxy on the way, so none of these endpoints read one.
+ * <p>The page signs in with Supabase (Google, or an email and password) and hands the access
+ * token over once; this swaps it for the app's own session cookie. Tokens only ever travel in a
+ * request body. One in a query string ends up in server logs, browser history and any proxy on
+ * the way, so none of these endpoints read one.
  */
 @RestController
 @RequestMapping("/api/account")
 public class AccountController {
 
     private final AccountService accounts;
+    private final Identities identities;
     private final EntryRepository entries;
     private final Standings standings;
+    private final Map<String, Object> authConfig;
 
-    public AccountController(AccountService accounts, EntryRepository entries, Standings standings) {
+    public AccountController(AccountService accounts, Identities identities, EntryRepository entries,
+                             Standings standings,
+                             @Value("${wheelhouse.supabase.url:}") String supabaseUrl,
+                             @Value("${wheelhouse.supabase.key:}") String supabaseKey) {
         this.accounts = accounts;
+        this.identities = identities;
         this.entries = entries;
         this.standings = standings;
+        this.authConfig = supabaseUrl.isBlank() || supabaseKey.isBlank()
+                ? Map.of()
+                : Map.of("url", supabaseUrl.strip(), "key", supabaseKey.strip());
     }
 
-    public record Credentials(String name, String password) {}
+    public record Token(String accessToken) {}
 
     public record Name(String name) {}
 
@@ -67,20 +80,30 @@ public class AccountController {
         return describe(accounts.current(withToken(request, token)));
     }
 
-    @PostMapping("/signup")
-    public Map<String, Object> signUp(@RequestBody Credentials body, HttpServletRequest request,
+    /**
+     * What the page needs to start a Supabase sign-in: the project URL and its publishable key.
+     * Both are public by design; what keeps the database closed is {@code DataApiLockdown}.
+     * Empty when this server has no Supabase project, and the page says sign-in isn't set up.
+     */
+    @GetMapping("/auth-config")
+    public Map<String, Object> authConfig() {
+        return authConfig;
+    }
+
+    /** A Supabase access token, exchanged for this app's session. */
+    @PostMapping("/supabase")
+    public Map<String, Object> signIn(@RequestBody Token body, HttpServletRequest request,
                                       HttpServletResponse response) {
-        String token = accounts.signUp(body.name(), body.password(), accounts.current(request));
+        Identities.Identity identity = identities.verify(body.accessToken());
+        String token = accounts.signIn(identity, accounts.current(request));
         setCookie(request, response, token, AccountService.SESSION_LENGTH);
         return describe(accounts.current(withToken(request, token)));
     }
 
-    @PostMapping("/signin")
-    public Map<String, Object> signIn(@RequestBody Credentials body, HttpServletRequest request,
-                                      HttpServletResponse response) {
-        String token = accounts.signIn(body.name(), body.password(), accounts.current(request));
-        setCookie(request, response, token, AccountService.SESSION_LENGTH);
-        return describe(accounts.current(withToken(request, token)));
+    /** Checked before an email sign-up, so a taken name is caught before an account exists. */
+    @PostMapping("/name-check")
+    public Map<String, Object> checkName(@RequestBody Name body) {
+        return Map.of("name", accounts.checkName(body.name()));
     }
 
     @PostMapping("/signout")
