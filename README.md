@@ -207,7 +207,12 @@ reading it is supposed to equal.
 ## Deploying
 
 Runs anywhere that can run a JVM. It is not serverless-compatible: there is a scheduler and a
-database.
+database. That includes Vercel, which runs Dockerfiles now but as request handlers: it scales an
+idle container to zero after five minutes, runs no background workers, and keeps no state between
+instances, so the ESPN poller stops and each instance holds its own copy of the live box scores.
+
+`render.yaml` is a Render Blueprint for this: Docker, Virginia beside the Supabase pooler, and the
+readiness probe as the health check. It prompts for the datasource values on creation.
 
 ```sh
 docker build -t wheelhouse .
