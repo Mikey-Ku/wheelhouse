@@ -8,14 +8,17 @@ import org.springframework.web.context.WebApplicationContext;
 import tools.jackson.databind.JsonNode;
 
 import java.util.Map;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Profiles: making one, signing in to it, and what a name is allowed to be. */
+/** Profiles: signing in through Supabase, what a name is allowed to be, and signing out. */
 @SpringBootTest
 @TestPropertySource(properties = {
         "spring.datasource.url=jdbc:h2:mem:accounts;DB_CLOSE_DELAY=-1",
-        "spring.jpa.hibernate.ddl-auto=create-drop"
+        "spring.jpa.hibernate.ddl-auto=create-drop",
+        "wheelhouse.supabase.url=https://example.supabase.co",
+        "wheelhouse.supabase.key=sb_publishable_test"
 })
 class AccountTest {
 
@@ -23,11 +26,11 @@ class AccountTest {
     private WebApplicationContext context;
 
     @Test
-    void signUpSignsYouIn() throws Exception {
+    void theFirstSignInMakesAProfileAndSignsYouIn() throws Exception {
         Api browser = new Api(context);
         assertThat(browser.get("/api/account/me").path("signedIn").asBoolean()).isFalse();
 
-        browser.signUp("Mikey Ku", "hunter22");
+        browser.signUp("Mikey Ku");
 
         JsonNode me = browser.get("/api/account/me");
         assertThat(me.path("signedIn").asBoolean()).isTrue();
@@ -35,39 +38,64 @@ class AccountTest {
     }
 
     @Test
-    void aNameIsOneProfileWhateverItsCase() throws Exception {
-        new Api(context).signUp("Casey", "hunter22");
+    void signingInAgainIsTheSameProfileUnderTheNameItChose() throws Exception {
+        String person = UUID.randomUUID().toString();
+        Api phone = new Api(context);
+        phone.signInAs(person, "Dana");
+        phone.postJson("/api/account/name", Map.of("name", "Dana R"));
 
-        Api other = new Api(context);
-        assertThat(other.signUp("casey", "different1").path("error").asText()).contains("taken");
-        assertThat(other.lastStatus()).isEqualTo(400);
+        // Google offers its name on every sign-in; the one they chose is the one that stays.
+        assertThat(new Api(context).signInAs(person, "Dana").path("name").asText()).isEqualTo("Dana R");
     }
 
     @Test
-    void theWrongPasswordSaysNothingAboutWhichHalfWasWrong() throws Exception {
-        new Api(context).signUp("Jordan", "hunter22");
-
-        Api browser = new Api(context);
-        String wrongPassword = browser.signIn("Jordan", "nope-nope").path("error").asText();
-        String noSuchName = browser.signIn("Nobody", "nope-nope").path("error").asText();
-        assertThat(wrongPassword).isEqualTo(noSuchName);
-
-        assertThat(browser.signIn("jordan", "hunter22").path("name").asText()).isEqualTo("Jordan");
+    void aTakenNameGetsTheNextFreeNumber() throws Exception {
+        new Api(context).signUp("Casey");
+        assertThat(new Api(context).signUp("casey").path("name").asText()).isEqualTo("casey 2");
+        assertThat(new Api(context).signUp("Casey").path("name").asText()).isEqualTo("Casey 3");
     }
 
     @Test
-    void namesAndPasswordsHaveLimits() throws Exception {
+    void anOfferedNameIsCleanedToWhatABoardCanPrint() throws Exception {
+        assertThat(new Api(context).signUp("<script>").path("name").asText()).isEqualTo("script");
+        assertThat(new Api(context).signUp("Quinn ✨").path("name").asText()).isEqualTo("Quinn");
+        assertThat(new Api(context).signUp("q".repeat(30)).path("name").asText()).isEqualTo("q".repeat(20));
+        assertThat(new Api(context).signUp("!").path("name").asText()).startsWith("Player");
+    }
+
+    @Test
+    void theNameCheckSaysTakenBeforeAnAccountExists() throws Exception {
+        new Api(context).signUp("Jordan");
+
         Api browser = new Api(context);
-        assertThat(browser.signUp("x", "hunter22").has("error")).as("too short").isTrue();
-        assertThat(browser.signUp("x".repeat(21), "hunter22").has("error")).as("too long").isTrue();
-        assertThat(browser.signUp("<script>", "hunter22").has("error")).as("markup").isTrue();
-        assertThat(browser.signUp("Riley", "12345").has("error")).as("short password").isTrue();
+        assertThat(browser.postJson("/api/account/name-check", Map.of("name", "jordan"))
+                .path("error").asText()).contains("taken");
+        assertThat(browser.lastStatus()).isEqualTo(400);
+        assertThat(browser.postJson("/api/account/name-check", Map.of("name", "x")).has("error"))
+                .as("too short").isTrue();
+        assertThat(browser.postJson("/api/account/name-check", Map.of("name", " Jordan  B "))
+                .path("name").asText()).isEqualTo("Jordan B");
+    }
+
+    @Test
+    void aTokenSupabaseDoesNotVouchForSignsNobodyIn() throws Exception {
+        Api browser = new Api(context);
+        browser.postJson("/api/account/supabase", Map.of("accessToken", "forged"));
+        assertThat(browser.lastStatus()).isEqualTo(401);
+        assertThat(browser.get("/api/account/me").path("signedIn").asBoolean()).isFalse();
+    }
+
+    @Test
+    void thePageIsToldWhichSupabaseProjectToSignInWith() throws Exception {
+        JsonNode config = new Api(context).get("/api/account/auth-config");
+        assertThat(config.path("url").asText()).isEqualTo("https://example.supabase.co");
+        assertThat(config.path("key").asText()).isEqualTo("sb_publishable_test");
     }
 
     @Test
     void signingOutForgetsYou() throws Exception {
         Api browser = new Api(context);
-        browser.signUp("Taylor", "hunter22");
+        browser.signUp("Taylor");
         browser.post("/api/account/signout");
         // The old cookie is still being sent; the session behind it is gone.
         assertThat(browser.get("/api/account/me").path("signedIn").asBoolean()).isFalse();
@@ -75,11 +103,12 @@ class AccountTest {
 
     @Test
     void renameKeepsNamesUnique() throws Exception {
-        new Api(context).signUp("Morgan", "hunter22");
+        new Api(context).signUp("Morgan");
         Api browser = new Api(context);
-        browser.signUp("Avery", "hunter22");
+        browser.signUp("Avery");
 
         assertThat(browser.postJson("/api/account/name", Map.of("name", "morgan")).has("error")).isTrue();
+        assertThat(browser.postJson("/api/account/name", Map.of("name", "<script>")).has("error")).isTrue();
         assertThat(browser.postJson("/api/account/name", Map.of("name", " Avery  B "))
                 .path("name").asText()).isEqualTo("Avery B");
     }

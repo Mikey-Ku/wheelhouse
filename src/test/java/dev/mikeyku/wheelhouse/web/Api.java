@@ -15,7 +15,8 @@ import tools.jackson.databind.ObjectMapper;
 import java.util.UUID;
 
 /**
- * A browser, for tests: signs up a fresh profile and sends its session cookie with every call.
+ * A browser, for tests: signs in through {@link FakeIdentities} and sends its session cookie with
+ * every call.
  * Paths are URL templates, so a literal space in one is encoded rather than written as %20.
  */
 public final class Api {
@@ -32,16 +33,18 @@ public final class Api {
     /** Signed up under a random name, so tests sharing a database never collide. */
     public static Api signedUp(WebApplicationContext context) throws Exception {
         Api api = new Api(context);
-        api.signUp("t" + UUID.randomUUID().toString().replace("-", "").substring(0, 10), "password1");
+        api.signUp("t" + UUID.randomUUID().toString().replace("-", "").substring(0, 10));
         return api;
     }
 
-    public JsonNode signUp(String name, String password) throws Exception {
-        return auth("/api/account/signup", name, password);
+    /** Somebody new signing in for the first time, asking for this name. */
+    public JsonNode signUp(String name) throws Exception {
+        return signInAs(UUID.randomUUID().toString(), name);
     }
 
-    public JsonNode signIn(String name, String password) throws Exception {
-        return auth("/api/account/signin", name, password);
+    /** Signs in as this Supabase user, offering this name in case it is their first time. */
+    public JsonNode signInAs(String person, String name) throws Exception {
+        return postJson("/api/account/supabase", java.util.Map.of("accessToken", FakeIdentities.token(person, name)));
     }
 
     public JsonNode post(String path) throws Exception {
@@ -60,12 +63,6 @@ public final class Api {
 
     public int lastStatus() {
         return lastStatus;
-    }
-
-    private JsonNode auth(String path, String name, String password) throws Exception {
-        return send(MockMvcRequestBuilders.post(path)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(mapper.writeValueAsString(java.util.Map.of("name", name, "password", password))));
     }
 
     /** Like a browser: whatever session cookie the server sets is sent from then on. */

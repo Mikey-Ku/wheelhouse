@@ -28,11 +28,17 @@ public class UserRecord {
     @Column(unique = true)
     private String nameKey;
 
-    private String passwordHash;
+    /**
+     * The Supabase Auth user this profile belongs to. Google and email sign-in both end in one of
+     * these, so it is the only thing a sign-in is matched on. A guest has none.
+     */
+    @Column(unique = true)
+    private String authId;
+
     private Instant createdAt;
 
     /**
-     * Playing without a profile. A guest has a name for the slip but no password, reserves no
+     * Playing without a profile. A guest has a name for the slip but no sign-in, reserves no
      * name, and stays off the leaderboards. Making a profile turns the guest into it.
      */
     private Boolean guest;
@@ -40,16 +46,16 @@ public class UserRecord {
     protected UserRecord() {
     }
 
-    public UserRecord(String id, String name, String passwordHash, Instant createdAt) {
+    public UserRecord(String id, String name, String authId, Instant createdAt) {
         this.id = id;
         name(name);
-        this.passwordHash = passwordHash;
+        this.authId = authId;
         this.createdAt = createdAt;
     }
 
     public String id() { return id; }
     public String name() { return name; }
-    public String passwordHash() { return passwordHash; }
+    public String authId() { return authId; }
     public boolean guest() { return Boolean.TRUE.equals(guest); }
 
     /** A guest's name is display only: it holds no key, so it never blocks a real profile. */
@@ -63,9 +69,9 @@ public class UserRecord {
     }
 
     /** The guest becomes a profile: same id, so every roster it played comes with it. */
-    public void becomeProfile(String name, String passwordHash) {
+    public void becomeProfile(String name, String authId) {
         name(name);
-        this.passwordHash = passwordHash;
+        this.authId = authId;
         this.guest = false;
     }
     public Instant createdAt() { return createdAt; }
