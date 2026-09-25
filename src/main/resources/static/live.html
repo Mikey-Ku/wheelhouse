@@ -12,10 +12,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;1,700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/app.css">
 <style>
-  .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}
-  .filters button{height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line-hi);background:var(--surface);
-    color:var(--secondary);font-family:var(--sans);font-size:12.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
-  .filters button.on{background:var(--text);color:var(--bg);border-color:var(--text)}
   .mine{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px}
   .mine a{flex:0 0 auto;display:flex;align-items:center;gap:12px;text-decoration:none;background:rgba(19,27,56,.9);
     border:1px solid var(--line);border-radius:12px;padding:10px 14px}
@@ -53,7 +49,6 @@
 <main class="wrap">
   <div class="page-head"><h1 id="title">Live</h1><p>Every game this week. Tap a game that has started for its leaders.</p></div>
   <div id="mineSec"></div>
-  <div class="filters" id="filters"></div>
   <div id="days"></div>
 </main>
 <script src="/app.js"></script>
@@ -61,7 +56,6 @@
 const { esc, fmt1, api } = WH;
 let data = null;
 let slates = [];
-let filter = "all";
 const open = new Set();
 const leaders = new Map();
 
@@ -98,12 +92,7 @@ function leadersHtml(id) {
 function render() {
   const games = data ? data.games : [];
   const keys = [...new Set(games.map(g => g.slate || "other"))];
-  document.getElementById("filters").innerHTML = keys.length > 1
-    ? [`<button data-f="all" class="${filter === "all" ? "on" : ""}">All</button>`]
-        .concat(keys.map(k => `<button data-f="${esc(k)}" class="${filter === k ? "on" : ""}">${esc(LABEL(k))}</button>`)).join("")
-    : "";
-  const shown = keys.filter(k => filter === "all" || filter === k);
-  document.getElementById("days").innerHTML = shown.map(k => {
+  document.getElementById("days").innerHTML = keys.map(k => {
     const list = games.filter(g => (g.slate || "other") === k)
       .sort((a, b) => (a.state === "in" ? -1 : 0) - (b.state === "in" ? -1 : 0) || new Date(a.kickoff) - new Date(b.kickoff));
     return `<section class="day"><div class="day-head">${WH.badge(k, LABEL(k), "lg")}</div>
@@ -155,10 +144,6 @@ async function load() {
   const navDone = WH.nav("live");
   try { slates = (await api("/api/play/slates")).slates; } catch (e) { slates = []; }
   await Promise.all([navDone, load(), renderMine()]);
-  document.getElementById("filters").addEventListener("click", e => {
-    const b = e.target.closest("[data-f]"); if (!b) return;
-    filter = b.dataset.f; render();
-  });
   document.getElementById("days").addEventListener("click", e => {
     const b = e.target.closest("button[data-id]"); if (b && !b.disabled) toggle(b.dataset.id);
   });
